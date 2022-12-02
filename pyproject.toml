@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sad"
+version = "0.1.0"
+description = "Audio-driven Speech Animation with Diffusion"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+    { name = "inkyupark", email = "inkyupark@krafton.com" },
+]
+dependencies = [
+    "diffusers[torch]",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+]
+
+[tool.setuptools]
+packages = ["sad"]
