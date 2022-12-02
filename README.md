@@ -2,12 +2,14 @@
 
 ## Basic Installation
 
-```bash
-pip install -r requirements.txt
-```
-
-If you want to install this project as a pip module, run the following commands:
+Run the following command to install it as a pip module:
 
 ```bash
 pip install .
+```
+
+If you are developing this repo, then run:
+
+```bash
+pip install -e .[dev]
 ```
