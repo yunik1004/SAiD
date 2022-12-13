@@ -1,4 +1,4 @@
-# Audio-Driven Speech Animation with Diffusion
+# SAiD: Audio-Driven Speech Animation with Diffusion
 
 ## Basic Installation
 

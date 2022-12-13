@@ -1,5 +1,5 @@
-from sad.model.sad import SAD
+from said.model.said import SAID
 
 if __name__ == "__main__":
-    sad_model = SAD()
-    print(sad_model.forward("forward is working"))
+    said_model = SAID()
+    print(said_model.forward("forward is working"))
