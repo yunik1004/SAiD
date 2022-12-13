@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sad"
+name = "said"
 version = "0.1.0"
 description = "Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
@@ -22,4 +22,4 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["sad"]
+packages = ["said"]

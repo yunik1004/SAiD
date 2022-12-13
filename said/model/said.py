@@ -1,9 +1,9 @@
 from torch import nn
 
 
-class SAD(nn.Module):
+class SAID(nn.Module):
     def __init__(self):
-        super(SAD, self).__init__()
+        super(SAID, self).__init__()
 
     def forward(self, x):
         return x
