@@ -1,6 +1,6 @@
 from math import pi
 import os
-from typing import Set
+from typing import Optional, Set
 import aud
 import bpy
 
@@ -87,18 +87,21 @@ class LipsyncGenerateOperator(bpy.types.Operator):
         audio_path = context.scene.lipsync_property.audio_path
         mesh_sequence_dir = context.scene.lipsync_property.mesh_sequence_dir
 
+        # Reset the scene frame to 1
+        context.scene.frame_set(1)
+
         # Create collection
         collection = bpy.data.collections.new("Lipsync")
-        bpy.context.scene.collection.children.link(collection)
+        context.scene.collection.children.link(collection)
 
         # Load the sound
         bpy.ops.object.speaker_add(rotation=(pi, 0.0, 0.0))
-        speaker = bpy.context.object
+        speaker = context.object
         speaker.hide_set(True)
         speaker.data.sound = bpy.data.sounds.load(audio_path)
         speaker.data.attenuation = 0.0
         speaker.data.update_tag()
-        bpy.context.collection.objects.unlink(speaker)
+        context.collection.objects.unlink(speaker)
         collection.objects.link(speaker)
 
         # List the mesh sequence
@@ -116,22 +119,25 @@ class LipsyncGenerateOperator(bpy.types.Operator):
         length = sd.length
         del sd
 
-        bpy.context.scene.render.fps = num_sequence
-        bpy.context.scene.render.fps_base = length / samplerate
+        context.scene.render.fps = num_sequence
+        context.scene.render.fps_base = length / samplerate
 
         # Generate animation sequence
-        if not self.load_mesh(sequence[0]):
+        obj = self.load_obj(context, sequence[0])
+        if obj is None:
             return {"CANCELLED"}
 
-        obj = bpy.context.object
-        bpy.context.collection.objects.unlink(obj)
+        context.collection.objects.unlink(obj)
         collection.objects.link(obj)
+        obj.name = "Object"
+        obj.data.name = "Object"
 
         num_vertices = len(obj.data.vertices)
 
         for sdx in range(1, num_sequence):
-            self.load_mesh(sequence[sdx])
-            obj_tmp = bpy.context.object
+            obj_tmp = self.load_obj(context, sequence[sdx])
+            if obj_tmp is None:
+                return {"CANCELLED"}
 
             for vdx in range(num_vertices):
                 obj.data.vertices[vdx].co = obj_tmp.data.vertices[vdx].co
@@ -141,18 +147,23 @@ class LipsyncGenerateOperator(bpy.types.Operator):
 
         return {"FINISHED"}
 
-    def load_mesh(self, path: str) -> bool:
+    def load_obj(
+        self, context: bpy.types.Context, path: str
+    ) -> Optional[bpy.types.Object]:
         ext = os.path.splitext(path)[-1]
+
+        obj = None
 
         if ext == ".ply":
             bpy.ops.import_mesh.ply(filepath=path)
+            obj = context.object
         elif ext == ".obj":
             bpy.ops.import_scene.obj(filepath=path)
+            obj = context.selected_objects[0]
         else:
             self.report({"ERROR_INVALID_INPUT"}, f"{ext} is not supported")
-            return False
 
-        return True
+        return obj
 
 
 # List of classes to be registered
