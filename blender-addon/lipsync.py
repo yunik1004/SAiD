@@ -150,6 +150,21 @@ class LipsyncGenerateOperator(bpy.types.Operator):
     def load_obj(
         self, context: bpy.types.Context, path: str
     ) -> Optional[bpy.types.Object]:
+        """Load object from the path. Currently support 'ply' and 'obj' file.
+
+        Parameters
+        ----------
+        context : bpy.types.Context
+            Blender context
+
+        path: str
+            Path of the object file
+
+        Returns
+        -------
+        Optional[bpy.types.Object]
+            Loaded object
+        """
         ext = os.path.splitext(path)[-1]
 
         obj = None
@@ -158,7 +173,7 @@ class LipsyncGenerateOperator(bpy.types.Operator):
             bpy.ops.import_mesh.ply(filepath=path)
             obj = context.object
         elif ext == ".obj":
-            bpy.ops.import_scene.obj(filepath=path)
+            bpy.ops.import_scene.obj(filepath=path, split_mode="OFF")
             obj = context.selected_objects[0]
         else:
             self.report({"ERROR_INVALID_INPUT"}, f"{ext} is not supported")
