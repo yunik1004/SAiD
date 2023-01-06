@@ -1,4 +1,4 @@
-from said.model.said import SAID
+from said.model.diffusion import SAID
 
 if __name__ == "__main__":
     said_model = SAID()
