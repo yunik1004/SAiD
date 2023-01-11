@@ -1,16 +1,24 @@
+from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 from diffusers import ConfigMixin, ModelMixin
 from diffusers.configuration_utils import register_to_config
 from diffusers.models.embeddings import GaussianFourierProjection
-from diffusers.models.unet_1d import UNet1DOutput
-from diffusers.models.unet_1d_blocks import (
-    get_down_block,
-    get_mid_block,
-    get_out_block,
-    get_up_block,
-)
+from diffusers.models.unet_1d_blocks import get_out_block
+from diffusers.utils import BaseOutput
 import torch
 from torch import nn
+from .unet_1d_blocks import get_down_block, get_mid_block, get_up_block
+
+
+@dataclass
+class UNet1DConditionOutput(BaseOutput):
+    """
+    Args:
+        sample (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
+            Hidden states conditioned on `encoder_hidden_states` input. Output of last layer of model.
+    """
+
+    sample: torch.FloatTensor
 
 
 class UNet1DConditionModel(ModelMixin, ConfigMixin):
@@ -57,11 +65,15 @@ class UNet1DConditionModel(ModelMixin, ConfigMixin):
         freq_shift: float = 0.0,
         down_block_types: Tuple[str] = (
             "DownBlock1DNoSkip",
+            "CrossAttnDownBlock1D",
             "DownBlock1D",
-            "AttnDownBlock1D",
         ),
-        up_block_types: Tuple[str] = ("AttnUpBlock1D", "UpBlock1D", "UpBlock1DNoSkip"),
-        mid_block_type: Tuple[str] = "UNetMidBlock1D",
+        up_block_types: Tuple[str] = (
+            "UpBlock1D",
+            "CrossAttnUpBlock1D",
+            "UpBlock1DNoSkip",
+        ),
+        mid_block_type: Tuple[str] = "UNetMidBlock1DCrossAttn",
         out_block_type: str = None,
         block_out_channels: Tuple[int] = (32, 32, 64),
         act_fn: str = None,
@@ -185,16 +197,16 @@ class UNet1DConditionModel(ModelMixin, ConfigMixin):
         timestep: Union[torch.Tensor, float, int],
         encoder_hidden_states: torch.Tensor,
         return_dict: bool = True,
-    ) -> Union[UNet1DOutput, Tuple]:
+    ) -> Union[UNet1DConditionOutput, Tuple]:
         r"""
         Args:
             sample (`torch.FloatTensor`): `(batch_size, sample_size, num_channels)` noisy inputs tensor
             timestep (`torch.FloatTensor` or `float` or `int): (batch) timesteps
             return_dict (`bool`, *optional*, defaults to `True`):
-                Whether or not to return a [`~models.unet_1d.UNet1DOutput`] instead of a plain tuple.
+                Whether or not to return a [`~models.unet_1d.UNet1DConditionOutput`] instead of a plain tuple.
 
         Returns:
-            [`~models.unet_1d.UNet1DOutput`] or `tuple`: [`~models.unet_1d.UNet1DOutput`] if `return_dict` is True,
+            [`~models.unet_1d.UNet1DConditionOutput`] or `tuple`: [`~models.unet_1d.UNet1DConditionOutput`] if `return_dict` is True,
             otherwise a `tuple`. When returning a tuple, the first element is the sample tensor.
         """
 
@@ -246,4 +258,4 @@ class UNet1DConditionModel(ModelMixin, ConfigMixin):
         if not return_dict:
             return (sample,)
 
-        return UNet1DOutput(sample=sample)
+        return UNet1DConditionOutput(sample=sample)
