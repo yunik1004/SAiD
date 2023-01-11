@@ -14,7 +14,6 @@ class UNet1DConditionModel(nn.Module):
         in_channels: int,
         out_channels: int,
         cross_attention_dim: int,
-        in_hidden_channels: int = 1,
     ):
         """Constructor of the UNet1DConditionModel
 
@@ -26,11 +25,8 @@ class UNet1DConditionModel(nn.Module):
             The number of channels in the output
         cross_attention_dim : int
             The dimension of the cross attention features
-        in_hidden_channels : int, optional
-            The number of channels to make 1D to 2D, by default 1
         """
         super().__init__()
-        self.conv1by1 = nn.Conv2d(1, in_hidden_channels, kernel_size=1)
         self.unet_2d = UNet2DConditionModel(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -59,8 +55,8 @@ class UNet1DConditionModel(nn.Module):
         torch.FloatTensor
             (Batch_size, sample_seq_len, channel), Predicted noise
         """
-        out = self.conv1by1(sample.unsqueeze(1)).transpose(1, 3)
+        out = sample.unsqueeze(1).transpose(1, 3)
         out = self.unet_2d(out, timestep, encoder_hidden_states).sample
-        out = torch.mean(out, dim=3).transpose(1, 2)
+        out = out.squeeze(3).transpose(1, 2)
 
         return out
