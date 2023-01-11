@@ -13,7 +13,11 @@ authors = [
 ]
 dependencies = [
     "diffusers[torch]",
+    "numpy",
+    "pandas",
     "torch",
+    "torchaudio",
+    "transformers",
 ]
 
 [project.optional-dependencies]
@@ -23,3 +27,12 @@ dev = [
 
 [tool.setuptools]
 packages = ["said"]
+
+[tool.black]
+include = '''
+/(
+    blender-addon
+  | said
+  | script
+)/
+'''
