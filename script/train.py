@@ -36,12 +36,12 @@ if __name__ == "__main__":
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
 
     waveform_processed = said_model.process_audio(waveform).to(device)
-    random_timesteps = said_model.get_random_timesteps(batch_size)
+    random_timesteps = said_model.get_random_timesteps(batch_size).to(device)
 
     audio_embedding = said_model.get_audio_embedding(waveform_processed)
     noisy_coeffs = said_model.add_noise(blendshape_coeffs, random_timesteps)
 
-    noise_pred = said_model(noisy_coeffs, random_timesteps, waveform_processed)
+    noise_pred = said_model(noisy_coeffs, random_timesteps, audio_embedding)
 
-    print(noise_pred.shape)
-    print(audio_embedding.shape)
+    print(f"Audio embedding: {audio_embedding.shape}")
+    print(f"Noise_pred: {noise_pred.shape}")

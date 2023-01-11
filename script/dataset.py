@@ -76,17 +76,15 @@ class VOCARKitTrainDataset(Dataset):
         Dict[str, torch.FloatTensor]
             {
                 "waveform": (audio_seq_len,),
-                "blendshape_coeffs": (num_blendshapes, blendshape_seq_len),
+                "blendshape_coeffs": (blendshape_seq_len, num_blendshapes),
             }
         """
 
         waveform = load_audio(self.audio_paths[index], self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(
-            self.blendshape_coeffs_paths[index]
-        ).transpose(0, 1)
+        blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
 
-        num_blendshape = blendshape_coeffs.shape[0]
-        blendshape_len = blendshape_coeffs.shape[1]
+        num_blendshape = blendshape_coeffs.shape[1]
+        blendshape_len = blendshape_coeffs.shape[0]
         waveform_len = waveform.shape[0]
         waveform_patch_len = (self.sampling_rate * self.window_size) // self.fps
 
@@ -94,15 +92,15 @@ class VOCARKitTrainDataset(Dataset):
         blendshape_coeffs_patch = None
         if blendshape_len >= self.window_size:
             idx = random.randint(0, blendshape_len - self.window_size)
-            blendshape_coeffs_patch = blendshape_coeffs[:, idx : idx + self.window_size]
+            blendshape_coeffs_patch = blendshape_coeffs[idx : idx + self.window_size, :]
 
             waveform_patch_idx = (self.sampling_rate * idx) // self.fps
             waveform_patch = waveform[
                 waveform_patch_idx : waveform_patch_idx + waveform_patch_len
             ]
         else:
-            blendshape_coeffs_patch = torch.zeros((num_blendshape, self.window_size))
-            blendshape_coeffs_patch[:, :blendshape_len] = blendshape_coeffs[:, :]
+            blendshape_coeffs_patch = torch.zeros((self.window_size, num_blendshape))
+            blendshape_coeffs_patch[:blendshape_len, :] = blendshape_coeffs[:, :]
 
             waveform_patch = torch.zeros(waveform_patch_len)
             waveform_patch[:waveform_len] = waveform[:]
@@ -128,7 +126,7 @@ class VOCARKitTrainDataset(Dataset):
         Dict[str, Any]
             {
                 "waveform": List[np.ndarray], each: (audio_seq_len,)
-                "blendshape_coeffs": torch.FloatTensor, (Batch, num_blendshapes, blendshape_seq_len)
+                "blendshape_coeffs": torch.FloatTensor, (Batch, blendshape_seq_len, num_blendshapes)
             }
         """
         examples_dict = {k: [dic[k] for dic in examples] for k in examples[0]}

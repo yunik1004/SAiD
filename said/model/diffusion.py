@@ -67,7 +67,6 @@ class SAID(ABC, nn.Module):
             self.noise_scheduler.num_train_timesteps,
             (batch_size,),
             dtype=torch.long,
-            device=self.denoiser.device,
         )
         return timesteps
 
@@ -131,9 +130,10 @@ class SAID_Wav2Vec2(SAID):
         self.sampling_rate = self.audio_processor.feature_extractor.sampling_rate
 
         # Denoiser-related
-        # 8 * 2:
         self.denoiser = UNet1DConditionModel(
-            in_channels=in_channels + 8 * 2, out_channels=in_channels
+            in_channels=in_channels,
+            out_channels=in_channels,
+            cross_attention_dim=self.audio_config.conv_dim[-1],
         )
         self.noise_scheduler = (
             noise_scheduler if noise_scheduler is not None else DDIMScheduler()
@@ -145,7 +145,7 @@ class SAID_Wav2Vec2(SAID):
         timesteps: torch.LongTensor,
         audio_embedding: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding).sample
+        noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding)
         return noise_pred
 
     def get_audio_embedding(
@@ -162,7 +162,9 @@ class SAID_Wav2Vec2(SAID):
         Returns
         -------
         torch.FloatTensor
-            (Batch_size, embed_size, embed_seq_len), Generated audio embedding
+            (Batch_size, embed_seq_len, embed_size), Generated audio embedding
         """
-        hidden_state = self.audio_encoder(waveform).last_hidden_state.transpose(1, 2)
-        return hidden_state
+        # hidden_state = self.audio_encoder(waveform).last_hidden_state
+        # return hidden_state
+        features = self.audio_encoder(waveform).extract_features
+        return features
