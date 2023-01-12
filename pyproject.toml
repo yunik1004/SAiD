@@ -22,7 +22,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "accelerate",
     "black",
+    "tensorboard",
+    "tqdm",
 ]
 
 [tool.setuptools]

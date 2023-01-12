@@ -1,7 +1,7 @@
 """Define the diffusion models which are used as SAiD model
 """
 from abc import abstractmethod, ABC
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 from diffusers import DDIMScheduler, SchedulerMixin
 import numpy as np
 import torch
@@ -72,7 +72,7 @@ class SAID(ABC, nn.Module):
 
     def add_noise(
         self, samples: torch.FloatTensor, timesteps: torch.LongTensor
-    ) -> torch.FloatTensor:
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         """Add the noise into the sample
 
         Parameters
@@ -84,12 +84,12 @@ class SAID(ABC, nn.Module):
 
         Returns
         -------
-        torch.FloatTensor
-            Noised samples
+        Tuple[torch.FloatTensor, torch.FloatTensor]
+            Noised samples, and Noise
         """
         noise = torch.randn(samples.shape, device=samples.device)
         noisy_samples = self.noise_scheduler.add_noise(samples, noise, timesteps)
-        return noisy_samples
+        return noisy_samples, noise
 
 
 class SAID_Wav2Vec2(SAID):
