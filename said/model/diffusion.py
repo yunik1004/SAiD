@@ -47,6 +47,19 @@ class SAID(ABC, nn.Module):
 
     @abstractmethod
     def get_audio_embedding(self, waveform: torch.FloatTensor) -> torch.FloatTensor:
+        """Return the audio embedding of the waveform
+
+        Parameters
+        ----------
+        waveform : Union[np.ndarray, torch.Tensor, List[np.ndarray]]
+            - np.ndarray, torch.Tensor: (audio_seq_len,)
+            - List[np.ndarray]: each (audio_seq_len,)
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, embed_seq_len, embed_size), Generated audio embedding
+        """
         pass
 
     def get_random_timesteps(self, batch_size: int) -> torch.LongTensor:
@@ -145,26 +158,27 @@ class SAID_Wav2Vec2(SAID):
         timesteps: torch.LongTensor,
         audio_embedding: torch.FloatTensor,
     ) -> torch.FloatTensor:
+        """Return the predicted noise in the noisy samples
+
+        Parameters
+        ----------
+        noisy_samples : torch.FloatTensor
+            (Batch_size, coeffs_seq_len, num_coeffs), Sequence of noisy coefficients
+        timesteps : torch.LongTensor
+            (Batch_size,), Timesteps
+        audio_embedding : torch.FloatTensor
+            (Batch_size, embedding_seq_len, embedding_size), Sequence of audio embeddings
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, coeffs_seq_len, num_coeffs), Sequence of predicted noises
+        """
         noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding)
         return noise_pred
 
     def get_audio_embedding(
         self, waveform: Union[np.ndarray, torch.Tensor, List[np.ndarray]]
     ) -> torch.FloatTensor:
-        """Return the audio embedding of the waveform
-
-        Parameters
-        ----------
-        waveform : Union[np.ndarray, torch.Tensor, List[np.ndarray]]
-            - np.ndarray, torch.Tensor: (audio_seq_len,)
-            - List[np.ndarray]: each (audio_seq_len,)
-
-        Returns
-        -------
-        torch.FloatTensor
-            (Batch_size, embed_seq_len, embed_size), Generated audio embedding
-        """
-        # hidden_state = self.audio_encoder(waveform).last_hidden_state
-        # return hidden_state
         features = self.audio_encoder(waveform).extract_features
         return features
