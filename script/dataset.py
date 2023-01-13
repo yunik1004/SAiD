@@ -135,21 +135,6 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         self.fps = fps
 
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
-        """Return the item of the given index
-
-        Parameters
-        ----------
-        index : int
-            Index of the item
-
-        Returns
-        -------
-        Dict[str, torch.FloatTensor]
-            {
-                "waveform": (audio_seq_len,),
-                "blendshape_coeffs": (blendshape_seq_len, num_blendshapes),
-            }
-        """
         waveform = load_audio(self.audio_paths[index], self.sampling_rate)
         blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
 
@@ -174,6 +159,21 @@ class VOCARKitTrainDataset(VOCARKitDataset):
 
             waveform_patch = torch.zeros(waveform_patch_len)
             waveform_patch[:waveform_len] = waveform[:]
+
+        out = {
+            "waveform": waveform_patch,
+            "blendshape_coeffs": blendshape_coeffs_patch,
+        }
+
+        return out
+
+
+class VOCARKitValDataset(VOCARKitDataset):
+    """Validation dataset for VOCA-ARKit"""
+
+    def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
+        waveform = load_audio(self.audio_paths[index], self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
 
         out = {
             "waveform": waveform_patch,
