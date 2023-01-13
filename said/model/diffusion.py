@@ -27,22 +27,25 @@ class SAID(ABC, nn.Module):
     denoiser: nn.Module
     noise_scheduler: SchedulerMixin
 
-    def process_audio(self, waveform: torch.FloatTensor) -> torch.FloatTensor:
+    def process_audio(
+        self, waveform: Union[np.ndarray, torch.Tensor, List[np.ndarray]]
+    ) -> torch.FloatTensor:
         """Process the waveform to fit the audio encoder
 
         Parameters
         ----------
-        waveform : torch.FloatTensor
-            (T_a), Mono waveform
+        waveform : Union[np.ndarray, torch.Tensor, List[np.ndarray]]
+            - np.ndarray, torch.Tensor: (audio_seq_len,)
+            - List[np.ndarray]: each (audio_seq_len,)
 
         Returns
         -------
         torch.FloatTensor
-            (T_a), Processed mono waveform
+            (Batch_size, T_a), Processed mono waveform
         """
         out = self.audio_processor(
             waveform, sampling_rate=self.sampling_rate, return_tensors="pt"
-        )["input_values"].squeeze(0)
+        )["input_values"]
         return out
 
     @abstractmethod
@@ -51,9 +54,8 @@ class SAID(ABC, nn.Module):
 
         Parameters
         ----------
-        waveform : Union[np.ndarray, torch.Tensor, List[np.ndarray]]
-            - np.ndarray, torch.Tensor: (audio_seq_len,)
-            - List[np.ndarray]: each (audio_seq_len,)
+        waveform : torch.FloatTensor
+            (Batch_size, T_a), Processed mono waveform
 
         Returns
         -------

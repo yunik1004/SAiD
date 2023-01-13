@@ -81,7 +81,7 @@ class VOCARKitDataset(ABC, Dataset):
         Parameters
         ----------
         examples : List[Dict[str, torch.FloatTensor]]
-            _description_
+            List of the outputs of __getitem__
 
         Returns
         -------
@@ -176,8 +176,8 @@ class VOCARKitValDataset(VOCARKitDataset):
         blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
 
         out = {
-            "waveform": waveform_patch,
-            "blendshape_coeffs": blendshape_coeffs_patch,
+            "waveform": waveform,
+            "blendshape_coeffs": blendshape_coeffs,
         }
 
         return out
