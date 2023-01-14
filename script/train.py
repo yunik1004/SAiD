@@ -5,6 +5,7 @@ import os
 from typing import Any, Dict
 from accelerate import Accelerator
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import Wav2Vec2Model
@@ -34,7 +35,6 @@ def random_noise_loss(
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
     curr_batch_size = len(waveform)
-    volume_coeffs = torch.numel(blendshape_coeffs)
 
     waveform_processed = said_model.process_audio(waveform).to(device)
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
@@ -44,7 +44,8 @@ def random_noise_loss(
 
     noise_pred = said_model(noisy_coeffs, random_timesteps, audio_embedding)
 
-    loss = torch.norm(noise_pred - noise) / volume_coeffs
+    criterion = nn.MSELoss()
+    loss = criterion(noise, noise_pred)
 
     return loss
 
@@ -148,7 +149,7 @@ def main():
     parser.add_argument(
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
-    parser.add_argument("--epochs", type=int, default=1000, help="The number of epochs")
+    parser.add_argument("--epochs", type=int, default=3000, help="The number of epochs")
     parser.add_argument(
         "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
@@ -159,7 +160,7 @@ def main():
         "--val_repeat", type=int, default=10, help="Number of repetition of val dataset"
     )
     parser.add_argument(
-        "--save_period", type=int, default=100, help="Period of saving model"
+        "--save_period", type=int, default=200, help="Period of saving model"
     )
     args = parser.parse_args()
 
