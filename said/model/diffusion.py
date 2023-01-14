@@ -2,7 +2,7 @@
 """
 from abc import abstractmethod, ABC
 from typing import List, Optional, Tuple, Union
-from diffusers import DDIMScheduler, SchedulerMixin
+from diffusers import DDPMScheduler, SchedulerMixin
 import numpy as np
 import torch
 from torch import nn
@@ -151,7 +151,7 @@ class SAID_Wav2Vec2(SAID):
             cross_attention_dim=self.audio_config.conv_dim[-1],
         )
         self.noise_scheduler = (
-            noise_scheduler if noise_scheduler is not None else DDIMScheduler()
+            noise_scheduler if noise_scheduler is not None else DDPMScheduler()
         )
 
     def forward(
