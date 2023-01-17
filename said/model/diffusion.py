@@ -167,7 +167,7 @@ class SAID_Wav2Vec2(SAID):
         noisy_samples : torch.FloatTensor
             (Batch_size, coeffs_seq_len, num_coeffs), Sequence of noisy coefficients
         timesteps : torch.LongTensor
-            (Batch_size,), Timesteps
+            (Batch_size,) or (1,), Timesteps
         audio_embedding : torch.FloatTensor
             (Batch_size, embedding_seq_len, embedding_size), Sequence of audio embeddings
 
@@ -184,3 +184,54 @@ class SAID_Wav2Vec2(SAID):
     ) -> torch.FloatTensor:
         features = self.audio_encoder(waveform).extract_features
         return features
+
+    def inference(
+        self,
+        waveform_processed: torch.FloatTensor,
+        init_samples: Optional[torch.FloatTensor],
+        num_inference_steps: int,
+        guidance_scale: float = 7.5,
+        eta: float = 0.0,
+        fps: int = 60,
+    ) -> torch.FloatTensor:
+        batch_size = waveform_processed.shape[0]
+        waveform_len = waveform_processed.shape[1]
+        in_channels = self.denoiser.in_channels
+        device = waveform_processed.device
+        do_classifier_free_guidance = guidance_scale > 1.0
+        window_size = int(waveform_len / self.sampling_rate * fps)
+
+        self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
+
+        if init_samples is None:
+            init_samples = torch.rand(
+                batch_size, window_size, in_channels, device=device
+            )
+
+        audio_embedding = self.get_audio_embedding(waveform_processed)
+        if do_classifier_free_guidance:
+            uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
+            uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
+            uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
+
+            audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
+
+        latents = init_samples
+        for t in self.noise_scheduler.timesteps:
+            latent_model_input = (
+                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            )
+
+            noise_pred = self.forward(latent_model_input, t, audio_embedding)
+
+            if do_classifier_free_guidance:
+                noise_pred_uncond, noise_pred_audio = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + guidance_scale * (
+                    noise_pred_audio - noise_pred_uncond
+                )
+
+            latents = self.noise_scheduler.step(noise_pred, t, latents).prev_sample
+
+        latents = torch.clip(latents, 0, 1)
+
+        return latents

@@ -27,10 +27,14 @@ class UNet1DConditionModel(nn.Module):
             The dimension of the cross attention features
         """
         super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.cross_attention_dim = cross_attention_dim
+
         self.unet_2d = UNet2DConditionModel(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            cross_attention_dim=cross_attention_dim,
+            in_channels=self.in_channels,
+            out_channels=self.out_channels,
+            cross_attention_dim=self.cross_attention_dim,
         )
 
     def forward(
