@@ -11,7 +11,7 @@ bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
     "version": (0, 2, 0),
-    "blender": (3, 0, 0),
+    "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
     "category": "Lipsync",
