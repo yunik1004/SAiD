@@ -1,6 +1,7 @@
 """Define the diffusion models which are used as SAiD model
 """
 from abc import abstractmethod, ABC
+import inspect
 from typing import List, Optional, Tuple, Union
 from diffusers import DDPMScheduler, SchedulerMixin
 import numpy as np
@@ -217,6 +218,12 @@ class SAID_Wav2Vec2(SAID):
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
         latents = init_samples
+
+        # Prepare extra kwargs for the scheduler step
+        extra_step_kwargs = {}
+        if "eta" in set(inspect.signature(self.noise_scheduler.step).parameters.keys()):
+            extra_step_kwargs["eta"] = eta
+
         for t in self.noise_scheduler.timesteps:
             latent_model_input = (
                 torch.cat([latents] * 2) if do_classifier_free_guidance else latents
@@ -230,8 +237,10 @@ class SAID_Wav2Vec2(SAID):
                     noise_pred_audio - noise_pred_uncond
                 )
 
-            latents = self.noise_scheduler.step(noise_pred, t, latents).prev_sample
+            latents = self.noise_scheduler.step(
+                noise_pred, t, latents, **extra_step_kwargs
+            ).prev_sample
 
-        latents = torch.clip(latents, 0, 1)
+        latents = latents.clamp(0, 1)
 
         return latents
