@@ -34,6 +34,8 @@ def random_noise_loss(
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
+    blendshape_coeffs = (blendshape_coeffs - 0.5) * 2 * 0.18215
+
     curr_batch_size = len(waveform)
 
     waveform_processed = said_model.process_audio(waveform).to(device)
@@ -219,7 +221,12 @@ def main():
     )
 
     # Initialize the optimzier
-    optimizer = torch.optim.Adam(said_model.parameters(), lr=learning_rate)
+    said_model.audio_encoder.freeze_feature_encoder()
+
+    optimizer = torch.optim.Adam(
+        params=filter(lambda p: p.requires_grad, said_model.parameters()),
+        lr=learning_rate,
+    )
 
     # Prepare the acceleration using accelerator
     said_model, optimizer, train_dataloader, val_dataloader = accelerator.prepare(

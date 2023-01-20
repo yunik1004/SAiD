@@ -205,7 +205,12 @@ class SAID_Wav2Vec2(SAID):
         self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
 
         if init_samples is None:
+            """
             init_samples = torch.rand(
+                batch_size, window_size, in_channels, device=device
+            )
+            """
+            init_samples = torch.randn(
                 batch_size, window_size, in_channels, device=device
             )
 
@@ -241,6 +246,7 @@ class SAID_Wav2Vec2(SAID):
                 noise_pred, t, latents, **extra_step_kwargs
             ).prev_sample
 
+        latents = latents / 0.18215 / 2 + 0.5
         latents = latents.clamp(0, 1)
 
         return latents
