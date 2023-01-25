@@ -149,7 +149,7 @@ class SAID_Wav2Vec2(SAID):
         self.denoiser = UNet1DConditionModel(
             in_channels=in_channels,
             out_channels=in_channels,
-            cross_attention_dim=self.audio_config.conv_dim[-1],
+            cross_attention_dim=self.audio_config.hidden_size,
         )
         self.noise_scheduler = (
             noise_scheduler if noise_scheduler is not None else DDPMScheduler()
@@ -183,7 +183,7 @@ class SAID_Wav2Vec2(SAID):
     def get_audio_embedding(
         self, waveform: Union[np.ndarray, torch.Tensor, List[np.ndarray]]
     ) -> torch.FloatTensor:
-        features = self.audio_encoder(waveform).extract_features
+        features = self.audio_encoder(waveform).last_hidden_state
         return features
 
     def inference(
