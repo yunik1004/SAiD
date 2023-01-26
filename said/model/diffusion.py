@@ -205,14 +205,10 @@ class SAID_Wav2Vec2(SAID):
         self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
 
         if init_samples is None:
-            """
-            init_samples = torch.rand(
-                batch_size, window_size, in_channels, device=device
-            )
-            """
             init_samples = torch.randn(
                 batch_size, window_size, in_channels, device=device
             )
+            init_samples *= np.float64(self.noise_scheduler.init_noise_sigma)
 
         audio_embedding = self.get_audio_embedding(waveform_processed)
         if do_classifier_free_guidance:
@@ -232,6 +228,9 @@ class SAID_Wav2Vec2(SAID):
         for t in self.noise_scheduler.timesteps:
             latent_model_input = (
                 torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            )
+            latent_model_input = self.noise_scheduler.scale_model_input(
+                latent_model_input, t
             )
 
             noise_pred = self.forward(latent_model_input, t, audio_embedding)
