@@ -12,7 +12,7 @@ from dataset import VOCARKIT_CLASSES
 def main():
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Train the SAiD model using VOCA-ARKit dataset"
+        description="Inference the lipsync using the SAiD model"
     )
     parser.add_argument(
         "--weights_path",
