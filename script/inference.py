@@ -1,3 +1,5 @@
+"""Inference using the SAiD_Wav2Vec2 model
+"""
 import argparse
 from diffusers import DDIMScheduler
 import pandas as pd
@@ -15,7 +17,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output-prev/3000.pth",
+        default="../output/3000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
