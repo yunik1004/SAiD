@@ -43,7 +43,7 @@ def elbo_loss(
 
     mse_func = torch.nn.MSELoss(reduction="sum")
 
-    reconst_loss = mse_func(blendshape_coeffs_reconst, blendshape_coeffs)
+    reconst_loss = mse_func(blendshape_coeffs_reconst, blendshape_coeffs) / batch_size
     kld_loss = (
         torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1) / batch_size
     )
