@@ -2,10 +2,10 @@
 """
 import argparse
 from diffusers import DDIMScheduler
-import pandas as pd
 import torch
 from said.model.diffusion import SAID_Wav2Vec2
 from said.util.audio import load_audio
+from said.util.blendshape import save_blendshape_coeffs
 from dataset import VOCARKIT_CLASSES
 
 
@@ -78,8 +78,11 @@ def main():
             eta=eta,
         )
 
-    pout = pd.DataFrame(output[0].cpu().numpy(), columns=VOCARKIT_CLASSES)
-    pout.to_csv(output_path, index=False)
+    save_blendshape_coeffs(
+        coeffs=output[0].cpu().numpy(),
+        classes=VOCARKIT_CLASSES,
+        output_path=output_path,
+    )
 
 
 if __name__ == "__main__":
