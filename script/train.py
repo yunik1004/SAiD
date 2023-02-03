@@ -105,6 +105,24 @@ def validate_epoch(
     accelerator: Accelerator,
     num_repeat: int = 1,
 ) -> float:
+    """Train the SAiD model one epoch.
+
+    Parameters
+    ----------
+    said_model : SAID
+        SAiD model object
+    val_dataloader : DataLoader
+        Dataloader of the VOCARKitValDataset
+    accelerator : Accelerator
+        Accelerator object
+    num_repeat : int, optional
+        Number of the repetition, by default 1
+
+    Returns
+    -------
+    float
+        Average loss
+    """
     device = accelerator.device
 
     said_model.eval()
@@ -126,6 +144,7 @@ def validate_epoch(
 
 
 def main():
+    """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"

@@ -10,6 +10,7 @@ from dataset import VOCARKIT_CLASSES
 
 
 def main():
+    """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
         description="Inference the lipsync using the SAiD model"

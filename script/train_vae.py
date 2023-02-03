@@ -62,20 +62,20 @@ def train_epoch(
     accelerator: Accelerator,
     beta: float,
 ) -> Dict[str, float]:
-    """Train the SAiD model one epoch.
+    """Train the VAE one epoch.
 
     Parameters
     ----------
     said_vae : BCVAE
         BCVAE object
     train_dataloader : DataLoader
-        Dataloader of the VOCARKitTrainDataset
+        Dataloader of the VOCARKitVAEDataset
     optimizer : torch.optim.Optimizer
         Optimizer object
     accelerator : Accelerator
         Accelerator object
     beta : float, optional
-        loss weight
+        Loss weight
 
     Returns
     -------
@@ -131,6 +131,28 @@ def validate_epoch(
     accelerator: Accelerator,
     beta: float,
 ) -> Dict[str, float]:
+    """Validate the VAE one epoch.
+
+    Parameters
+    ----------
+    said_vae : BCVAE
+        BCVAE object
+    val_dataloader : DataLoader
+        Dataloader of the VOCARKitVAEDataset
+    accelerator : Accelerator
+        Accelerator object
+    beta : float
+        Loss weight
+
+    Returns
+    -------
+    Dict[str, float]
+        {
+            "reconstruction": Reconstruction loss
+            "regularization": Regularization loss
+            "total": Total loss
+        }
+    """
     device = accelerator.device
 
     said_vae.eval()
@@ -167,6 +189,7 @@ def validate_epoch(
 
 
 def main():
+    """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
