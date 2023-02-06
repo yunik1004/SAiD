@@ -185,15 +185,11 @@ class BCVAE(nn.Module):
                 "reconstruction": (Batch_size, sample_seq_len, x_dim), Reconstructed blendshape coefficients
             }
         """
-        latent_dict = self.encoder(coeffs)
-        mean = latent_dict["mean"]
-        log_var = latent_dict["log_var"]
-        latent = (
-            self.encoder.reparametrize(mean, log_var, align_noise)
-            if use_noise
-            else mean
-        )
-        coeffs_reconst = self.decoder(latent)
+        latent_stats = self.encode(coeffs)
+        mean = latent_stats["mean"]
+        log_var = latent_stats["log_var"]
+        latent = self.reparametrize(mean, log_var, align_noise) if use_noise else mean
+        coeffs_reconst = self.decode(latent)
         output = {
             "mean": mean,
             "log_var": log_var,
