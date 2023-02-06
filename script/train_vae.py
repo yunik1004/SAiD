@@ -21,7 +21,7 @@ def elbo_loss(
     said_vae : BCVAE
         BCVAE object
     data : torch.FloatTensor
-        Input data
+        (Batch_size, sample_seq_len, x_dim), Input data
     device : torch.device
         GPU device
 
@@ -33,8 +33,10 @@ def elbo_loss(
             "regularization": (1,), Regularization loss
         }
     """
-    batch_size = data.shape[0]
+    batch_size, sample_seq_len, _ = data.shape
     blendshape_coeffs = data.to(device)
+    num_samples = batch_size * sample_seq_len
+
     output = said_vae(blendshape_coeffs)
 
     mean = output["mean"]
@@ -43,9 +45,9 @@ def elbo_loss(
 
     mse_func = torch.nn.MSELoss(reduction="sum")
 
-    reconst_loss = mse_func(blendshape_coeffs_reconst, blendshape_coeffs) / batch_size
+    reconst_loss = mse_func(blendshape_coeffs_reconst, blendshape_coeffs) / num_samples
     kld_loss = (
-        torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1) / batch_size
+        torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1) / num_samples
     )
 
     output = {
