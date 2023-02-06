@@ -199,9 +199,7 @@ class SAID_Wav2Vec2(SAID):
         noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding)
         return noise_pred
 
-    def get_audio_embedding(
-        self, waveform: Union[np.ndarray, torch.Tensor, List[np.ndarray]]
-    ) -> torch.FloatTensor:
+    def get_audio_embedding(self, waveform: torch.FloatTensor) -> torch.FloatTensor:
         features = self.audio_encoder(waveform).last_hidden_state
         return features
 
@@ -245,12 +243,34 @@ class SAID_Wav2Vec2(SAID):
     def inference(
         self,
         waveform_processed: torch.FloatTensor,
-        init_samples: Optional[torch.FloatTensor],
-        num_inference_steps: int,
+        init_samples: Optional[torch.FloatTensor] = None,
+        num_inference_steps: int = 100,
         guidance_scale: float = 7.5,
         eta: float = 0.0,
         fps: int = 60,
     ) -> torch.FloatTensor:
+        """Inference pipeline
+
+        Parameters
+        ----------
+        waveform_processed : torch.FloatTensor
+            (Batch_size, T_a), Processed mono waveform
+        init_samples : Optional[torch.FloatTensor], optional
+            (Batch_size, sample_seq_len, x_dim), Starting point for the process, by default None
+        num_inference_steps : int, optional
+            The number of denoising steps, by default 100
+        guidance_scale : float, optional
+            Guidance scale in classifier-free guidance, by default 7.5
+        eta : float, optional
+            Eta in DDIM, by default 0.0
+        fps : int, optional
+            The number of frames per second, by default 60
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
+        """
         batch_size = waveform_processed.shape[0]
         waveform_len = waveform_processed.shape[1]
         in_channels = self.denoiser.in_channels
