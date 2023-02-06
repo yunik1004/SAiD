@@ -16,7 +16,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/3000.pth",
+        default="../output/5000.pth",
         help="Path of the weights of VAE",
     )
     parser.add_argument(
@@ -32,6 +32,18 @@ def main():
         help="Path of the output blendshape coefficients file (csv format)",
     )
     parser.add_argument(
+        "--use_noise",
+        type=bool,
+        default=True,
+        help="Use the noise when reconstructing the coefficients",
+    )
+    parser.add_argument(
+        "--align_noise",
+        type=bool,
+        default=True,
+        help="Align the noise during the whole sequence",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda:0",
@@ -42,6 +54,8 @@ def main():
     weights_path = args.weights_path
     blendshape_coeffs_path = args.blendshape_coeffs_path
     output_path = args.output_path
+    use_noise = args.use_noise
+    align_noise = args.align_noise
     device = args.device
 
     # Load model
@@ -52,11 +66,11 @@ def main():
 
     # Load data
     blendshape_coeffs = load_blendshape_coeffs(blendshape_coeffs_path).unsqueeze(0)
-    blendshape_coeffs.to(device)
+    blendshape_coeffs = blendshape_coeffs.to(device)
 
     # Inference
     with torch.no_grad():
-        output = said_vae(blendshape_coeffs)
+        output = said_vae(blendshape_coeffs, use_noise, align_noise)
 
     blendshape_coeffs_reconst = output["reconstruction"]
 
