@@ -221,6 +221,7 @@ class BCVAE(nn.Module):
         return self.encoder(coeffs)
 
     def reparametrize(
+        self,
         mean: torch.FloatTensor,
         log_var: torch.FloatTensor,
         align_noise: bool = False,
