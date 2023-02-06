@@ -34,7 +34,7 @@ def random_noise_loss(
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
-    blendshape_coeffs = (blendshape_coeffs - 0.5) * 2 * 0.18215
+    coeff_latents = said_model.get_latent(blendshape_coeffs)
 
     curr_batch_size = len(waveform)
 
@@ -42,9 +42,11 @@ def random_noise_loss(
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
     audio_embedding = said_model.get_audio_embedding(waveform_processed)
-    noisy_coeffs, noise = said_model.add_noise(blendshape_coeffs, random_timesteps)
+    noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
+    noisy_latents = noise_dict["noisy_samples"]
+    noise = noise_dict["noise"]
 
-    noise_pred = said_model(noisy_coeffs, random_timesteps, audio_embedding)
+    noise_pred = said_model(noisy_latents, random_timesteps, audio_embedding)
 
     criterion = nn.MSELoss()
     loss = criterion(noise, noise_pred)
@@ -150,6 +152,12 @@ def main():
         description="Train the SAiD model using VOCA-ARKit dataset"
     )
     parser.add_argument(
+        "--vae_weights_path",
+        type=str,
+        default="../output-vae/5000.pth",
+        help="Path of the weights of VAE",
+    )
+    parser.add_argument(
         "--data_dir",
         type=str,
         default="../VOCA_ARKit",
@@ -185,6 +193,8 @@ def main():
     )
     args = parser.parse_args()
 
+    vae_weights_path = args.vae_weights_path
+
     train_dir = os.path.join(args.data_dir, "train")
     val_dir = os.path.join(args.data_dir, "val")
 
@@ -207,10 +217,13 @@ def main():
     if accelerator.is_main_process:
         accelerator.init_trackers("SAiD")
 
-    # Load model with pretrained audio encoder
+    # Load model with pretrained audio encoder, VAE
     said_model = SAID_Wav2Vec2()
     said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
+    )
+    said_model.vae.load_state_dict(
+        torch.load(vae_weights_path, map_location=accelerator.device)
     )
 
     # Load data
@@ -239,8 +252,11 @@ def main():
         collate_fn=VOCARKitValDataset.collate_fn,
     )
 
-    # Initialize the optimzier
+    # Initialize the optimzier - freeze audio encoder, VAE
     said_model.audio_encoder.freeze_feature_encoder()
+
+    for p in said_model.vae.parameters():
+        p.requires_grad = False
 
     optimizer = torch.optim.Adam(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),

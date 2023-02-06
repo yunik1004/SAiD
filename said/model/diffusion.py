@@ -2,7 +2,7 @@
 """
 from abc import abstractmethod, ABC
 import inspect
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 from diffusers import DDPMScheduler, SchedulerMixin
 import numpy as np
 import torch
@@ -17,6 +17,7 @@ from transformers import (
     Wav2Vec2Processor,
 )
 from .unet_1d_condition import UNet1DConditionModel
+from .vae import BCVAE
 
 
 class SAID(ABC, nn.Module):
@@ -88,7 +89,7 @@ class SAID(ABC, nn.Module):
 
     def add_noise(
         self, samples: torch.FloatTensor, timesteps: torch.LongTensor
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> Dict[str, torch.FloatTensor]:
         """Add the noise into the sample
 
         Parameters
@@ -100,12 +101,20 @@ class SAID(ABC, nn.Module):
 
         Returns
         -------
-        Tuple[torch.FloatTensor, torch.FloatTensor]
-            Noised samples, and Noise
+        Dict[str, torch.FloatTensor]
+            {
+                "noisy_samples": Noisy samples
+                "noise": Added noise
+            }
         """
         noise = torch.randn(samples.shape, device=samples.device)
         noisy_samples = self.noise_scheduler.add_noise(samples, noise, timesteps)
-        return noisy_samples, noise
+
+        output = {
+            "noisy_samples": noisy_samples,
+            "noise": noise,
+        }
+        return output
 
 
 class SAID_Wav2Vec2(SAID):
@@ -116,7 +125,9 @@ class SAID_Wav2Vec2(SAID):
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
         noise_scheduler: Optional[SchedulerMixin] = None,
-        in_channels: int = 32,
+        vae_x_dim: int = 32,
+        vae_h_dim: int = 16,
+        vae_z_dim: int = 8,
     ):
         """Constructor of SAID_Wav2Vec2
 
@@ -128,8 +139,12 @@ class SAID_Wav2Vec2(SAID):
             Wav2Vec2Processor object, by default None
         noise_scheduler : Optional[SchedulerMixin], optional
             scheduler object, by default None
-        in_channels: int
-            Size of the input channel, by default 32
+        x_dim : int
+            Dimension of the input, by default 32
+        h_dim : int
+            Dimension of the hidden layer, by default 16
+        z_dim : int
+            Dimension of the latent, by default 8
         """
         super(SAID_Wav2Vec2, self).__init__()
 
@@ -145,10 +160,14 @@ class SAID_Wav2Vec2(SAID):
         )
         self.sampling_rate = self.audio_processor.feature_extractor.sampling_rate
 
+        # VAE
+        self.vae = BCVAE(x_dim=vae_x_dim, h_dim=vae_h_dim, z_dim=vae_z_dim)
+        self.latent_scale = 0.18215
+
         # Denoiser-related
         self.denoiser = UNet1DConditionModel(
-            in_channels=in_channels,
-            out_channels=in_channels,
+            in_channels=vae_z_dim,
+            out_channels=vae_z_dim,
             cross_attention_dim=self.audio_config.hidden_size,
         )
         self.noise_scheduler = (
@@ -166,7 +185,7 @@ class SAID_Wav2Vec2(SAID):
         Parameters
         ----------
         noisy_samples : torch.FloatTensor
-            (Batch_size, coeffs_seq_len, num_coeffs), Sequence of noisy coefficients
+            (Batch_size, coeffs_seq_len, z_dim), Sequence of noisy coefficient latents
         timesteps : torch.LongTensor
             (Batch_size,) or (1,), Timesteps
         audio_embedding : torch.FloatTensor
@@ -185,6 +204,43 @@ class SAID_Wav2Vec2(SAID):
     ) -> torch.FloatTensor:
         features = self.audio_encoder(waveform).last_hidden_state
         return features
+
+    def get_latent(
+        self,
+        coeffs: torch.FloatTensor,
+        use_noise: bool = True,
+        align_noise: bool = True,
+        do_scaling: bool = True,
+    ) -> torch.FloatTensor:
+        """Convert blendshape coefficients into the latents
+
+        Parameters
+        ----------
+        coeffs : torch.FloatTensor
+            (Batch_size, sample_seq_len, x_dim), Blendshape coefficients
+        use_noise : bool, optional
+            Whether using noises when reconstructing the coefficients, by default True
+        align_noise : bool, optional
+            Whether the noises are the same in each batch, by default True
+        do_scaling : bool, optional
+            Whether scaling the latent, by default True
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, z_dim), Latents of the coefficients
+        """
+        latent_stats = self.vae.encode(coeffs)
+        latent = (
+            self.vae.reparametrize(
+                latent_stats["mean"], latent_stats["log_var"], align_noise
+            )
+            if use_noise
+            else mean
+        )
+        if do_scaling:
+            latent *= self.latent_scale
+        return latent
 
     def inference(
         self,
@@ -205,10 +261,17 @@ class SAID_Wav2Vec2(SAID):
         self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
 
         if init_samples is None:
-            init_samples = torch.randn(
-                batch_size, window_size, in_channels, device=device
+            latents = torch.randn(batch_size, window_size, in_channels, device=device)
+            latents *= np.float64(self.noise_scheduler.init_noise_sigma)
+        else:
+            latent_stats = self.vae.encode(init_samples)
+            latents = self.vae.reparametrize(
+                latent_stats["mean"], latent_stats["log_var"], True
             )
-            init_samples *= np.float64(self.noise_scheduler.init_noise_sigma)
+            # Todo: Adding additional noise would be necessary
+
+        # Scaling the latent
+        latents *= self.latent_scale
 
         audio_embedding = self.get_audio_embedding(waveform_processed)
         if do_classifier_free_guidance:
@@ -217,8 +280,6 @@ class SAID_Wav2Vec2(SAID):
             uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
 
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
-
-        latents = init_samples
 
         # Prepare extra kwargs for the scheduler step
         extra_step_kwargs = {}
@@ -245,7 +306,8 @@ class SAID_Wav2Vec2(SAID):
                 noise_pred, t, latents, **extra_step_kwargs
             ).prev_sample
 
-        latents = latents / 0.18215 / 2 + 0.5
-        latents = latents.clamp(0, 1)
+        # Re-scaling the latent
+        latents /= self.latent_scale
+        output = self.vae.decode(latents)
 
-        return latents
+        return output
