@@ -162,7 +162,7 @@ class BCVAE(nn.Module):
         self.decoder = BCDecoder(z_dim, h_dim, x_dim)
 
     def forward(
-        self, coeffs: torch.Tensor, align_noise: bool = False
+        self, coeffs: torch.Tensor, use_noise: bool = True, align_noise: bool = False
     ) -> Dict[str, torch.Tensor]:
         """Forward function
 
@@ -170,6 +170,8 @@ class BCVAE(nn.Module):
         ----------
         coeffs : torch.Tensor
             (Batch_size, sample_seq_len, x_dim), Blendshape coefficients
+        use_noise : bool, optional
+            Whether using noises when reconstructing the coefficients, by default True
         align_noise : bool, optional
             Whether the noises are the same in each batch, by default False
 
@@ -186,7 +188,11 @@ class BCVAE(nn.Module):
         latent_dict = self.encoder(coeffs)
         mean = latent_dict["mean"]
         log_var = latent_dict["log_var"]
-        latent = self.encoder.reparametrize(mean, log_var, align_noise)
+        latent = (
+            self.encoder.reparametrize(mean, log_var, align_noise)
+            if use_noise
+            else mean
+        )
         coeffs_reconst = self.decoder(latent)
         output = {
             "mean": mean,
