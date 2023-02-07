@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "said"
-version = "0.1.0"
+version = "0.2.0"
 description = "Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -13,6 +13,7 @@ authors = [
 ]
 dependencies = [
     "diffusers[torch]",
+    "einops",
     "numpy",
     "pandas",
     "torch",
@@ -37,5 +38,5 @@ include = '''
     blender-addon
   | said
   | script
-)/
+)/.*\.py$
 '''
