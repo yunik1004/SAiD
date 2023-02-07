@@ -282,7 +282,6 @@ class SAID_Wav2Vec2(SAID):
 
         if init_samples is None:
             latents = torch.randn(batch_size, window_size, in_channels, device=device)
-            latents *= np.float64(self.noise_scheduler.init_noise_sigma)
         else:
             latent_stats = self.vae.encode(init_samples)
             latents = self.vae.reparametrize(
@@ -291,7 +290,7 @@ class SAID_Wav2Vec2(SAID):
             # Todo: Adding additional noise would be necessary
 
         # Scaling the latent
-        latents *= self.latent_scale
+        latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
 
         audio_embedding = self.get_audio_embedding(waveform_processed)
         if do_classifier_free_guidance:
