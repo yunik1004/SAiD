@@ -20,48 +20,6 @@ from .util import (
 from .attention import SpatialTransformer
 
 
-# dummy replace
-def convert_module_to_f16(x):
-    pass
-
-
-def convert_module_to_f32(x):
-    pass
-
-
-## go
-class AttentionPool2d(nn.Module):
-    """
-    Adapted from CLIP: https://github.com/openai/CLIP/blob/main/clip/model.py
-    """
-
-    def __init__(
-        self,
-        spacial_dim: int,
-        embed_dim: int,
-        num_heads_channels: int,
-        output_dim: int = None,
-    ):
-        super().__init__()
-        self.positional_embedding = nn.Parameter(
-            th.randn(embed_dim, spacial_dim**2 + 1) / embed_dim**0.5
-        )
-        self.qkv_proj = conv_nd(1, embed_dim, 3 * embed_dim, 1)
-        self.c_proj = conv_nd(1, embed_dim, output_dim or embed_dim, 1)
-        self.num_heads = embed_dim // num_heads_channels
-        self.attention = QKVAttention(self.num_heads)
-
-    def forward(self, x):
-        b, c, *_spatial = x.shape
-        x = x.reshape(b, c, -1)  # NC(HW)
-        x = th.cat([x.mean(dim=-1, keepdim=True), x], dim=-1)  # NC(HW+1)
-        x = x + self.positional_embedding[None, :, :].to(x.dtype)  # NC(HW+1)
-        x = self.qkv_proj(x)
-        x = self.attention(x)
-        x = self.c_proj(x)
-        return x[:, :, 0]
-
-
 class TimestepBlock(nn.Module):
     """
     Any module where forward() takes timestep embeddings as a second argument.
@@ -122,22 +80,6 @@ class Upsample(nn.Module):
         if self.use_conv:
             x = self.conv(x)
         return x
-
-
-class TransposedUpsample(nn.Module):
-    "Learned 2x upsampling without padding"
-
-    def __init__(self, channels, out_channels=None, ks=5):
-        super().__init__()
-        self.channels = channels
-        self.out_channels = out_channels or channels
-
-        self.up = nn.ConvTranspose2d(
-            self.channels, self.out_channels, kernel_size=ks, stride=2
-        )
-
-    def forward(self, x):
-        return self.up(x)
 
 
 class Downsample(nn.Module):
@@ -734,22 +676,6 @@ class UNetModel(nn.Module):
                 conv_nd(dims, model_channels, n_embed, 1),
                 # nn.LogSoftmax(dim=1)  # change to cross_entropy and produce non-normalized logits
             )
-
-    def convert_to_fp16(self):
-        """
-        Convert the torso of the model to float16.
-        """
-        self.input_blocks.apply(convert_module_to_f16)
-        self.middle_block.apply(convert_module_to_f16)
-        self.output_blocks.apply(convert_module_to_f16)
-
-    def convert_to_fp32(self):
-        """
-        Convert the torso of the model to float32.
-        """
-        self.input_blocks.apply(convert_module_to_f32)
-        self.middle_block.apply(convert_module_to_f32)
-        self.output_blocks.apply(convert_module_to_f32)
 
     def forward(self, x, timesteps=None, context=None, y=None, **kwargs):
         """

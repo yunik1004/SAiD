@@ -233,11 +233,19 @@ def main():
         said_model.sampling_rate,
         window_size,
     )
+    val_dataset = VOCARKitTrainDataset(
+        val_audio_dir,
+        val_blendshape_coeffs_dir,
+        said_model.sampling_rate,
+        window_size,
+    )
+    """
     val_dataset = VOCARKitValDataset(
         val_audio_dir,
         val_blendshape_coeffs_dir,
         said_model.sampling_rate,
     )
+    """
 
     train_dataloader = DataLoader(
         train_dataset,
