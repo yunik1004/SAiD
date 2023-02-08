@@ -1,9 +1,8 @@
 """Define the conditional 1D UNet model
 """
-from typing import Union
-from diffusers import UNet2DConditionModel
 import torch
 from torch import nn
+from ..ldm.openaimodel import UNetModel
 
 
 class UNet1DConditionModel(nn.Module):
@@ -31,16 +30,24 @@ class UNet1DConditionModel(nn.Module):
         self.out_channels = out_channels
         self.cross_attention_dim = cross_attention_dim
 
-        self.unet_2d = UNet2DConditionModel(
+        self.model = UNetModel(
+            dims=1,
             in_channels=self.in_channels,
             out_channels=self.out_channels,
-            cross_attention_dim=self.cross_attention_dim,
+            model_channels=192,
+            num_res_blocks=2,
+            attention_resolutions=(8, 4, 2),
+            channel_mult=(1, 2, 3, 5),
+            num_head_channels=32,
+            use_spatial_transformer=True,
+            transformer_depth=1,
+            context_dim=self.cross_attention_dim,
         )
 
     def forward(
         self,
         sample: torch.FloatTensor,
-        timestep: Union[torch.Tensor, float, int],
+        timestep: torch.Tensor,
         encoder_hidden_states: torch.Tensor,
     ) -> torch.FloatTensor:
         """Denoise the input sample
@@ -49,8 +56,8 @@ class UNet1DConditionModel(nn.Module):
         ----------
         sample : torch.FloatTensor
             (Batch_size, sample_seq_len, channel), Noisy inputs tensor
-        timestep : Union[torch.Tensor, float, int]
-            (Batch_size,), Timesteps
+        timestep : torch.Tensor
+            (Batch_size,), (1,), or (), Timesteps
         encoder_hidden_states : torch.Tensor
             (Batch_size, hidden_states_seq_len, cross_attention_dim), Encoder hidden states
 
@@ -59,8 +66,13 @@ class UNet1DConditionModel(nn.Module):
         torch.FloatTensor
             (Batch_size, sample_seq_len, channel), Predicted noise
         """
-        out = sample.unsqueeze(1).transpose(1, 3)
-        out = self.unet_2d(out, timestep, encoder_hidden_states).sample
-        out = out.squeeze(3).transpose(1, 2)
+        timestep_size = timestep.size()
+        if len(timestep_size) == 0 or timestep_size[0] == 1:
+            batch_size = sample.shape[0]
+            timestep = timestep.repeat(batch_size)
+
+        out = sample.transpose(1, 2)
+        out = self.model(out, timestep, encoder_hidden_states)
+        out = out.transpose(1, 2)
 
         return out
