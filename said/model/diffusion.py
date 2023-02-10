@@ -117,8 +117,8 @@ class SAID(ABC, nn.Module):
         return output
 
 
-class SAID_Wav2Vec2(SAID):
-    """SAiD model implemented using Wav2Vec2 audio model"""
+class SAID_UNet1D(SAID):
+    """SAiD model implemented using U-Net 1D model"""
 
     def __init__(
         self,
@@ -128,6 +128,8 @@ class SAID_Wav2Vec2(SAID):
         vae_x_dim: int = 32,
         vae_h_dim: int = 16,
         vae_z_dim: int = 8,
+        diffusion_steps: int = 1000,
+        latent_scale: float = 0.18215,
     ):
         """Constructor of SAID_Wav2Vec2
 
@@ -145,6 +147,10 @@ class SAID_Wav2Vec2(SAID):
             Dimension of the hidden layer, by default 16
         z_dim : int
             Dimension of the latent, by default 8
+        diffusion_steps : int
+            The number of diffusion steps, by default 50
+        latent_scale : float
+            Scaling the latent, by default 0.18215
         """
         super(SAID_Wav2Vec2, self).__init__()
 
@@ -162,7 +168,7 @@ class SAID_Wav2Vec2(SAID):
 
         # VAE
         self.vae = BCVAE(x_dim=vae_x_dim, h_dim=vae_h_dim, z_dim=vae_z_dim)
-        self.latent_scale = 0.18215
+        self.latent_scale = latent_scale
 
         # Denoiser-related
         self.denoiser = UNet1DConditionModel(
@@ -171,7 +177,14 @@ class SAID_Wav2Vec2(SAID):
             cross_attention_dim=self.audio_config.hidden_size,
         )
         self.noise_scheduler = (
-            noise_scheduler if noise_scheduler is not None else DDPMScheduler()
+            noise_scheduler
+            if noise_scheduler is not None
+            else DDPMScheduler(
+                num_train_timesteps=diffusion_steps,
+                beta_start=1e-4,
+                beta_end=2e-2,
+                beta_schedule="squaredcos_cap_v2",
+            )
         )
 
     def forward(
@@ -245,10 +258,11 @@ class SAID_Wav2Vec2(SAID):
         waveform_processed: torch.FloatTensor,
         init_samples: Optional[torch.FloatTensor] = None,
         num_inference_steps: int = 100,
-        guidance_scale: float = 7.5,
+        guidance_scale: float = 0.0,
         eta: float = 0.0,
         fps: int = 60,
-    ) -> torch.FloatTensor:
+        save_intermediate: bool = False,
+    ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
         """Inference pipeline
 
         Parameters
@@ -268,8 +282,11 @@ class SAID_Wav2Vec2(SAID):
 
         Returns
         -------
-        torch.FloatTensor
-            (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
+        Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
+            {
+                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
+                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, x_dim), Intermediate blendshape coefficients
+            }
         """
         batch_size = waveform_processed.shape[0]
         waveform_len = waveform_processed.shape[1]
@@ -305,7 +322,13 @@ class SAID_Wav2Vec2(SAID):
         if "eta" in set(inspect.signature(self.noise_scheduler.step).parameters.keys()):
             extra_step_kwargs["eta"] = eta
 
+        intermediates = []
+
         for t in self.noise_scheduler.timesteps:
+            if save_intermediate:
+                interm = self.vae.decode(latents / self.latent_scale)
+                intermediates.append(interm)
+
             latent_model_input = (
                 torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             )
@@ -327,6 +350,11 @@ class SAID_Wav2Vec2(SAID):
 
         # Re-scaling the latent
         latents /= self.latent_scale
-        output = self.vae.decode(latents)
+        result = self.vae.decode(latents)
+
+        output = {
+            "Result": result,
+            "Intermediate": intermediates,
+        }
 
         return output

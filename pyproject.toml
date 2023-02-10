@@ -16,6 +16,7 @@ dependencies = [
     "einops",
     "numpy",
     "pandas",
+    "pillow",
     "torch",
     "torchaudio",
     "transformers",
