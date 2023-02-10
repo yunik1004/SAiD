@@ -258,7 +258,7 @@ class SAID_UNet1D(SAID):
         waveform_processed: torch.FloatTensor,
         init_samples: Optional[torch.FloatTensor] = None,
         num_inference_steps: int = 100,
-        guidance_scale: float = 0.0,
+        guidance_scale: float = 2.5,
         eta: float = 0.0,
         fps: int = 60,
         save_intermediate: bool = False,

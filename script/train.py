@@ -183,6 +183,12 @@ def main():
         "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
     parser.add_argument(
+        "--uncond_prob",
+        type=float,
+        default=0.1,
+        help="Unconditional probability of waveform (for classifier-free guidance)",
+    )
+    parser.add_argument(
         "--val_period", type=int, default=50, help="Period of validating model"
     )
     parser.add_argument(
@@ -208,6 +214,7 @@ def main():
     batch_size = args.batch_size
     epochs = args.epochs
     learning_rate = args.learning_rate
+    uncond_prob = args.uncond_prob
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
@@ -232,12 +239,14 @@ def main():
         train_blendshape_coeffs_dir,
         said_model.sampling_rate,
         window_size,
+        uncond_prob=uncond_prob,
     )
     val_dataset = VOCARKitTrainDataset(
         val_audio_dir,
         val_blendshape_coeffs_dir,
         said_model.sampling_rate,
         window_size,
+        uncond_prob=uncond_prob,
     )
     """
     val_dataset = VOCARKitValDataset(
