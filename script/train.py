@@ -1,4 +1,4 @@
-"""Train the SAiD_Wav2Vec2 model
+"""Train the SAID_UNet1D model
 """
 import argparse
 import os

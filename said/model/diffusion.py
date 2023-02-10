@@ -131,7 +131,7 @@ class SAID_UNet1D(SAID):
         diffusion_steps: int = 1000,
         latent_scale: float = 0.18215,
     ):
-        """Constructor of SAID_Wav2Vec2
+        """Constructor of SAID_UNet1D
 
         Parameters
         ----------
@@ -152,7 +152,7 @@ class SAID_UNet1D(SAID):
         latent_scale : float
             Scaling the latent, by default 0.18215
         """
-        super(SAID_Wav2Vec2, self).__init__()
+        super(SAID_UNet1D, self).__init__()
 
         # Audio-related
         self.audio_config = (

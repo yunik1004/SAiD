@@ -1,4 +1,4 @@
-"""Inference using the SAiD_Wav2Vec2 model
+"""Inference using the SAID_UNet1D model
 """
 import argparse
 import math
