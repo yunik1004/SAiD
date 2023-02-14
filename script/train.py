@@ -1,4 +1,4 @@
-"""Train the SAiD_Wav2Vec2 model
+"""Train the SAID_UNet1D model
 """
 import argparse
 import os
@@ -9,7 +9,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import Wav2Vec2Model
-from said.model.diffusion import SAID, SAID_Wav2Vec2
+from said.model.diffusion import SAID, SAID_UNet1D
 from dataset import VOCARKitTrainDataset, VOCARKitValDataset
 
 
@@ -34,7 +34,8 @@ def random_noise_loss(
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
-    coeff_latents = said_model.get_latent(blendshape_coeffs)
+    # coeff_latents = said_model.get_latent(blendshape_coeffs)
+    coeff_latents = blendshape_coeffs
 
     curr_batch_size = len(waveform)
 
@@ -151,12 +152,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
     )
+    """
     parser.add_argument(
         "--vae_weights_path",
         type=str,
         default="../output-vae/5000.pth",
         help="Path of the weights of VAE",
     )
+    """
     parser.add_argument(
         "--data_dir",
         type=str,
@@ -183,6 +186,12 @@ def main():
         "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
     parser.add_argument(
+        "--uncond_prob",
+        type=float,
+        default=0.1,
+        help="Unconditional probability of waveform (for classifier-free guidance)",
+    )
+    parser.add_argument(
         "--val_period", type=int, default=50, help="Period of validating model"
     )
     parser.add_argument(
@@ -193,7 +202,7 @@ def main():
     )
     args = parser.parse_args()
 
-    vae_weights_path = args.vae_weights_path
+    # vae_weights_path = args.vae_weights_path
 
     train_dir = os.path.join(args.data_dir, "train")
     val_dir = os.path.join(args.data_dir, "val")
@@ -208,6 +217,7 @@ def main():
     batch_size = args.batch_size
     epochs = args.epochs
     learning_rate = args.learning_rate
+    uncond_prob = args.uncond_prob
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
@@ -218,13 +228,15 @@ def main():
         accelerator.init_trackers("SAiD")
 
     # Load model with pretrained audio encoder, VAE
-    said_model = SAID_Wav2Vec2()
+    said_model = SAID_UNet1D()
     said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
+    """
     said_model.vae.load_state_dict(
         torch.load(vae_weights_path, map_location=accelerator.device)
     )
+    """
 
     # Load data
     train_dataset = VOCARKitTrainDataset(
@@ -232,12 +244,22 @@ def main():
         train_blendshape_coeffs_dir,
         said_model.sampling_rate,
         window_size,
+        uncond_prob=uncond_prob,
     )
+    val_dataset = VOCARKitTrainDataset(
+        val_audio_dir,
+        val_blendshape_coeffs_dir,
+        said_model.sampling_rate,
+        window_size,
+        uncond_prob=uncond_prob,
+    )
+    """
     val_dataset = VOCARKitValDataset(
         val_audio_dir,
         val_blendshape_coeffs_dir,
         said_model.sampling_rate,
     )
+    """
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -253,10 +275,13 @@ def main():
     )
 
     # Initialize the optimzier - freeze audio encoder, VAE
-    said_model.audio_encoder.freeze_feature_encoder()
+    for p in said_model.audio_encoder.parameters():
+        p.requires_grad = False
 
+    """
     for p in said_model.vae.parameters():
         p.requires_grad = False
+    """
 
     optimizer = torch.optim.Adam(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),
