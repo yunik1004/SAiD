@@ -34,7 +34,8 @@ def random_noise_loss(
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
-    coeff_latents = said_model.get_latent(blendshape_coeffs)
+    # coeff_latents = said_model.get_latent(blendshape_coeffs)
+    coeff_latents = blendshape_coeffs
 
     curr_batch_size = len(waveform)
 
@@ -151,12 +152,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
     )
+    """
     parser.add_argument(
         "--vae_weights_path",
         type=str,
         default="../output-vae/5000.pth",
         help="Path of the weights of VAE",
     )
+    """
     parser.add_argument(
         "--data_dir",
         type=str,
@@ -199,7 +202,7 @@ def main():
     )
     args = parser.parse_args()
 
-    vae_weights_path = args.vae_weights_path
+    # vae_weights_path = args.vae_weights_path
 
     train_dir = os.path.join(args.data_dir, "train")
     val_dir = os.path.join(args.data_dir, "val")
@@ -229,9 +232,11 @@ def main():
     said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
+    """
     said_model.vae.load_state_dict(
         torch.load(vae_weights_path, map_location=accelerator.device)
     )
+    """
 
     # Load data
     train_dataset = VOCARKitTrainDataset(
@@ -270,10 +275,13 @@ def main():
     )
 
     # Initialize the optimzier - freeze audio encoder, VAE
-    said_model.audio_encoder.freeze_feature_encoder()
+    for p in said_model.audio_encoder.parameters():
+        p.requires_grad = False
 
+    """
     for p in said_model.vae.parameters():
         p.requires_grad = False
+    """
 
     optimizer = torch.optim.Adam(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),

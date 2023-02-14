@@ -19,7 +19,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/3000.pth",
+        default="../output-dropout/5000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
@@ -38,7 +38,7 @@ def main():
         "--num_steps", type=int, default=100, help="Number of inference steps"
     )
     parser.add_argument(
-        "--guidance_scale", type=float, default=0.0, help="Guidance scale"
+        "--guidance_scale", type=float, default=2.5, help="Guidance scale"
     )
     parser.add_argument(
         "--eta", type=float, default=0.0, help="Eta for DDIMScheduler, between [0, 1]"
@@ -129,12 +129,19 @@ def main():
     )
 
     """
+    # Save coeffs as images
     save_blendshape_coeffs_image(result, "../out.png")
 
     if save_intermediate:
         for i, interm in enumerate(intermediate):
             save_blendshape_coeffs_image(
                 interm[0, :window_len].cpu().numpy(), f"../interm/{i}.png"
+            )
+
+            save_blendshape_coeffs(
+                coeffs=interm[0, :window_len].cpu().numpy(),
+                classes=VOCARKIT_CLASSES,
+                output_path=f"../interm/{i}.csv",
             )
     """
 

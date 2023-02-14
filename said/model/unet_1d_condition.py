@@ -13,6 +13,7 @@ class UNet1DConditionModel(nn.Module):
         in_channels: int,
         out_channels: int,
         cross_attention_dim: int,
+        dropout: float = 0.1,
     ):
         """Constructor of the UNet1DConditionModel
 
@@ -24,6 +25,8 @@ class UNet1DConditionModel(nn.Module):
             The number of channels in the output
         cross_attention_dim : int
             The dimension of the cross attention features
+        dropout : float
+            Dropout ratte, by default 0.1
         """
         super().__init__()
         self.in_channels = in_channels
@@ -37,6 +40,7 @@ class UNet1DConditionModel(nn.Module):
             model_channels=192,
             num_res_blocks=2,
             attention_resolutions=(8, 4, 2),
+            dropout=dropout,
             channel_mult=(1, 2, 3, 5),
             num_head_channels=32,
             use_spatial_transformer=True,
