@@ -87,6 +87,11 @@ class CrossAttention(nn.Module):
     def forward(self, x, context=None, mask=None):
         h = self.heads
 
+        """
+        # Check whether it is a cross attention
+        iscross = context is not None
+        """
+
         q = self.to_q(x)
         context = default(context, x)
         k = self.to_k(context)
@@ -104,6 +109,20 @@ class CrossAttention(nn.Module):
 
         # attention, what we cannot get enough of
         attn = sim.softmax(dim=-1)
+
+        """
+        # Save the cross attention map
+        if iscross:
+            import time
+            import seaborn as sns
+            import matplotlib.pyplot as plt
+            data = attn[0].detach().cpu().numpy()
+            filename = f"../attn/{time.time()}.png"
+
+            ax = sns.heatmap(data)
+            plt.savefig(filename)
+            plt.close()
+        """
 
         out = einsum("b i j, b j d -> b i d", attn, v)
         out = rearrange(out, "(b h) n d -> b n (h d)", h=h)
