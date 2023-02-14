@@ -149,6 +149,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         sampling_rate: int,
         window_size: int = 120,
         fps: int = 60,
+        uncond_prob: float = 0.1,
     ):
         """Constructor of the class
 
@@ -164,10 +165,13 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Window size of the blendshape coefficients, by default 120
         fps : int, optional
             fps of the blendshape coefficients, by default 60
+        uncond_prob : float, optional
+            Unconditional probability of waveform (for classifier-free guidance), by default 0.1
         """
         super().__init__(audio_dir, blendshape_coeffs_dir, sampling_rate)
         self.window_size = window_size
         self.fps = fps
+        self.uncond_prob = uncond_prob
 
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
         waveform = load_audio(self.audio_paths[index], self.sampling_rate)
@@ -194,6 +198,9 @@ class VOCARKitTrainDataset(VOCARKitDataset):
 
             waveform_patch = torch.zeros(waveform_patch_len)
             waveform_patch[:waveform_len] = waveform[:]
+
+        if random.uniform(0, 1) < self.uncond_prob:
+            waveform_patch = torch.zeros(waveform_patch_len)
 
         out = {
             "waveform": waveform_patch,
