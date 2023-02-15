@@ -191,6 +191,36 @@ class SAID(ABC, nn.Module):
         }
         return output
 
+    def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
+        """Encode samples into latent
+
+        Parameters
+        ----------
+        samples : torch.FloatTensor
+            (Batch_size, sample_seq_len, in_channels), Samples
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, in_channels), Output latent
+        """
+        return samples.clone()
+
+    def decode_latent(self, latent: torch.FloatTensor) -> torch.FloatTensor:
+        """Decode latent into samples
+
+        Parameters
+        ----------
+        latent : torch.FloatTensor
+            (Batch_size, sample_seq_len, in_channels), Latent
+
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, in_channels), Output samples
+        """
+        return latent.clone()
+
     def inference(
         self,
         waveform_processed: torch.FloatTensor,
@@ -208,7 +238,7 @@ class SAID(ABC, nn.Module):
         waveform_processed : torch.FloatTensor
             (Batch_size, T_a), Processed mono waveform
         init_samples : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, in_channels), Starting point for the process, by default None
+            (Batch_size, sample_seq_len, vae_x_dim), Starting point for the process, by default None
         num_inference_steps : int, optional
             The number of denoising steps, by default 100
         guidance_scale : float, optional
@@ -222,8 +252,8 @@ class SAID(ABC, nn.Module):
         -------
         Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
             {
-                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, in_channels), Generated blendshape coefficients
-                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, in_channels), Intermediate blendshape coefficients
+                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, vae_x_dim), Generated blendshape coefficients
+                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, vae_x_dim), Intermediate blendshape coefficients
             }
         """
         batch_size = waveform_processed.shape[0]
@@ -238,7 +268,8 @@ class SAID(ABC, nn.Module):
         if init_samples is None:
             latents = torch.randn(batch_size, window_size, in_channels, device=device)
         else:
-            latents = init_samples.clonse()
+            latents = self.encode_samples(init_samples)
+
             # Todo: Adding additional noise would be necessary
 
         # Scaling the latent
@@ -261,6 +292,7 @@ class SAID(ABC, nn.Module):
 
         for t in self.noise_scheduler.timesteps:
             if save_intermediate:
+                interm = self.vae.decode(latents / self.latent_scale)
                 interm = latents / self.latent_scale
                 intermediates.append(interm)
 
@@ -284,7 +316,7 @@ class SAID(ABC, nn.Module):
             ).prev_sample
 
         # Re-scaling the latent
-        result = latents / self.latent_scale
+        result = self.decode_latent(latents / self.latent_scale)
 
         output = {
             "Result": result,
@@ -424,108 +456,36 @@ class SAID_UNet1D_LDM(SAID_UNet1D):
             latent *= self.latent_scale
         return latent
 
-    def inference(
-        self,
-        waveform_processed: torch.FloatTensor,
-        init_samples: Optional[torch.FloatTensor] = None,
-        num_inference_steps: int = 100,
-        guidance_scale: float = 2.5,
-        eta: float = 0.0,
-        fps: int = 60,
-        save_intermediate: bool = False,
-    ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
-        """Inference pipeline
+    def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
+        """Encode samples into latent
 
         Parameters
         ----------
-        waveform_processed : torch.FloatTensor
-            (Batch_size, T_a), Processed mono waveform
-        init_samples : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, vae_x_dim), Starting point for the process, by default None
-        num_inference_steps : int, optional
-            The number of denoising steps, by default 100
-        guidance_scale : float, optional
-            Guidance scale in classifier-free guidance, by default 2.5
-        eta : float, optional
-            Eta in DDIM, by default 0.0
-        fps : int, optional
-            The number of frames per second, by default 60
+        samples : torch.FloatTensor
+            (Batch_size, sample_seq_len, vae_x_dim), Samples
 
         Returns
         -------
-        Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
-            {
-                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, vae_x_dim), Generated blendshape coefficients
-                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, vae_x_dim), Intermediate blendshape coefficients
-            }
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, vae_z_dim), Output latent
         """
-        batch_size = waveform_processed.shape[0]
-        waveform_len = waveform_processed.shape[1]
-        in_channels = self.denoiser.in_channels
-        device = waveform_processed.device
-        do_classifier_free_guidance = guidance_scale > 1.0
-        window_size = int(waveform_len / self.sampling_rate * fps)
+        latent_stats = self.vae.encode(samples)
+        latents = self.vae.reparametrize(
+            latent_stats["mean"], latent_stats["log_var"], True
+        )
+        return latents
 
-        self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
+    def decode_latent(self, latent: torch.FloatTensor) -> torch.FloatTensor:
+        """Decode latent into samples
 
-        if init_samples is None:
-            latents = torch.randn(batch_size, window_size, in_channels, device=device)
-        else:
-            latent_stats = self.vae.encode(init_samples)
-            latents = self.vae.reparametrize(
-                latent_stats["mean"], latent_stats["log_var"], True
-            )
-            # Todo: Adding additional noise would be necessary
+        Parameters
+        ----------
+        latent : torch.FloatTensor
+            (Batch_size, sample_seq_len, vae_z_dim), Latent
 
-        # Scaling the latent
-        latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
-
-        audio_embedding = self.get_audio_embedding(waveform_processed)
-        if do_classifier_free_guidance:
-            uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
-            uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
-            uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
-
-            audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
-
-        # Prepare extra kwargs for the scheduler step
-        extra_step_kwargs = {}
-        if "eta" in set(inspect.signature(self.noise_scheduler.step).parameters.keys()):
-            extra_step_kwargs["eta"] = eta
-
-        intermediates = []
-
-        for t in self.noise_scheduler.timesteps:
-            if save_intermediate:
-                interm = self.vae.decode(latents / self.latent_scale)
-                interm = latents / self.latent_scale
-                intermediates.append(interm)
-
-            latent_model_input = (
-                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-            )
-            latent_model_input = self.noise_scheduler.scale_model_input(
-                latent_model_input, t
-            )
-
-            noise_pred = self.forward(latent_model_input, t, audio_embedding)
-
-            if do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_audio = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (
-                    noise_pred_audio - noise_pred_uncond
-                )
-
-            latents = self.noise_scheduler.step(
-                noise_pred, t, latents, **extra_step_kwargs
-            ).prev_sample
-
-        # Re-scaling the latent
-        result = self.vae.decode(latents / self.latent_scale)
-
-        output = {
-            "Result": result,
-            "Intermediate": intermediates,
-        }
-
-        return output
+        Returns
+        -------
+        torch.FloatTensor
+            (Batch_size, sample_seq_len, vae_x_dim), Output samples
+        """
+        return self.vae.decode(latent)
