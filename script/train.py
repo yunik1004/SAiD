@@ -14,7 +14,10 @@ from dataset import VOCARKitTrainDataset, VOCARKitValDataset
 
 
 def random_noise_loss(
-    said_model: SAID, data: Dict[str, Any], device: torch.device
+    said_model: SAID,
+    data: Dict[str, Any],
+    device: torch.device,
+    mdm_like: bool = False,
 ) -> torch.FloatTensor:
     """Compute the MSE loss with randomized noises
 
@@ -26,6 +29,8 @@ def random_noise_loss(
         Output of the SAID.collate_fn
     device : torch.device
         GPU device
+    mdm_like: bool
+        Whether predict the signal itself or just a noise, by default False
 
     Returns
     -------
@@ -34,8 +39,9 @@ def random_noise_loss(
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
-    # coeff_latents = said_model.get_latent(blendshape_coeffs)
-    coeff_latents = blendshape_coeffs
+    coeff_latents = said_model.encode_samples(
+        blendshape_coeffs * said_model.latent_scale
+    )
 
     curr_batch_size = len(waveform)
 
@@ -47,10 +53,10 @@ def random_noise_loss(
     noisy_latents = noise_dict["noisy_samples"]
     noise = noise_dict["noise"]
 
-    noise_pred = said_model(noisy_latents, random_timesteps, audio_embedding)
+    pred = said_model(noisy_latents, random_timesteps, audio_embedding)
 
     criterion = nn.MSELoss()
-    loss = criterion(noise, noise_pred)
+    loss = criterion(coeff_latents if mdm_like else noise, pred)
 
     return loss
 
@@ -60,6 +66,7 @@ def train_epoch(
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
+    mdm_like: bool = False,
 ) -> float:
     """Train the SAiD model one epoch.
 
@@ -73,6 +80,8 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
+    mdm_like: bool
+        Whether predict the signal itself or just a noise, by default False
 
     Returns
     -------
@@ -89,7 +98,7 @@ def train_epoch(
         optimizer.zero_grad()
 
         curr_batch_size = len(data["waveform"])
-        loss = random_noise_loss(said_model, data, device)
+        loss = random_noise_loss(said_model, data, device, mdm_like)
 
         accelerator.backward(loss)
         optimizer.step()
@@ -106,6 +115,7 @@ def validate_epoch(
     said_model: SAID,
     val_dataloader: DataLoader,
     accelerator: Accelerator,
+    mdm_like: bool = False,
     num_repeat: int = 1,
 ) -> float:
     """Train the SAiD model one epoch.
@@ -118,6 +128,8 @@ def validate_epoch(
         Dataloader of the VOCARKitValDataset
     accelerator : Accelerator
         Accelerator object
+    mdm_like: bool
+        Whether predict the signal itself or just a noise, by default False
     num_repeat : int, optional
         Number of the repetition, by default 1
 
@@ -136,7 +148,7 @@ def validate_epoch(
         for _ in range(num_repeat):
             for data in val_dataloader:
                 curr_batch_size = len(data["waveform"])
-                loss = random_noise_loss(said_model, data, device)
+                loss = random_noise_loss(said_model, data, device, mdm_like)
 
                 val_total_loss += loss.item() * curr_batch_size
                 val_total_num += curr_batch_size
@@ -173,6 +185,12 @@ def main():
         help="Directory of the outputs",
     )
     parser.add_argument(
+        "--mdm_like",
+        type=bool,
+        default=False,
+        help="Whether predict the signal itself or just a noise",
+    )
+    parser.add_argument(
         "--window_size",
         type=int,
         default=120,
@@ -181,7 +199,9 @@ def main():
     parser.add_argument(
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
-    parser.add_argument("--epochs", type=int, default=5000, help="The number of epochs")
+    parser.add_argument(
+        "--epochs", type=int, default=10000, help="The number of epochs"
+    )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
@@ -213,6 +233,7 @@ def main():
     val_blendshape_coeffs_dir = os.path.join(val_dir, "blendshape_coeffs")
 
     output_dir = args.output_dir
+    mdm_like = args.mdm_like
     window_size = args.window_size
     batch_size = args.batch_size
     epochs = args.epochs
@@ -306,6 +327,7 @@ def main():
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             accelerator=accelerator,
+            mdm_like=mdm_like,
         )
 
         # Log
@@ -317,6 +339,7 @@ def main():
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
+                mdm_like=mdm_like,
                 num_repeat=val_repeat,
             )
             # Append the log

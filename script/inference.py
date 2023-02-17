@@ -19,7 +19,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output-dropout/5000.pth",
+        default="../output/10000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
@@ -33,6 +33,12 @@ def main():
         type=str,
         default="../out.csv",
         help="Path of the output blendshape coefficients file (csv format)",
+    )
+    parser.add_argument(
+        "--mdm_like",
+        type=bool,
+        default=False,
+        help="Whether predict the signal itself or just a noise",
     )
     parser.add_argument(
         "--num_steps", type=int, default=100, help="Number of inference steps"
@@ -72,6 +78,7 @@ def main():
     weights_path = args.weights_path
     audio_path = args.audio_path
     output_path = args.output_path
+    mdm_like = args.mdm_like
     num_steps = args.num_steps
     guidance_scale = args.guidance_scale
     eta = args.eta
@@ -110,13 +117,23 @@ def main():
 
     # Inference
     with torch.no_grad():
-        output = said_model.inference(
-            waveform_processed=waveform_processed,
-            init_samples=None,
-            num_inference_steps=num_steps,
-            guidance_scale=guidance_scale,
-            eta=eta,
-            save_intermediate=save_intermediate,
+        output = (
+            said_model.inference_mdm(
+                waveform_processed=waveform_processed,
+                init_samples=None,
+                num_inference_steps=num_steps,
+                guidance_scale=guidance_scale,
+                save_intermediate=save_intermediate,
+            )
+            if mdm_like
+            else said_model.inference(
+                waveform_processed=waveform_processed,
+                init_samples=None,
+                num_inference_steps=num_steps,
+                guidance_scale=guidance_scale,
+                eta=eta,
+                save_intermediate=save_intermediate,
+            )
         )
 
     result = output["Result"][0, :window_len].cpu().numpy()

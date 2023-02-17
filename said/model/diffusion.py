@@ -516,43 +516,6 @@ class SAID_UNet1D_LDM(SAID_UNet1D):
         # VAE
         self.vae = BCVAE(x_dim=vae_x_dim, h_dim=vae_h_dim, z_dim=vae_z_dim)
 
-    def get_latent(
-        self,
-        coeffs: torch.FloatTensor,
-        use_noise: bool = True,
-        align_noise: bool = True,
-        do_scaling: bool = True,
-    ) -> torch.FloatTensor:
-        """Convert blendshape coefficients into the latents
-
-        Parameters
-        ----------
-        coeffs : torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_x_dim), Blendshape coefficients
-        use_noise : bool, optional
-            Whether using noises when reconstructing the coefficients, by default True
-        align_noise : bool, optional
-            Whether the noises are the same in each batch, by default True
-        do_scaling : bool, optional
-            Whether scaling the latent, by default True
-
-        Returns
-        -------
-        torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_z_dim), Latents of the coefficients
-        """
-        latent_stats = self.vae.encode(coeffs)
-        latent = (
-            self.vae.reparametrize(
-                latent_stats["mean"], latent_stats["log_var"], align_noise
-            )
-            if use_noise
-            else mean
-        )
-        if do_scaling:
-            latent *= self.latent_scale
-        return latent
-
     def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
         """Encode samples into latent
 
