@@ -292,8 +292,7 @@ class SAID(ABC, nn.Module):
 
         for t in self.noise_scheduler.timesteps:
             if save_intermediate:
-                interm = self.vae.decode(latents / self.latent_scale)
-                interm = latents / self.latent_scale
+                interm = self.decode_latent(latents / self.latent_scale)
                 intermediates.append(interm)
 
             latent_model_input = (
@@ -314,6 +313,104 @@ class SAID(ABC, nn.Module):
             latents = self.noise_scheduler.step(
                 noise_pred, t, latents, **extra_step_kwargs
             ).prev_sample
+
+        # Re-scaling the latent
+        result = self.decode_latent(latents / self.latent_scale)
+
+        output = {
+            "Result": result,
+            "Intermediate": intermediates,
+        }
+
+        return output
+
+    def inference_mdm(
+        self,
+        waveform_processed: torch.FloatTensor,
+        init_samples: Optional[torch.FloatTensor] = None,
+        num_inference_steps: int = 100,
+        guidance_scale: float = 2.5,
+        fps: int = 60,
+        save_intermediate: bool = False,
+    ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
+        """Inference pipeline
+
+        Parameters
+        ----------
+        waveform_processed : torch.FloatTensor
+            (Batch_size, T_a), Processed mono waveform
+        init_samples : Optional[torch.FloatTensor], optional
+            (Batch_size, sample_seq_len, vae_x_dim), Starting point for the process, by default None
+        num_inference_steps : int, optional
+            The number of denoising steps, by default 100
+        guidance_scale : float, optional
+            Guidance scale in classifier-free guidance, by default 2.5
+        fps : int, optional
+            The number of frames per second, by default 60
+
+        Returns
+        -------
+        Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
+            {
+                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, vae_x_dim), Generated blendshape coefficients
+                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, vae_x_dim), Intermediate blendshape coefficients
+            }
+        """
+        batch_size = waveform_processed.shape[0]
+        waveform_len = waveform_processed.shape[1]
+        in_channels = self.denoiser.in_channels
+        device = waveform_processed.device
+        do_classifier_free_guidance = guidance_scale > 1.0
+        window_size = int(waveform_len / self.sampling_rate * fps)
+
+        self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
+
+        if init_samples is None:
+            latents = torch.randn(batch_size, window_size, in_channels, device=device)
+        else:
+            latents = self.encode_samples(init_samples)
+
+            # Todo: Adding additional noise would be necessary
+
+        # Scaling the latent
+        latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
+
+        audio_embedding = self.get_audio_embedding(waveform_processed)
+        if do_classifier_free_guidance:
+            uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
+            uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
+            uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
+
+            audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
+
+        intermediates = []
+
+        for t in self.noise_scheduler.timesteps:
+            if save_intermediate:
+                interm = self.decode_latent(latents / self.latent_scale)
+                intermediates.append(interm)
+
+            latent_model_input = (
+                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            )
+            latent_model_input = self.noise_scheduler.scale_model_input(
+                latent_model_input, t
+            )
+
+            latents_pred = self.forward(latent_model_input, t, audio_embedding)
+
+            if do_classifier_free_guidance:
+                latents_pred_uncond, latents_pred_audio = latents_pred.chunk(2)
+                latents_pred = latents_pred_uncond + guidance_scale * (
+                    latents_pred_audio - latents_pred_uncond
+                )
+
+            for temp in reversed(self.noise_scheduler.timesteps):
+                if temp >= t:
+                    break
+                latents_pred = self.add_noise(latents_pred, temp)["noisy_samples"]
+
+            latents = latents_pred
 
         # Re-scaling the latent
         result = self.decode_latent(latents / self.latent_scale)
