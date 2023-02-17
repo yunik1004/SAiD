@@ -14,7 +14,7 @@ class UNet1DConditionModel(nn.Module):
         out_channels: int,
         cross_attention_dim: int,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         """Constructor of the UNet1DConditionModel
 
         Parameters
