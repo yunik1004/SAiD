@@ -2,6 +2,7 @@
 """
 import argparse
 import math
+import os
 from diffusers import DDIMScheduler
 import torch
 from said.model.diffusion import SAID_UNet1D
@@ -35,10 +36,28 @@ def main():
         help="Path of the output blendshape coefficients file (csv format)",
     )
     parser.add_argument(
+        "--output_image_path",
+        type=str,
+        default="../out.png",
+        help="Path of the image of the output blendshape coefficients",
+    )
+    parser.add_argument(
+        "--intermediate_dir",
+        type=str,
+        default="../interm",
+        help="Saving directory of the intermediate outputs",
+    )
+    parser.add_argument(
         "--mdm_like",
         type=bool,
         default=False,
         help="Whether predict the signal itself or just a noise",
+    )
+    parser.add_argument(
+        "--save_intermediate",
+        type=bool,
+        default=False,
+        help="Save the intermediate outputs",
     )
     parser.add_argument(
         "--num_steps", type=int, default=100, help="Number of inference steps"
@@ -67,17 +86,13 @@ def main():
         default="cuda:0",
         help="GPU/CPU device",
     )
-    parser.add_argument(
-        "--save_intermediate",
-        type=bool,
-        default=False,
-        help="Save the intermediate outputs",
-    )
     args = parser.parse_args()
 
     weights_path = args.weights_path
     audio_path = args.audio_path
     output_path = args.output_path
+    output_image_path = args.output_image_path
+    intermediate_dir = args.intermediate_dir
     mdm_like = args.mdm_like
     num_steps = args.num_steps
     guidance_scale = args.guidance_scale
@@ -137,7 +152,6 @@ def main():
         )
 
     result = output["Result"][0, :window_len].cpu().numpy()
-    intermediate = output["Intermediate"]
 
     save_blendshape_coeffs(
         coeffs=result,
@@ -145,22 +159,26 @@ def main():
         output_path=output_path,
     )
 
-    """
-    # Save coeffs as images
-    save_blendshape_coeffs_image(result, "../out.png")
+    # Save coeffs as an image
+    save_blendshape_coeffs_image(result, output_image_path)
 
     if save_intermediate:
-        for i, interm in enumerate(intermediate):
+        intermediate = output["Intermediate"]
+
+        # Save intermediates
+        for t, interm in enumerate(reversed(intermediate)):
+            interm_coeffs = interm[0, :window_len].cpu().numpy()
+            timestep = t + 1
+
             save_blendshape_coeffs_image(
-                interm[0, :window_len].cpu().numpy(), f"../interm/{i}.png"
+                interm_coeffs, os.path.join(intermediate_dir, f"{timestep}.png")
             )
 
             save_blendshape_coeffs(
-                coeffs=interm[0, :window_len].cpu().numpy(),
+                coeffs=interm_coeffs,
                 classes=VOCARKIT_CLASSES,
-                output_path=f"../interm/{i}.csv",
+                output_path=os.path.join(intermediate_dir, f"{timestep}.csv"),
             )
-    """
 
 
 if __name__ == "__main__":
