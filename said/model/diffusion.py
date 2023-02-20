@@ -16,6 +16,7 @@ from transformers import (
     Wav2Vec2Model,
     Wav2Vec2Processor,
 )
+from .transformer import ConditionalDiT
 from .unet_1d_condition import UNet1DConditionModel
 from .vae import BCVAE
 
@@ -549,3 +550,54 @@ class SAID_UNet1D_LDM(SAID_UNet1D):
             (Batch_size, sample_seq_len, vae_x_dim), Output samples
         """
         return self.vae.decode(latent)
+
+
+class SAID_CDiT(SAID):
+    """SAiD model implemented using Conditional DiT model"""
+
+    def __init__(
+        self,
+        audio_config: Optional[Wav2Vec2Config] = None,
+        audio_processor: Optional[Wav2Vec2Processor] = None,
+        noise_scheduler: Optional[SchedulerMixin] = None,
+        in_channels: int = 32,
+        feature_dim: int = 64,
+        diffusion_steps: int = 1000,
+        latent_scale: float = 1,
+    ):
+        """Constructor of SAID_CDiT
+
+        Parameters
+        ----------
+        audio_config : Optional[Wav2Vec2Config], optional
+            Wav2Vec2Config object, by default None
+        audio_processor : Optional[Wav2Vec2Processor], optional
+            Wav2Vec2Processor object, by default None
+        noise_scheduler : Optional[SchedulerMixin], optional
+            scheduler object, by default None
+        in_channels : int
+            Dimension of the input, by default 32
+        feature_dim : int
+            Dimension of the model feature, by default 64
+        diffusion_steps : int
+            The number of diffusion steps, by default 1000
+        latent_scale : float
+            Scaling the latent, by default 1
+        """
+        super(SAID_CDiT, self).__init__(
+            audio_config=audio_config,
+            audio_processor=audio_processor,
+            noise_scheduler=noise_scheduler,
+            in_channels=in_channels,
+            diffusion_steps=diffusion_steps,
+            latent_scale=latent_scale,
+        )
+        self.feature_dim = feature_dim
+
+        # Denoiser
+        self.denoiser = ConditionalDiT(
+            in_channels=in_channels,
+            out_channels=in_channels,
+            cond_in_channels=self.audio_config.hidden_size,
+            feature_dim=self.feature_dim,
+        )

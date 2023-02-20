@@ -9,7 +9,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import Wav2Vec2Model
-from said.model.diffusion import SAID, SAID_UNet1D
+from said.model.diffusion import SAID, SAID_UNet1D, SAID_CDiT
 from dataset import VOCARKitTrainDataset, VOCARKitValDataset
 
 
@@ -250,6 +250,7 @@ def main():
 
     # Load model with pretrained audio encoder, VAE
     said_model = SAID_UNet1D()
+    # said_model = SAID_CDiT()
     said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
@@ -304,7 +305,7 @@ def main():
         p.requires_grad = False
     """
 
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),
         lr=learning_rate,
     )
