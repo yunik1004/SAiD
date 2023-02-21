@@ -70,11 +70,6 @@ class UNet1DConditionModel(nn.Module):
         torch.FloatTensor
             (Batch_size, sample_seq_len, channel), Predicted noise
         """
-        timestep_size = timestep.size()
-        if len(timestep_size) == 0 or timestep_size[0] == 1:
-            batch_size = sample.shape[0]
-            timestep = timestep.repeat(batch_size)
-
         out = sample.transpose(1, 2)
         out = self.model(out, timestep, encoder_hidden_states)
         out = out.transpose(1, 2)

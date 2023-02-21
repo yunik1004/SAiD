@@ -9,7 +9,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import Wav2Vec2Model
-from said.model.diffusion import SAID, SAID_UNet1D, SAID_CDiT
+from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
 from dataset import VOCARKitTrainDataset, VOCARKitValDataset
 
 
@@ -249,8 +249,8 @@ def main():
         accelerator.init_trackers("SAiD")
 
     # Load model with pretrained audio encoder, VAE
-    said_model = SAID_UNet1D()
     # said_model = SAID_CDiT()
+    said_model = SAID_UNet1D()
     said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )

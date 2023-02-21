@@ -3,7 +3,7 @@
 from abc import abstractmethod, ABC
 import os
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -43,6 +43,20 @@ VOCARKIT_CLASSES = [
     "cheekSquintRight",
     "noseSneerLeft",
     "noseSneerRight",
+]
+
+VOCARKIT_CLASSES_MIRROR_PAIR = [
+    ("jawLeft", "jawRight"),
+    ("mouthLeft", "mouthRight"),
+    ("mouthSmileLeft", "mouthSmileRight"),
+    ("mouthFrownLeft", "mouthFrownRight"),
+    ("mouthDimpleLeft", "mouthDimpleRight"),
+    ("mouthStretchLeft", "mouthStretchRight"),
+    ("mouthPressLeft", "mouthPressRight"),
+    ("mouthLowerDownLeft", "mouthLowerDownRight"),
+    ("mouthUpperUpLeft", "mouthUpperUpRight"),
+    ("cheekSquintLeft", "cheekSquintRight"),
+    ("noseSneerLeft", "noseSneerRight"),
 ]
 
 
@@ -150,6 +164,9 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         window_size: int = 120,
         fps: int = 60,
         uncond_prob: float = 0.1,
+        hflip: bool = True,
+        classes: List[str] = VOCARKIT_CLASSES,
+        classes_mirror_pair: List[Tuple[str, str]] = VOCARKIT_CLASSES_MIRROR_PAIR,
     ):
         """Constructor of the class
 
@@ -167,11 +184,29 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             fps of the blendshape coefficients, by default 60
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
+        hflip : bool, optional
+            Whether do the horizontal flip, by default True
+        classes : List[str], optional
+            List of blendshape names, by default VOCARKIT_CLASSES
+        classes_mirror_pair : List[Tuple[str, str]], optional
+            List of blendshape pairs which are mirror to each other, by default VOCARKIT_CLASSES_MIRROR_PAIR
         """
         super().__init__(audio_dir, blendshape_coeffs_dir, sampling_rate)
         self.window_size = window_size
         self.fps = fps
         self.uncond_prob = uncond_prob
+
+        self.hflip = hflip
+        self.classes = classes
+        self.classes_mirror_pair = classes_mirror_pair
+
+        self.mirror_indices = []
+        self.mirror_indices_flip = []
+        for pair in self.classes_mirror_pair:
+            index_l = self.classes.index(pair[0])
+            index_r = self.classes.index(pair[1])
+            self.mirror_indices.extend([index_l, index_r])
+            self.mirror_indices_flip.extend([index_r, index_l])
 
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
         waveform = load_audio(self.audio_paths[index], self.sampling_rate)
@@ -199,6 +234,13 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             waveform_patch = torch.zeros(waveform_patch_len)
             waveform_patch[:waveform_len] = waveform[:]
 
+        # Augmentation - hflip
+        if self.hflip and random.uniform(0, 1) < 0.5:
+            blendshape_coeffs_patch[:, self.mirror_indices] = blendshape_coeffs_patch[
+                :, self.mirror_indices_flip
+            ]
+
+        # Random uncondition for classifier-free guidance
         if random.uniform(0, 1) < self.uncond_prob:
             waveform_patch = torch.zeros(waveform_patch_len)
 

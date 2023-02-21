@@ -5,7 +5,7 @@ import math
 import os
 from diffusers import DDIMScheduler
 import torch
-from said.model.diffusion import SAID_UNet1D
+from said.model.diffusion import SAID_CDiT, SAID_UNet1D
 from said.util.audio import load_audio
 from said.util.blendshape import save_blendshape_coeffs, save_blendshape_coeffs_image
 from dataset import VOCARKIT_CLASSES
@@ -103,6 +103,7 @@ def main():
     save_intermediate = args.save_intermediate
 
     # Load model
+    # said_model = SAID_CDiT(
     said_model = SAID_UNet1D(
         noise_scheduler=DDIMScheduler(beta_schedule="squaredcos_cap_v2")
     )
