@@ -207,7 +207,7 @@ class ConditionalDiT(nn.Module):
         out_channels: int,
         cond_in_channels: int,
         feature_dim: int,
-        num_heads: int = 4,
+        num_heads: int = 32,
         num_layers: int = 1,
         dropout: float = 0.1,
     ) -> None:
@@ -224,7 +224,7 @@ class ConditionalDiT(nn.Module):
         feature_dim : int
             The dimension of the attention models
         num_heads : int
-            The the number of heads in the multiheadattention models, by default 4
+            The the number of heads in the multiheadattention models, by default 32
         num_layers : float
             The number of decoder layers, by default 1
         dropout : float

@@ -102,6 +102,11 @@ class SAID(ABC, nn.Module):
         torch.FloatTensor
             (Batch_size, coeffs_seq_len, num_coeffs), Sequence of predicted noises
         """
+        timestep_size = timesteps.size()
+        if len(timestep_size) == 0 or timestep_size[0] == 1:
+            batch_size = noisy_samples.shape[0]
+            timesteps = timesteps.repeat(batch_size)
+
         noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding)
         return noise_pred
 
@@ -561,7 +566,7 @@ class SAID_CDiT(SAID):
         audio_processor: Optional[Wav2Vec2Processor] = None,
         noise_scheduler: Optional[SchedulerMixin] = None,
         in_channels: int = 32,
-        feature_dim: int = 64,
+        feature_dim: int = 512,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
     ):
@@ -578,7 +583,7 @@ class SAID_CDiT(SAID):
         in_channels : int
             Dimension of the input, by default 32
         feature_dim : int
-            Dimension of the model feature, by default 64
+            Dimension of the model feature, by default 512
         diffusion_steps : int
             The number of diffusion steps, by default 1000
         latent_scale : float
