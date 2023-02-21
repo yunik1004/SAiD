@@ -569,6 +569,7 @@ class SAID_CDiT(SAID):
         feature_dim: int = 512,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
+        num_layers: int = 3,
     ):
         """Constructor of SAID_CDiT
 
@@ -588,6 +589,8 @@ class SAID_CDiT(SAID):
             The number of diffusion steps, by default 1000
         latent_scale : float
             Scaling the latent, by default 1
+        num_layers : int
+            The number of transformer layers, by default 3
         """
         super(SAID_CDiT, self).__init__(
             audio_config=audio_config,
@@ -598,6 +601,7 @@ class SAID_CDiT(SAID):
             latent_scale=latent_scale,
         )
         self.feature_dim = feature_dim
+        self.num_layers = num_layers
 
         # Denoiser
         self.denoiser = ConditionalDiT(
@@ -605,4 +609,5 @@ class SAID_CDiT(SAID):
             out_channels=in_channels,
             cond_in_channels=self.audio_config.hidden_size,
             feature_dim=self.feature_dim,
+            num_layers=self.num_layers,
         )

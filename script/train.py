@@ -2,8 +2,9 @@
 """
 import argparse
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from accelerate import Accelerator
+from diffusers.training_utils import EMAModel
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -67,6 +68,7 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
     mdm_like: bool = False,
+    ema_model: Optional[EMAModel] = None,
 ) -> float:
     """Train the SAiD model one epoch.
 
@@ -82,6 +84,8 @@ def train_epoch(
         Accelerator object
     mdm_like: bool
         Whether predict the signal itself or just a noise, by default False
+    ema_model: Optional[EMAModel]
+        EMA model of said_model, by default None
 
     Returns
     -------
@@ -95,13 +99,14 @@ def train_epoch(
     train_total_loss = 0
     train_total_num = 0
     for data in train_dataloader:
-        optimizer.zero_grad()
-
         curr_batch_size = len(data["waveform"])
         loss = random_noise_loss(said_model, data, device, mdm_like)
 
         accelerator.backward(loss)
         optimizer.step()
+        if ema_model:
+            ema_model.step(said_model.parameters())
+        optimizer.zero_grad()
 
         train_total_loss += loss.item() * curr_batch_size
         train_total_num += curr_batch_size
@@ -212,6 +217,12 @@ def main():
         help="Unconditional probability of waveform (for classifier-free guidance)",
     )
     parser.add_argument(
+        "--ema",
+        type=bool,
+        default=True,
+        help="Use Exponential Moving Average of models weights",
+    )
+    parser.add_argument(
         "--val_period", type=int, default=50, help="Period of validating model"
     )
     parser.add_argument(
@@ -239,6 +250,7 @@ def main():
     epochs = args.epochs
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
+    ema = args.ema
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
@@ -315,6 +327,9 @@ def main():
         said_model, optimizer, train_dataloader, val_dataloader
     )
 
+    # Prepare the EMA model
+    ema_model = EMAModel(said_model.parameters()) if ema else None
+
     # Set the progress bar
     progress_bar = tqdm(
         range(1, epochs + 1), disable=not accelerator.is_local_main_process
@@ -329,6 +344,7 @@ def main():
             optimizer=optimizer,
             accelerator=accelerator,
             mdm_like=mdm_like,
+            ema_model=ema_model,
         )
 
         # Log
