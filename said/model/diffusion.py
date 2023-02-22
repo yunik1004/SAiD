@@ -13,12 +13,12 @@ from transformers import (
     PretrainedConfig,
     PreTrainedModel,
     Wav2Vec2Config,
-    Wav2Vec2Model,
     Wav2Vec2Processor,
 )
 from .transformer import ConditionalDiT
 from .unet_1d_condition import UNet1DConditionModel
 from .vae import BCVAE
+from .wav2vec2 import ModifiedWav2Vec2Model
 
 
 class SAID(ABC, nn.Module):
@@ -58,7 +58,7 @@ class SAID(ABC, nn.Module):
         self.audio_config = (
             audio_config if audio_config is not None else Wav2Vec2Config()
         )
-        self.audio_encoder = Wav2Vec2Model(self.audio_config)
+        self.audio_encoder = ModifiedWav2Vec2Model(self.audio_config)
         self.audio_processor = (
             audio_processor
             if audio_processor is not None
@@ -131,20 +131,25 @@ class SAID(ABC, nn.Module):
         )["input_values"]
         return out
 
-    def get_audio_embedding(self, waveform: torch.FloatTensor) -> torch.FloatTensor:
+    def get_audio_embedding(
+        self, waveform: torch.FloatTensor, num_frames: Optional[int]
+    ) -> torch.FloatTensor:
         """Return the audio embedding of the waveform
 
         Parameters
         ----------
         waveform : torch.FloatTensor
             (Batch_size, T_a), Processed mono waveform
+        num_frames: Optional[int]
+            The length of output audio embedding sequence, by default None
 
         Returns
         -------
         torch.FloatTensor
-            (Batch_size, embed_seq_len, embed_size), Generated audio embedding
+            (Batch_size, embed_seq_len, embed_size), Generated audio embedding.
+            If num_frames is not None, embed_seq_len = num_frames.
         """
-        features = self.audio_encoder(waveform).last_hidden_state
+        features = self.audio_encoder(waveform, num_frames=num_frames).last_hidden_state
         return features
 
     def get_random_timesteps(self, batch_size: int) -> torch.LongTensor:
@@ -281,11 +286,13 @@ class SAID(ABC, nn.Module):
         # Scaling the latent
         latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
 
-        audio_embedding = self.get_audio_embedding(waveform_processed)
+        audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
             uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
             uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
-            uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
+            uncond_audio_embedding = self.get_audio_embedding(
+                uncond_waveform_processed, window_size
+            )
 
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
@@ -381,11 +388,13 @@ class SAID(ABC, nn.Module):
         # Scaling the latent
         latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
 
-        audio_embedding = self.get_audio_embedding(waveform_processed)
+        audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
             uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
             uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
-            uncond_audio_embedding = self.get_audio_embedding(uncond_waveform_processed)
+            uncond_audio_embedding = self.get_audio_embedding(
+                uncond_waveform_processed, window_size
+            )
 
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
@@ -567,7 +576,7 @@ class SAID_CDiT(SAID):
         noise_scheduler: Optional[SchedulerMixin] = None,
         in_channels: int = 32,
         feature_dim: int = 256,
-        num_heads: int = 4,
+        num_heads: int = 8,
         num_layers: int = 8,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,

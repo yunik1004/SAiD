@@ -113,7 +113,7 @@ class ConditionalDiTBlock(nn.Module):
             nn.Dropout(dropout),
         )
 
-        self.adaLN_num_mod = 9
+        self.adaLN_num_mod = 6
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(), nn.Linear(d_model, self.adaLN_num_mod * d_model, bias=True)
         )
@@ -124,15 +124,16 @@ class ConditionalDiTBlock(nn.Module):
         (
             shift_msa,
             scale_msa,
-            gate_msa,
+            # gate_msa,
             shift_mca,
             scale_mca,
-            gate_mca,
+            # gate_mca,
             shift_mlp,
             scale_mlp,
-            gate_mlp,
+            # gate_mlp,
         ) = self.adaLN_modulation(temb).chunk(self.adaLN_num_mod, dim=1)
 
+        """
         x = x + gate_msa.unsqueeze(1) * self._sa_block(
             modulate(self.norm_sa(x), shift_msa, scale_msa)
         )
@@ -143,6 +144,23 @@ class ConditionalDiTBlock(nn.Module):
         x = x + gate_mlp.unsqueeze(1) * self.mlp(
             modulate(self.norm_mlp(x), shift_mlp, scale_mlp)
         )
+        """
+
+        # Create the alignment bias
+        x_seq_len = x.shape[1]
+        c_seq_len = c.shape[1]
+        align_bias = torch.ones(x_seq_len, c_seq_len, dtype=torch.bool, device=x.device)
+        for i in range(min(x_seq_len, c_seq_len)):
+            align_bias[i, i] = False
+
+        # Compute the transformer decoder
+        x = x + modulate(self.norm_sa(self._sa_block(x)), shift_msa, scale_msa)
+        x = x + modulate(
+            self.norm_ca(self._ca_block(x, c, attn_mask=align_bias)),
+            shift_mca,
+            scale_mca,
+        )
+        x = x + modulate(self.norm_mlp(self.mlp(x)), shift_mlp, scale_mlp)
 
         return x
 
@@ -183,19 +201,21 @@ class ConditionalDiTBlock(nn.Module):
 class ConditionalDiTFinalLayer(nn.Module):
     def __init__(self, d_model: int, out_channels: int, layer_norm_eps: float = 1e-5):
         super(ConditionalDiTFinalLayer, self).__init__()
-        self.norm_final = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        # self.norm_final = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.linear = nn.Linear(d_model, out_channels, bias=True)
+        """
         self.adaLN_num_mod = 2
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(),
             nn.Linear(d_model, self.adaLN_num_mod * d_model, bias=True),
         )
+        """
 
     def forward(
         self, x: torch.FloatTensor, temb: torch.FloatTensor
     ) -> torch.FloatTensor:
-        shift, scale = self.adaLN_modulation(temb).chunk(self.adaLN_num_mod, dim=1)
-        x = modulate(self.norm_final(x), shift, scale)
+        # shift, scale = self.adaLN_modulation(temb).chunk(self.adaLN_num_mod, dim=1)
+        # x = modulate(self.norm_final(x), shift, scale)
         x = self.linear(x)
         return x
 
@@ -276,8 +296,10 @@ class ConditionalDiT(nn.Module):
             nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
 
         # Zero-out output layers
+        """
         nn.init.constant_(self.final_layer.adaLN_modulation[-1].weight, 0)
         nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0)
+        """
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
 

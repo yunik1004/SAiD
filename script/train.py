@@ -9,8 +9,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import Wav2Vec2Model
 from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
+from said.model.wav2vec2 import ModifiedWav2Vec2Model
 from dataset import VOCARKitTrainDataset, VOCARKitValDataset
 
 
@@ -45,11 +45,12 @@ def random_noise_loss(
     )
 
     curr_batch_size = len(waveform)
+    window_size = blendshape_coeffs.shape[1]
 
     waveform_processed = said_model.process_audio(waveform).to(device)
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
-    audio_embedding = said_model.get_audio_embedding(waveform_processed)
+    audio_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
     noisy_latents = noise_dict["noisy_samples"]
     noise = noise_dict["noise"]
@@ -208,12 +209,12 @@ def main():
         "--epochs", type=int, default=10000, help="The number of epochs"
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-5, help="Learning rate"
+        "--learning_rate", type=float, default=1e-4, help="Learning rate"
     )
     parser.add_argument(
         "--uncond_prob",
         type=float,
-        default=0.1,
+        default=0.25,
         help="Unconditional probability of waveform (for classifier-free guidance)",
     )
     parser.add_argument(
@@ -263,7 +264,7 @@ def main():
     # Load model with pretrained audio encoder, VAE
     # said_model = SAID_CDiT()
     said_model = SAID_UNet1D()
-    said_model.audio_encoder = Wav2Vec2Model.from_pretrained(
+    said_model.audio_encoder = ModifiedWav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
     """
@@ -320,6 +321,7 @@ def main():
     optimizer = torch.optim.AdamW(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),
         lr=learning_rate,
+        weight_decay=1e-4,
     )
 
     # Prepare the acceleration using accelerator
@@ -328,7 +330,7 @@ def main():
     )
 
     # Prepare the EMA model
-    ema_model = EMAModel(said_model.parameters()) if ema else None
+    ema_model = EMAModel(said_model.parameters(), decay=0.99) if ema else None
 
     # Set the progress bar
     progress_bar = tqdm(
