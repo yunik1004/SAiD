@@ -350,6 +350,12 @@ def main():
         # Log
         logs = {"Train/Loss": train_avg_loss}
 
+        accelerator.wait_for_everyone()
+
+        # EMA
+        if ema and accelerator.is_main_process:
+            ema_model.copy_to(said_model.parameters())
+
         # Validate the model
         if epoch % val_period == 0:
             val_avg_loss = validate_epoch(
