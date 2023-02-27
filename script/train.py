@@ -20,7 +20,7 @@ def random_noise_loss(
     device: torch.device,
     mdm_like: bool = False,
 ) -> torch.FloatTensor:
-    """Compute the MSE loss with randomized noises
+    """Compute the loss with randomized noises
 
     Parameters
     ----------
@@ -57,7 +57,7 @@ def random_noise_loss(
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding)
 
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
     loss = criterion(coeff_latents if mdm_like else noise, pred)
 
     return loss

@@ -102,10 +102,10 @@ class CrossAttention(nn.Module):
         sim = einsum("b i d, b j d -> b i j", q, k) * self.scale
 
         if exists(mask):
-            mask = rearrange(mask, "b ... -> b (...)")
+            # mask = rearrange(mask, "b ... -> b (...)")
             max_neg_value = -torch.finfo(sim.dtype).max
-            mask = repeat(mask, "b j -> (b h) () j", h=h)
-            sim.masked_fill_(~mask, max_neg_value)
+            mask = repeat(mask, "b j k -> (b h) j k", h=h)
+            sim.masked_fill_(mask, max_neg_value)
 
         # attention, what we cannot get enough of
         attn = sim.softmax(dim=-1)
@@ -164,7 +164,22 @@ class BasicTransformerBlock(nn.Module):
 
     def _forward(self, x, context=None):
         x = self.attn1(self.norm1(x)) + x
-        x = self.attn2(self.norm2(x), context=context) + x
+
+        # TODO: Alignment bias for aligning the sequences
+        align_bias = None
+        if exists(context):
+            # Alignment bias
+            batch_size = x.shape[0]
+            x_seq_len = x.shape[1]
+            c_seq_len = context.shape[1]
+
+            align_bias = torch.ones(
+                batch_size, x_seq_len, c_seq_len, dtype=torch.bool, device=x.device
+            )
+            for i in range(min(x_seq_len, c_seq_len)):
+                align_bias[:, i, i] = False
+
+        x = self.attn2(self.norm2(x), context=context, mask=align_bias) + x
         x = self.ff(self.norm3(x)) + x
         return x
 
