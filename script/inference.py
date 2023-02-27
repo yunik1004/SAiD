@@ -77,7 +77,7 @@ def main():
     parser.add_argument(
         "--divisor_unet",
         type=int,
-        default=8,
+        default=1,
         help="Length of the blendshape coefficients sequence should be divided by this number",
     )
     parser.add_argument(
@@ -117,7 +117,6 @@ def main():
     # Fit the size of waveform
     gcd = math.gcd(said_model.sampling_rate, fps)
     divisor_waveform = said_model.sampling_rate // gcd * divisor_unet
-    divisor_window = fps // gcd * divisor_unet
 
     waveform_len = waveform.shape[0]
     window_len = int(waveform_len / said_model.sampling_rate * fps)
