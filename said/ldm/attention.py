@@ -139,6 +139,7 @@ class BasicTransformerBlock(nn.Module):
         context_dim=None,
         gated_ff=True,
         checkpoint=True,
+        pad=0,
     ):
         super().__init__()
         self.attn1 = CrossAttention(
@@ -157,6 +158,8 @@ class BasicTransformerBlock(nn.Module):
         self.norm3 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
+        self.pad = pad
+
     def forward(self, x, context=None):
         return checkpoint(
             self._forward, (x, context), self.parameters(), self.checkpoint
@@ -165,19 +168,26 @@ class BasicTransformerBlock(nn.Module):
     def _forward(self, x, context=None):
         x = self.attn1(self.norm1(x)) + x
 
-        # TODO: Alignment bias for aligning the sequences
+        # Alignment bias for aligning the sequences
         align_bias = None
         if exists(context):
-            # Alignment bias
             batch_size = x.shape[0]
             x_seq_len = x.shape[1]
             c_seq_len = context.shape[1]
 
+            c_x_ratio = c_seq_len / x_seq_len
+            c_kh_size = c_x_ratio / 2 + self.pad
+
             align_bias = torch.ones(
                 batch_size, x_seq_len, c_seq_len, dtype=torch.bool, device=x.device
             )
-            for i in range(min(x_seq_len, c_seq_len)):
-                align_bias[:, i, i] = False
+
+            for i in range(x_seq_len):
+                c_mid = (i + 0.5) * c_x_ratio
+                c_min = max(round(c_mid - c_kh_size), 0)
+                c_max = min(round(c_mid + c_kh_size), c_seq_len)
+
+                align_bias[:, i, c_min:c_max] = False
 
         x = self.attn2(self.norm2(x), context=context, mask=align_bias) + x
         x = self.ff(self.norm3(x)) + x

@@ -239,7 +239,7 @@ def main():
     save_period = args.save_period
 
     # Initialize accelerator
-    accelerator = Accelerator(log_with="tensorboard", logging_dir=output_dir)
+    accelerator = Accelerator(log_with="tensorboard", project_dir=output_dir)
     if accelerator.is_main_process:
         accelerator.init_trackers("SAiD-VAE")
 
