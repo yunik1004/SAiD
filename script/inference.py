@@ -56,7 +56,7 @@ def main():
     parser.add_argument(
         "--save_intermediate",
         type=bool,
-        default=True,
+        default=False,
         help="Save the intermediate outputs",
     )
     parser.add_argument(
