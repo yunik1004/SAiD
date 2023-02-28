@@ -124,7 +124,7 @@ def validate_epoch(
     mdm_like: bool = False,
     num_repeat: int = 1,
 ) -> float:
-    """Train the SAiD model one epoch.
+    """Validate the SAiD model one epoch.
 
     Parameters
     ----------
