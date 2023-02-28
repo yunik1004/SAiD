@@ -27,7 +27,7 @@ def random_noise_loss(
     said_model : SAID
         SAiD model object
     data : Dict[str, Any]
-        Output of the SAID.collate_fn
+        Output of the VOCARKitDataset.collate_fn
     device : torch.device
         GPU device
     mdm_like: bool
