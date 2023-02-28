@@ -36,7 +36,7 @@ def random_noise_loss(
     Returns
     -------
     torch.FloatTensor
-        MSE loss between added noise and predicted noise
+        MAE loss between added noise and predicted noise
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
