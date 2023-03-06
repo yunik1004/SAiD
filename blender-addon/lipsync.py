@@ -10,7 +10,7 @@ import bpy
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 2, 0),
+    "version": (0, 2, 1),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -229,8 +229,12 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
         Set[str]
             Set of status messages: https://docs.blender.org/api/current/bpy.types.Operator.html
         """
-        audio_path = context.scene.lipsync_property.audio_path_mesh_sequence
-        mesh_sequence_dir = context.scene.lipsync_property.mesh_sequence_dir
+        audio_path = bpy.path.abspath(
+            context.scene.lipsync_property.audio_path_mesh_sequence
+        )
+        mesh_sequence_dir = bpy.path.abspath(
+            context.scene.lipsync_property.mesh_sequence_dir
+        )
 
         # Reset the scene frame to 1
         context.scene.frame_set(1)
@@ -305,8 +309,8 @@ class LipsyncAddBlendshapeOperator(bpy.types.Operator):
         Set[str]
             Set of status messages: https://docs.blender.org/api/current/bpy.types.Operator.html
         """
-        neutral_path = context.scene.lipsync_property.neutral_path
-        blendshape_dir = context.scene.lipsync_property.blendshape_dir
+        neutral_path = bpy.path.abspath(context.scene.lipsync_property.neutral_path)
+        blendshape_dir = bpy.path.abspath(context.scene.lipsync_property.blendshape_dir)
 
         # Get blendshape names and absolute paths
         blendshape_names = []
@@ -363,8 +367,12 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
         Set[str]
             Set of status messages: https://docs.blender.org/api/current/bpy.types.Operator.html
         """
-        audio_path = context.scene.lipsync_property.audio_path_blendshape
-        blendshape_weights_path = context.scene.lipsync_property.blendshape_weights_path
+        audio_path = bpy.path.abspath(
+            context.scene.lipsync_property.audio_path_blendshape
+        )
+        blendshape_weights_path = bpy.path.abspath(
+            context.scene.lipsync_property.blendshape_weights_path
+        )
 
         # Create collection
         collection = bpy.data.collections.new("Lipsync")
