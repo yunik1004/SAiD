@@ -1,12 +1,11 @@
 """Inference using the SAID_UNet1D model
 """
 import argparse
-import math
 import os
 from diffusers import DDIMScheduler
 import torch
 from said.model.diffusion import SAID_CDiT, SAID_UNet1D
-from said.util.audio import load_audio
+from said.util.audio import fit_audio_unet, load_audio
 from said.util.blendshape import save_blendshape_coeffs, save_blendshape_coeffs_image
 from dataset import VOCARKIT_CLASSES
 
@@ -115,17 +114,9 @@ def main():
     waveform = load_audio(audio_path, said_model.sampling_rate)
 
     # Fit the size of waveform
-    gcd = math.gcd(said_model.sampling_rate, fps)
-    divisor_waveform = said_model.sampling_rate // gcd * divisor_unet
-
-    waveform_len = waveform.shape[0]
-    window_len = int(waveform_len / said_model.sampling_rate * fps)
-    waveform_len_fit = math.ceil(waveform_len / divisor_waveform) * divisor_waveform
-
-    if waveform_len_fit > waveform_len:
-        tmp = torch.zeros(waveform_len_fit)
-        tmp[:waveform_len] = waveform[:]
-        waveform = tmp
+    fit_output = fit_audio_unet(waveform, said_model.sampling_rate, fps, divisor_unet)
+    waveform = fit_output["waveform"]
+    window_len = fit_output["window_len"]
 
     # Process the waveform
     waveform_processed = said_model.process_audio(waveform).to(device)
@@ -139,6 +130,7 @@ def main():
                 num_inference_steps=num_steps,
                 guidance_scale=guidance_scale,
                 save_intermediate=save_intermediate,
+                show_process=True,
             )
             if mdm_like
             else said_model.inference(
@@ -148,6 +140,7 @@ def main():
                 guidance_scale=guidance_scale,
                 eta=eta,
                 save_intermediate=save_intermediate,
+                show_process=True,
             )
         )
 

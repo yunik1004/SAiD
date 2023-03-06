@@ -1,5 +1,4 @@
 from inspect import isfunction
-import math
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum

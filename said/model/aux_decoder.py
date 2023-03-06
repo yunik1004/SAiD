@@ -2,7 +2,6 @@
 """
 import torch
 from torch import nn
-from ..ldm.attention import SpatialTransformer
 from .transformer import PositionalEncoding
 
 

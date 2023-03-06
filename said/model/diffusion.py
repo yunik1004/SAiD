@@ -1,17 +1,14 @@
 """Define the diffusion models which are used as SAiD model
 """
-from abc import abstractmethod, ABC
+from abc import ABC
 import inspect
 from typing import Dict, List, Optional, Union
 from diffusers import DDPMScheduler, SchedulerMixin
 import numpy as np
 import torch
 from torch import nn
-import torchaudio
+from tqdm import tqdm
 from transformers import (
-    ProcessorMixin,
-    PretrainedConfig,
-    PreTrainedModel,
     Wav2Vec2Config,
     Wav2Vec2Processor,
 )
@@ -241,6 +238,7 @@ class SAID(ABC, nn.Module):
         eta: float = 0.0,
         fps: int = 60,
         save_intermediate: bool = False,
+        show_process: bool = False,
     ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
         """Inference pipeline
 
@@ -258,6 +256,10 @@ class SAID(ABC, nn.Module):
             Eta in DDIM, by default 0.0
         fps : int, optional
             The number of frames per second, by default 60
+        save_intermediate: bool, optional
+            Return the intermediate results, by default False
+        show_process: bool, optional
+            Visualize the inference process, by default False
 
         Returns
         -------
@@ -303,7 +305,7 @@ class SAID(ABC, nn.Module):
 
         intermediates = []
 
-        for t in self.noise_scheduler.timesteps:
+        for t in tqdm(self.noise_scheduler.timesteps, disable=not show_process):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
                 intermediates.append(interm)
@@ -345,6 +347,7 @@ class SAID(ABC, nn.Module):
         guidance_scale: float = 2.5,
         fps: int = 60,
         save_intermediate: bool = False,
+        show_process: bool = False,
     ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
         """Inference pipeline
 
@@ -360,6 +363,10 @@ class SAID(ABC, nn.Module):
             Guidance scale in classifier-free guidance, by default 2.5
         fps : int, optional
             The number of frames per second, by default 60
+        save_intermediate: bool, optional
+            Return the intermediate results, by default False
+        show_process: bool, optional
+            Visualize the inference process, by default False
 
         Returns
         -------
@@ -400,7 +407,7 @@ class SAID(ABC, nn.Module):
 
         intermediates = []
 
-        for t in self.noise_scheduler.timesteps:
+        for t in tqdm(self.noise_scheduler.timesteps, disable=not show_process):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
                 intermediates.append(interm)
@@ -523,7 +530,7 @@ class SAID_UNet1D_LDM(SAID_UNet1D):
             audio_config=audio_config,
             audio_processor=audio_processor,
             noise_scheduler=noise_scheduler,
-            in_channels=z_dim,
+            in_channels=vae_z_dim,
             diffusion_steps=diffusion_steps,
             latent_scale=latent_scale,
         )
