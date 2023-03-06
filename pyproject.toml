@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "said"
-version = "0.2.1"
+version = "0.2.2"
 description = "Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -12,13 +12,14 @@ authors = [
     { name = "inkyupark", email = "inkyupark@krafton.com" },
 ]
 dependencies = [
-    "diffusers[torch]==0.13.1",
+    "diffusers[torch]==0.12.1",
     "einops",
     "numpy",
     "pandas",
     "pillow",
     "torch",
     "torchaudio",
+    "tqdm",
     "transformers",
 ]
 
@@ -27,7 +28,6 @@ dev = [
     "accelerate",
     "black",
     "tensorboard",
-    "tqdm",
 ]
 
 [tool.setuptools]
