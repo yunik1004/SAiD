@@ -10,7 +10,7 @@ import bpy
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 2, 1),
+    "version": (0, 3, 0),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -63,6 +63,18 @@ class LipsyncProperty(bpy.types.PropertyGroup):
         subtype="FILE_PATH",
     )
 
+    fps_mesh: bpy.props.IntProperty(
+        name="FPS",
+        default=-1,
+        description="Automatically set fps when -1",
+    )
+
+    fps_blendshape: bpy.props.IntProperty(
+        name="FPS",
+        default=-1,
+        description="Automatically set fps when -1",
+    )
+
 
 class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
     """Mesh panel"""
@@ -81,14 +93,19 @@ class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
         context : bpy.types.Context
             Blender context
         """
-        row = self.layout.row()
+        box_mesh = self.layout.box()
+
+        row = box_mesh.row()
         row.prop(context.scene.lipsync_property, "audio_path_mesh_sequence")
 
-        row = self.layout.row()
+        row = box_mesh.row()
         row.prop(context.scene.lipsync_property, "mesh_sequence_dir")
 
+        row = box_mesh.row()
+        row.prop(context.scene.lipsync_property, "fps_blendshape")
+
         # Button
-        row = self.layout.row()
+        row = box_mesh.row()
         row.operator("lipsync.generate_mesh_anime_operator", text="Generate Anime")
 
 
@@ -139,6 +156,9 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
 
         row = box_anime.row()
         row.prop(context.scene.lipsync_property, "blendshape_weights_path")
+
+        row = box_anime.row()
+        row.prop(context.scene.lipsync_property, "fps_blendshape")
 
         row = box_anime.row()
         row.operator(
@@ -257,10 +277,15 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
 
         # Update frame rate of the animation
         num_sequence = len(sequence)
-        samplerate = speaker.data.sound.samplerate
 
-        context.scene.render.fps = num_sequence
-        context.scene.render.fps_base = length / samplerate
+        fps = context.scene.lipsync_property.fps_mesh
+        if fps < 0:
+            samplerate = speaker.data.sound.samplerate
+            context.scene.render.fps = num_sequence
+            context.scene.render.fps_base = length / samplerate
+        else:
+            context.scene.render.fps = fps
+            context.scene.render.fps_base = 1
 
         # Generate animation sequence
         obj = load_obj(context, sequence[0])
@@ -286,6 +311,9 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
                 obj.data.vertices[vdx].keyframe_insert("co", frame=sdx + 1)
 
             bpy.ops.object.delete()
+
+        # Update the frame end
+        context.scene.frame_end = max(context.scene.frame_end, num_sequence)
 
         return {"FINISHED"}
 
@@ -408,8 +436,14 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
         num_sequence = len(weights)
         samplerate = speaker.data.sound.samplerate
 
-        context.scene.render.fps = num_sequence
-        context.scene.render.fps_base = length / samplerate
+        fps = context.scene.lipsync_property.fps_blendshape
+        if fps < 0:
+            samplerate = speaker.data.sound.samplerate
+            context.scene.render.fps = num_sequence
+            context.scene.render.fps_base = length / samplerate
+        else:
+            context.scene.render.fps = fps
+            context.scene.render.fps_base = 1
 
         # Generate animation sequence
         for wdx, weight in enumerate(weights):
@@ -420,6 +454,9 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
                 if keyblock.name in weight:
                     keyblock.value = weight[keyblock.name]
                     keyblock.keyframe_insert("value", frame=wdx + 1)
+
+        # Update the frame end
+        context.scene.frame_end = max(context.scene.frame_end, len(weights))
 
         return {"FINISHED"}
 
