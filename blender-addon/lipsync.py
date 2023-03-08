@@ -1,3 +1,5 @@
+"""Blender Add-on for the lipsync animation
+"""
 import csv
 from math import pi
 import os
@@ -5,17 +7,22 @@ from pathlib import Path
 from typing import Optional, Set, Tuple
 import aud
 import bpy
+from bpy_extras.io_utils import ExportHelper
 
 
+# Add-on information
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 3, 0),
+    "version": (0, 4, 0),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
     "category": "Lipsync",
 }
+
+# Global variables
+BASIS_KEY = "Basis"
 
 
 class LipsyncProperty(bpy.types.PropertyGroup):
@@ -75,6 +82,12 @@ class LipsyncProperty(bpy.types.PropertyGroup):
         description="Automatically set fps when -1",
     )
 
+    rearrange_blendshape: bpy.props.BoolProperty(
+        name="Rearrange Blendshapes",
+        default=True,
+        description="Rearrange the order of shape keys (Blendshapes)",
+    )
+
 
 class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
     """Mesh panel"""
@@ -84,6 +97,7 @@ class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
     bl_category = "Lipsync"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context: bpy.types.Context):
         """Draw UI elements
@@ -138,7 +152,7 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row = box_blendshape.row()
         row.operator("lipsync.import_blendshape_operator", text="Import Blendshape")
 
-        # Box for anime
+        # Box for generating anime
         box_anime = self.layout.box()
 
         # Visualize the selected object
@@ -161,9 +175,29 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row.prop(context.scene.lipsync_property, "fps_blendshape")
 
         row = box_anime.row()
+        row.prop(context.scene.lipsync_property, "rearrange_blendshape")
+
+        row = box_anime.row()
         row.operator(
             "lipsync.generate_blendshape_anime_operator",
             text="Generate Anime",
+        )
+
+        # Box for saving anime
+        box_save = self.layout.box()
+
+        row = box_save.row()
+        row.label(text="Selected Object: ", icon="OBJECT_DATA")
+        box = box_save.box()
+        if len(selected_objects) == 0:
+            box.label(text="", icon="KEYFRAME")
+        else:
+            box.label(text=selected_objects[0].name, icon="KEYFRAME")
+
+        row = box_save.row()
+        row.operator(
+            "lipsync.save_blendshape_anime_operator",
+            text="Save Anime",
         )
 
 
@@ -358,7 +392,7 @@ class LipsyncAddBlendshapeOperator(bpy.types.Operator):
         num_vertices = len(obj.data.vertices)
 
         # Create shape keys
-        obj.shape_key_add(name="Basis")
+        obj.shape_key_add(name=BASIS_KEY)
 
         for bdx in range(len(blendshape_names)):
             obj_bdx = load_obj(context, blendshape_paths[bdx])
@@ -423,6 +457,9 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
         context.collection.objects.unlink(speaker)
         collection.objects.link(speaker)
 
+        # Reset the active object
+        context.view_layer.objects.active = obj
+
         # Load blendshape weights
         weights = []
         with open(blendshape_weights_path, "r") as csvfile:
@@ -445,10 +482,23 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
             context.scene.render.fps = fps
             context.scene.render.fps_base = 1
 
+        key_blocks = obj.data.shape_keys.key_blocks
+
+        # Change the order of shape_keys
+        if context.scene.lipsync_property.rearrange_blendshape and num_sequence > 0:
+            blendshape_keys = list(weights[0].keys())
+            blendshape_keys.insert(0, BASIS_KEY)
+
+            for key in reversed(blendshape_keys):
+                kdx = key_blocks.find(key)
+                if kdx != -1:
+                    obj.active_shape_key_index = kdx
+                    bpy.ops.object.shape_key_move(type="TOP")
+
         # Generate animation sequence
         for wdx, weight in enumerate(weights):
-            for keyblock in obj.data.shape_keys.key_blocks:
-                if keyblock.name == "Basis":
+            for keyblock in key_blocks:
+                if keyblock.name == BASIS_KEY:
                     continue
 
                 if keyblock.name in weight:
@@ -456,7 +506,68 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
                     keyblock.keyframe_insert("value", frame=wdx + 1)
 
         # Update the frame end
-        context.scene.frame_end = max(context.scene.frame_end, len(weights))
+        context.scene.frame_end = max(context.scene.frame_end, num_sequence)
+
+        return {"FINISHED"}
+
+
+class LipsyncSaveBlendshapeAnimeOperator(bpy.types.Operator, ExportHelper):
+    """Operator for the 'Save Blendshape Anime' button in Blendshape panel"""
+
+    bl_idname = "lipsync.save_blendshape_anime_operator"
+    bl_label = "Save Blendshape"
+
+    filename_ext = ".csv"
+    filter_glob: bpy.props.StringProperty(
+        default="*.csv",
+        options={"HIDDEN"},
+    )
+
+    def execute(self, context: bpy.types.Context) -> Set[str]:
+        """Execute the operator
+
+        Parameters
+        ----------
+        context : bpy.types.Context
+            Blender context
+
+        Returns
+        -------
+        Set[str]
+            Set of status messages: https://docs.blender.org/api/current/bpy.types.Operator.html
+        """
+        selected_objects = context.selected_objects
+        if len(selected_objects) == 0:
+            self.report({"ERROR_INVALID_INPUT"}, "No selected object")
+            return {"CANCELLED"}
+
+        obj = selected_objects[0]
+        key_blocks = obj.data.shape_keys.key_blocks
+
+        blendshape_keys = key_blocks.keys()[1:]  # Remove BASIS_KEY
+
+        vals = []
+
+        fcurves = obj.data.shape_keys.animation_data.action.fcurves
+        if fcurves:
+            num_frame = len(fcurves[0].keyframe_points)
+            vals = [[0 for _ in range(len(blendshape_keys))] for _ in range(num_frame)]
+
+        for fcurve in fcurves:
+            key = fcurve.data_path.split('"')[1]
+            if key == BASIS_KEY:
+                continue
+
+            kdx = blendshape_keys.index(key)
+
+            for fdx, point in enumerate(fcurve.keyframe_points):
+                frame_val = point.co[1]
+                vals[fdx][kdx] = frame_val
+
+        with open(self.filepath, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(blendshape_keys)
+            writer.writerows(vals)
 
         return {"FINISHED"}
 
@@ -469,6 +580,7 @@ classes = (
     LipsyncGenerateMeshAnimeOperator,
     LipsyncAddBlendshapeOperator,
     LipsyncGenerateBlendshapeAnimeOperator,
+    LipsyncSaveBlendshapeAnimeOperator,
 )
 
 
