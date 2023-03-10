@@ -233,7 +233,9 @@ class SAID(ABC, nn.Module):
         self,
         waveform_processed: torch.FloatTensor,
         init_samples: Optional[torch.FloatTensor] = None,
+        mask: Optional[torch.FloatTensor] = None,
         num_inference_steps: int = 100,
+        strength: float = 1.0,
         guidance_scale: float = 2.5,
         eta: float = 0.0,
         fps: int = 60,
@@ -247,9 +249,13 @@ class SAID(ABC, nn.Module):
         waveform_processed : torch.FloatTensor
             (Batch_size, T_a), Processed mono waveform
         init_samples : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, vae_x_dim), Starting point for the process, by default None
+            (Batch_size, sample_seq_len, x_dim), Starting point for the process, by default None
+        mask : Optional[torch.FloatTensor], optional
+            (Batch_size, sample_seq_len, x_dim), Mask the region not to be changed, by default None
         num_inference_steps : int, optional
             The number of denoising steps, by default 100
+        strength: float, optional
+            How much to paint. Must be between 0 and 1, by default 1.0
         guidance_scale : float, optional
             Guidance scale in classifier-free guidance, by default 2.5
         eta : float, optional
@@ -278,15 +284,29 @@ class SAID(ABC, nn.Module):
 
         self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
 
-        if init_samples is None:
-            latents = torch.randn(batch_size, window_size, in_channels, device=device)
-        else:
-            latents = self.encode_samples(init_samples)
-
-            # Todo: Adding additional noise would be necessary
+        latents = (
+            torch.randn(batch_size, window_size, in_channels, device=device)
+            if init_samples is None
+            else self.encode_samples(init_samples)
+        )
 
         # Scaling the latent
         latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
+
+        init_latents = latents.clone()
+        init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+
+        # Add additional noise
+        noise = None
+        if init_samples is not None:
+            timestep = self.noise_scheduler.timesteps[-init_timestep]
+            timesteps = torch.tensor(
+                [timestep] * batch_size, dtype=torch.long, device=device
+            )
+
+            noise_output = self.add_noise(latents, timesteps)
+            latents = noise_output["noisy_samples"]
+            noise = noise_output["noise"]
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
@@ -305,7 +325,10 @@ class SAID(ABC, nn.Module):
 
         intermediates = []
 
-        for t in tqdm(self.noise_scheduler.timesteps, disable=not show_process):
+        t_start = num_inference_steps - init_timestep
+        for t in tqdm(
+            self.noise_scheduler.timesteps[t_start:], disable=not show_process
+        ):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
                 intermediates.append(interm)
@@ -329,6 +352,13 @@ class SAID(ABC, nn.Module):
                 noise_pred, t, latents, **extra_step_kwargs
             ).prev_sample
 
+            # Masking
+            if init_samples is not None and mask is not None:
+                init_latents_noisy = self.noise_scheduler.add_noise(
+                    init_latents, noise, t
+                )
+                latents = init_latents_noisy * mask + latents * (1 - mask)
+
         # Re-scaling the latent
         result = self.decode_latent(latents / self.latent_scale)
 
@@ -343,7 +373,9 @@ class SAID(ABC, nn.Module):
         self,
         waveform_processed: torch.FloatTensor,
         init_samples: Optional[torch.FloatTensor] = None,
+        mask: Optional[torch.FloatTensor] = None,
         num_inference_steps: int = 100,
+        strength: float = 1.0,
         guidance_scale: float = 2.5,
         fps: int = 60,
         save_intermediate: bool = False,
@@ -356,9 +388,13 @@ class SAID(ABC, nn.Module):
         waveform_processed : torch.FloatTensor
             (Batch_size, T_a), Processed mono waveform
         init_samples : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, vae_x_dim), Starting point for the process, by default None
+            (Batch_size, sample_seq_len, x_dim), Starting point for the process, by default None
+        mask : Optional[torch.FloatTensor], optional
+            (Batch_size, sample_seq_len, x_dim), Mask the region not to be changed, by default None
         num_inference_steps : int, optional
             The number of denoising steps, by default 100
+        strength: float, optional
+            How much to paint. Must be between 0 and 1, by default 1.0
         guidance_scale : float, optional
             Guidance scale in classifier-free guidance, by default 2.5
         fps : int, optional
@@ -372,8 +408,8 @@ class SAID(ABC, nn.Module):
         -------
         Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
             {
-                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, vae_x_dim), Generated blendshape coefficients
-                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, vae_x_dim), Intermediate blendshape coefficients
+                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
+                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, x_dim), Intermediate blendshape coefficients
             }
         """
         batch_size = waveform_processed.shape[0]
@@ -385,15 +421,29 @@ class SAID(ABC, nn.Module):
 
         self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
 
-        if init_samples is None:
-            latents = torch.randn(batch_size, window_size, in_channels, device=device)
-        else:
-            latents = self.encode_samples(init_samples)
-
-            # Todo: Adding additional noise would be necessary
+        latents = (
+            torch.randn(batch_size, window_size, in_channels, device=device)
+            if init_samples is None
+            else self.encode_samples(init_samples)
+        )
 
         # Scaling the latent
         latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
+
+        init_latents = latents.clone()
+        init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+
+        # Add additional noise
+        noise = None
+        if init_samples is not None:
+            timestep = self.noise_scheduler.timesteps[-init_timestep]
+            timesteps = torch.tensor(
+                [timestep] * batch_size, dtype=torch.long, device=device
+            )
+
+            noise_output = self.add_noise(latents, timesteps)
+            latents = noise_output["noisy_samples"]
+            noise = noise_output["noise"]
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
@@ -407,7 +457,10 @@ class SAID(ABC, nn.Module):
 
         intermediates = []
 
-        for t in tqdm(self.noise_scheduler.timesteps, disable=not show_process):
+        t_start = num_inference_steps - init_timestep
+        for t in tqdm(
+            self.noise_scheduler.timesteps[t_start:], disable=not show_process
+        ):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
                 intermediates.append(interm)
@@ -434,6 +487,13 @@ class SAID(ABC, nn.Module):
 
             latents = latents_pred
 
+            # Masking
+            if init_samples is not None and mask is not None:
+                init_latents_noisy = self.noise_scheduler.add_noise(
+                    init_latents, noise, t
+                )
+                latents = init_latents_noisy * mask + latents * (1 - mask)
+
         # Re-scaling the latent
         result = self.decode_latent(latents / self.latent_scale)
 
@@ -446,7 +506,7 @@ class SAID(ABC, nn.Module):
 
 
 class SAID_UNet1D(SAID):
-    """SAiD model implemented using U-Net 1D model"""
+    """SAiD model implemented using U-Net 1D model. Masking is not supported"""
 
     def __init__(
         self,

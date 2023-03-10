@@ -6,7 +6,11 @@ from diffusers import DDIMScheduler
 import torch
 from said.model.diffusion import SAID_CDiT, SAID_UNet1D
 from said.util.audio import fit_audio_unet, load_audio
-from said.util.blendshape import save_blendshape_coeffs, save_blendshape_coeffs_image
+from said.util.blendshape import (
+    load_blendshape_coeffs,
+    save_blendshape_coeffs,
+    save_blendshape_coeffs_image,
+)
 from dataset import VOCARKIT_CLASSES
 
 
@@ -61,6 +65,7 @@ def main():
     parser.add_argument(
         "--num_steps", type=int, default=100, help="Number of inference steps"
     )
+    parser.add_argument("--strength", type=float, default=1.0, help="How much to paint")
     parser.add_argument(
         "--guidance_scale", type=float, default=2.5, help="Guidance scale"
     )
@@ -85,6 +90,16 @@ def main():
         default="cuda:0",
         help="GPU/CPU device",
     )
+    parser.add_argument(
+        "--init_sample_path",
+        type=str,
+        help="Path of the initial sample file (csv format)",
+    )
+    parser.add_argument(
+        "--mask_path",
+        type=str,
+        help="Path of the mask file (csv format)",
+    )
     args = parser.parse_args()
 
     weights_path = args.weights_path
@@ -94,12 +109,26 @@ def main():
     intermediate_dir = args.intermediate_dir
     mdm_like = args.mdm_like
     num_steps = args.num_steps
+    strength = args.strength
     guidance_scale = args.guidance_scale
     eta = args.eta
     fps = args.fps
     divisor_unet = args.divisor_unet
     device = args.device
     save_intermediate = args.save_intermediate
+    show_process = True
+
+    # Load init sample
+    init_sample_path = args.init_sample_path
+    init_samples = None
+    if init_sample_path is not None:
+        init_samples = load_blendshape_coeffs(init_sample_path).unsqueeze(0).to(device)
+
+    # Load mask
+    mask_path = args.mask_path
+    mask = None
+    if mask_path is not None:
+        mask = load_blendshape_coeffs(mask_path).unsqueeze(0).to(device)
 
     # Load model
     # said_model = SAID_CDiT(
@@ -126,21 +155,25 @@ def main():
         output = (
             said_model.inference_mdm(
                 waveform_processed=waveform_processed,
-                init_samples=None,
+                init_samples=init_samples,
+                mask=mask,
                 num_inference_steps=num_steps,
+                strength=strength,
                 guidance_scale=guidance_scale,
                 save_intermediate=save_intermediate,
-                show_process=True,
+                show_process=show_process,
             )
             if mdm_like
             else said_model.inference(
                 waveform_processed=waveform_processed,
-                init_samples=None,
+                init_samples=init_samples,
+                mask=mask,
                 num_inference_steps=num_steps,
+                strength=strength,
                 guidance_scale=guidance_scale,
                 eta=eta,
                 save_intermediate=save_intermediate,
-                show_process=True,
+                show_process=show_process,
             )
         )
 
