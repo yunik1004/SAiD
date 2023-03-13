@@ -369,8 +369,12 @@ class SAID(ABC, nn.Module):
 
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
-        # Re-scaling the latent
-        result = self.decode_latent(latents / self.latent_scale)
+            # Start clipping after 90% done
+            if idx / init_timestep > 0.9:
+                latents = latents.clamp(0, self.latent_scale)
+
+        # Re-scaling & clipping the latent
+        result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
 
         output = {
             "Result": result,
@@ -513,8 +517,12 @@ class SAID(ABC, nn.Module):
 
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
-        # Re-scaling the latent
-        result = self.decode_latent(latents / self.latent_scale)
+            # Start clipping after 90% done
+            if idx / init_timestep > 0.9:
+                latents = latents.clamp(0, self.latent_scale)
+
+        # Re-scaling & clipping the latent
+        result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
 
         output = {
             "Result": result,
