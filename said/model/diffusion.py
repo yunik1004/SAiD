@@ -326,8 +326,12 @@ class SAID(ABC, nn.Module):
         intermediates = []
 
         t_start = num_inference_steps - init_timestep
-        for t in tqdm(
-            self.noise_scheduler.timesteps[t_start:], disable=not show_process
+
+        for idx, t in enumerate(
+            tqdm(
+                self.noise_scheduler.timesteps[t_start:],
+                disable=not show_process,
+            )
         ):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
@@ -354,9 +358,15 @@ class SAID(ABC, nn.Module):
 
             # Masking
             if init_samples is not None and mask is not None:
-                init_latents_noisy = self.noise_scheduler.add_noise(
-                    init_latents, noise, t
-                )
+                init_latents_noisy = init_latents
+
+                tdx_next = t_start + idx + 1
+                if tdx_next < num_inference_steps:
+                    t_next = self.noise_scheduler.timesteps[tdx_next]
+                    init_latents_noisy = self.noise_scheduler.add_noise(
+                        init_latents, noise, t_next
+                    )
+
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
         # Re-scaling the latent
@@ -458,8 +468,11 @@ class SAID(ABC, nn.Module):
         intermediates = []
 
         t_start = num_inference_steps - init_timestep
-        for t in tqdm(
-            self.noise_scheduler.timesteps[t_start:], disable=not show_process
+        for idx, t in enumerate(
+            tqdm(
+                self.noise_scheduler.timesteps[t_start:],
+                disable=not show_process,
+            )
         ):
             if save_intermediate:
                 interm = self.decode_latent(latents / self.latent_scale)
@@ -489,9 +502,15 @@ class SAID(ABC, nn.Module):
 
             # Masking
             if init_samples is not None and mask is not None:
-                init_latents_noisy = self.noise_scheduler.add_noise(
-                    init_latents, noise, t
-                )
+                init_latents_noisy = init_latents
+
+                tdx_next = t_start + idx + 1
+                if tdx_next < num_inference_steps:
+                    t_next = self.noise_scheduler.timesteps[tdx_next]
+                    init_latents_noisy = self.noise_scheduler.add_noise(
+                        init_latents, noise, t_next
+                    )
+
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
         # Re-scaling the latent

@@ -29,7 +29,7 @@ def main():
     parser.add_argument(
         "--audio_path",
         type=str,
-        default="../VOCA_ARKit/test/audio/FaceTalk_170913_03279_TA_sentence01.wav",
+        default="../VOCA_ARKit/test/audio/FaceTalk_170731_00024_TA_sentence01.wav",
         help="Path of the audio file",
     )
     parser.add_argument(
