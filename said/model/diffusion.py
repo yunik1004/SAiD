@@ -370,8 +370,15 @@ class SAID(ABC, nn.Module):
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
             # Start clipping after 90% done
+            """
             if idx / init_timestep > 0.9:
-                latents = latents.clamp(0, self.latent_scale)
+                latents = (
+                    self.encode_samples(
+                        self.decode_latent(latents / self.latent_scale).clamp(0, 1)
+                    )
+                    * self.latent_scale
+                )
+            """
 
         # Re-scaling & clipping the latent
         result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
@@ -518,8 +525,15 @@ class SAID(ABC, nn.Module):
                 latents = init_latents_noisy * mask + latents * (1 - mask)
 
             # Start clipping after 90% done
+            """
             if idx / init_timestep > 0.9:
-                latents = latents.clamp(0, self.latent_scale)
+                latents = (
+                    self.encode_samples(
+                        self.decode_latent(latents / self.latent_scale).clamp(0, 1)
+                    )
+                    * self.latent_scale
+                )
+            """
 
         # Re-scaling & clipping the latent
         result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
