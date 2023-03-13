@@ -14,7 +14,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 4, 0),
+    "version": (0, 5, 0),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -293,14 +293,8 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
         # Reset the scene frame to 1
         context.scene.frame_set(1)
 
-        # Create collection
-        collection = bpy.data.collections.new("Lipsync")
-        context.scene.collection.children.link(collection)
-
         # Load the sound
         speaker, length = load_speaker(context, audio_path)
-        context.collection.objects.unlink(speaker)
-        collection.objects.link(speaker)
 
         # List the mesh sequence
         sequence = []
@@ -326,11 +320,6 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
         if obj is None:
             self.report({"ERROR_INVALID_INPUT"}, "File format is not supported")
             return {"CANCELLED"}
-
-        context.collection.objects.unlink(obj)
-        collection.objects.link(obj)
-        obj.name = "Object"
-        obj.data.name = "Object"
 
         num_vertices = len(obj.data.vertices)
 
@@ -436,26 +425,17 @@ class LipsyncGenerateBlendshapeAnimeOperator(bpy.types.Operator):
             context.scene.lipsync_property.blendshape_weights_path
         )
 
-        # Create collection
-        collection = bpy.data.collections.new("Lipsync")
-        context.scene.collection.children.link(collection)
-
         selected_objects = context.selected_objects
         if len(selected_objects) == 0:
             self.report({"ERROR_INVALID_INPUT"}, "Should have to select the object")
             return {"CANCELLED"}
         obj = selected_objects[0]
 
-        context.collection.objects.unlink(obj)
-        collection.objects.link(obj)
-
         # Reset the scene frame to 1
         context.scene.frame_set(1)
 
         # Load the sound
         speaker, length = load_speaker(context, audio_path)
-        context.collection.objects.unlink(speaker)
-        collection.objects.link(speaker)
 
         # Reset the active object
         context.view_layer.objects.active = obj
