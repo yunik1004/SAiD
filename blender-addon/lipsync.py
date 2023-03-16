@@ -14,7 +14,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 5, 0),
+    "version": (0, 5, 1),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -23,6 +23,7 @@ bl_info = {
 
 # Global variables
 BASIS_KEY = "Basis"
+DIFF_MATERIAL = "Diff"
 
 
 class LipsyncProperty(bpy.types.PropertyGroup):
@@ -86,6 +87,18 @@ class LipsyncProperty(bpy.types.PropertyGroup):
         name="Rearrange Blendshapes",
         default=True,
         description="Rearrange the order of shape keys (Blendshapes)",
+    )
+
+    target_obj: bpy.props.PointerProperty(
+        name="Target Object",
+        type=bpy.types.Object,
+        description="Target object to visualize the vertex differences",
+    )
+
+    color_multiplier: bpy.props.FloatProperty(
+        name="Color Multiplier",
+        default=1.0,
+        description="Multiplier for the color which visualize the vertex differences",
     )
 
 
@@ -198,6 +211,20 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row.operator(
             "lipsync.save_blendshape_anime_operator",
             text="Save Anime",
+        )
+
+        box_visualize = self.layout.box()
+
+        row = box_visualize.row()
+        row.prop(context.scene.lipsync_property, "target_obj")
+
+        row = box_visualize.row()
+        row.prop(context.scene.lipsync_property, "color_multiplier")
+
+        row = box_visualize.row()
+        row.operator(
+            "lipsync.visualize_difference_operator",
+            text="Visualize Difference",
         )
 
 
@@ -323,6 +350,7 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
 
         num_vertices = len(obj.data.vertices)
 
+        # TODO: Faster keyframe inserting
         for sdx in range(1, num_sequence):
             obj_tmp = load_obj(context, sequence[sdx])
             if obj_tmp is None:
@@ -552,6 +580,91 @@ class LipsyncSaveBlendshapeAnimeOperator(bpy.types.Operator, ExportHelper):
         return {"FINISHED"}
 
 
+class LipsyncVisualizeDifferenceOperator(bpy.types.Operator):
+    """Operator for the 'Visualize Difference' button in Blendshape panel"""
+
+    bl_idname = "lipsync.visualize_difference_operator"
+    bl_label = "Visualize Difference"
+
+    def execute(self, context: bpy.types.Context) -> Set[str]:
+        """Execute the operator
+
+        Parameters
+        ----------
+        context : bpy.types.Context
+            Blender context
+
+        Returns
+        -------
+        Set[str]
+            Set of status messages: https://docs.blender.org/api/current/bpy.types.Operator.html
+        """
+        selected_objects = context.selected_objects
+        if len(selected_objects) == 0:
+            self.report({"ERROR_INVALID_INPUT"}, "No selected object")
+            return {"CANCELLED"}
+
+        obj = selected_objects[0]
+
+        target_obj = context.scene.lipsync_property.target_obj
+        if target_obj is None:
+            self.report({"ERROR_INVALID_INPUT"}, "No target object")
+            return {"CANCELLED"}
+
+        ### Update vertex colors
+        mesh = obj.data
+
+        if len(mesh.vertex_colors) == 0:
+            mesh.vertex_colors.new()
+
+        # Set material
+        if DIFF_MATERIAL not in bpy.data.materials:
+            mat = bpy.data.materials.new(name=DIFF_MATERIAL)
+        mat = bpy.data.materials[DIFF_MATERIAL]
+        mat.use_nodes = True
+
+        vcolor = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        mat.node_tree.links.new(vcolor.outputs[0], bsdf.inputs[0])
+
+        mesh.materials.append(mat)
+
+        new_mat_idx = len(mesh.materials) - 1
+
+        for poly in mesh.polygons:
+            poly.material_index = new_mat_idx
+
+        color_multiplier = context.scene.lipsync_property.color_multiplier
+
+        try:
+            fcurves = obj.data.shape_keys.animation_data.action.fcurves
+            num_frame = len(fcurves[0].keyframe_points)
+        except:
+            num_frame = 0
+
+        # TODO: Faster keyframe inserting
+        for fdx in range(1, num_frame + 1):
+            context.scene.frame_set(fdx)
+            for poly in mesh.polygons:
+                for i, vdx in enumerate(poly.vertices):
+                    diff = mesh.vertices[vdx].co - target_obj.data.vertices[vdx].co
+                    loop_idx = poly.loop_indices[i]
+                    mesh.vertex_colors.active.data[loop_idx].color = (
+                        abs(diff[0]) * color_multiplier,
+                        abs(diff[1]) * color_multiplier,
+                        abs(diff[2]) * color_multiplier,
+                        1.0,
+                    )
+                    mesh.vertex_colors.active.data[loop_idx].keyframe_insert(
+                        "color", frame=fdx
+                    )
+
+        context.scene.frame_set(1)
+
+        return {"FINISHED"}
+
+
 # List of classes to be registered
 classes = (
     LipsyncProperty,
@@ -561,6 +674,7 @@ classes = (
     LipsyncAddBlendshapeOperator,
     LipsyncGenerateBlendshapeAnimeOperator,
     LipsyncSaveBlendshapeAnimeOperator,
+    LipsyncVisualizeDifferenceOperator,
 )
 
 
