@@ -25,6 +25,7 @@ bl_info = {
 BASIS_KEY = "Basis"
 DIFF_MATERIAL = "DiffMaterial"
 ACTION_NAME = "LipsyncAction"
+DIFF_ACTION_NAME = "DiffAction"
 
 
 class LipsyncProperty(bpy.types.PropertyGroup):
@@ -377,6 +378,8 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
         mesh.animation_data_create()
         mesh.animation_data.action = bpy.data.actions.new(name=ACTION_NAME)
 
+        frames = range(1, num_sequence + 1)
+
         # Insert keyframes
         for vdx in range(num_vertices):
             for idx in range(3):
@@ -385,7 +388,6 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
                     index=idx,
                 )
 
-                frames = range(1, num_sequence + 1)
                 samples = [
                     coords_list[fdx][3 * vdx + idx] for fdx in range(num_sequence)
                 ]
@@ -676,24 +678,45 @@ class LipsyncVisualizeDifferenceOperator(bpy.types.Operator):
         except:
             num_frame = 0
 
-        # TODO: Faster keyframe inserting
-        for fdx in range(1, num_frame + 1):
-            context.scene.frame_set(fdx)
+        # Compute the difference
+        diff_dict = [{} for _ in range(num_frame)]
+        for fdx in range(num_frame):
+            context.scene.frame_set(fdx + 1)
             for poly in mesh.polygons:
                 for i, vdx in enumerate(poly.vertices):
                     diff = mesh.vertices[vdx].co - target_obj.data.vertices[vdx].co
                     loop_idx = poly.loop_indices[i]
-                    mesh.vertex_colors.active.data[loop_idx].color = (
-                        abs(diff[0]) * color_multiplier,
-                        abs(diff[1]) * color_multiplier,
-                        abs(diff[2]) * color_multiplier,
-                        1.0,
-                    )
-                    mesh.vertex_colors.active.data[loop_idx].keyframe_insert(
-                        "color", frame=fdx
-                    )
+                    diff_dict[fdx][loop_idx] = diff
 
         context.scene.frame_set(1)
+
+        # Create animation_data, action
+        mesh.animation_data_create()
+        mesh.animation_data.action = bpy.data.actions.new(name=DIFF_ACTION_NAME)
+
+        frames = range(1, num_frame + 1)
+
+        # Insert keyframes
+        for poly in mesh.polygons:
+            for i, vdx in enumerate(poly.vertices):
+                loop_idx = poly.loop_indices[i]
+                diff = [diff_dict[fdx][loop_idx] for fdx in range(num_frame)]
+
+                for idx in range(3):
+                    fcurve = mesh.animation_data.action.fcurves.new(
+                        data_path=f"vertex_colors.active.data[{loop_idx}].color",
+                        index=idx,
+                    )
+
+                    samples = [
+                        abs(diff[fdx][idx]) * color_multiplier
+                        for fdx in range(num_frame)
+                    ]
+
+                    fcurve.keyframe_points.add(count=num_frame)
+                    fcurve.keyframe_points.foreach_set(
+                        "co", [x for co in zip(frames, samples) for x in co]
+                    )
 
         return {"FINISHED"}
 
