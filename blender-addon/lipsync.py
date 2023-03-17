@@ -23,7 +23,8 @@ bl_info = {
 
 # Global variables
 BASIS_KEY = "Basis"
-DIFF_MATERIAL = "Diff"
+DIFF_MATERIAL = "DiffMaterial"
+ACTION_NAME = "LipsyncAction"
 
 
 class LipsyncProperty(bpy.types.PropertyGroup):
@@ -348,20 +349,51 @@ class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
             self.report({"ERROR_INVALID_INPUT"}, "File format is not supported")
             return {"CANCELLED"}
 
-        num_vertices = len(obj.data.vertices)
+        mesh = obj.data
+        num_vertices = len(mesh.vertices)
 
-        # TODO: Faster keyframe inserting
+        # Generate vertices coordinates lists
+        coords_list = []
+
+        # Default vertices coordinates
+        coords = [None] * (num_vertices * 3)
+        mesh.vertices.foreach_get("co", coords)
+        coords_list.append(coords)
+
+        # Next vertices coordinates
         for sdx in range(1, num_sequence):
             obj_tmp = load_obj(context, sequence[sdx])
             if obj_tmp is None:
                 self.report({"ERROR_INVALID_INPUT"}, "File format is not supported")
                 return {"CANCELLED"}
 
-            for vdx in range(num_vertices):
-                obj.data.vertices[vdx].co = obj_tmp.data.vertices[vdx].co
-                obj.data.vertices[vdx].keyframe_insert("co", frame=sdx + 1)
+            coords = [None] * (num_vertices * 3)
+            obj_tmp.data.vertices.foreach_get("co", coords)
+            coords_list.append(coords)
 
             bpy.ops.object.delete()
+
+        # Create animation_data, action
+        mesh.animation_data_create()
+        mesh.animation_data.action = bpy.data.actions.new(name=ACTION_NAME)
+
+        # Insert keyframes
+        for vdx in range(num_vertices):
+            for idx in range(3):
+                fcurve = mesh.animation_data.action.fcurves.new(
+                    data_path=f"vertices[{vdx}].co",
+                    index=idx,
+                )
+
+                frames = range(1, num_sequence + 1)
+                samples = [
+                    coords_list[fdx][3 * vdx + idx] for fdx in range(num_sequence)
+                ]
+
+                fcurve.keyframe_points.add(count=num_sequence)
+                fcurve.keyframe_points.foreach_set(
+                    "co", [x for co in zip(frames, samples) for x in co]
+                )
 
         # Update the frame end
         context.scene.frame_end = max(context.scene.frame_end, num_sequence)
@@ -418,9 +450,10 @@ class LipsyncAddBlendshapeOperator(bpy.types.Operator):
                 continue
 
             sk = obj.shape_key_add(name=blendshape_names[bdx])
-            for vdx in range(num_vertices):
-                for i in range(3):
-                    sk.data[vdx].co[i] = obj_bdx.data.vertices[vdx].co[i]
+
+            coords = [None] * (num_vertices * 3)
+            obj_bdx.data.vertices.foreach_get("co", coords)
+            sk.data.foreach_set("co", coords)
 
             bpy.ops.object.delete()
 
