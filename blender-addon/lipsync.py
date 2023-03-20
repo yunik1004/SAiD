@@ -1,7 +1,7 @@
 """Blender Add-on for the lipsync animation
 """
 import csv
-from math import pi
+from math import pi, sqrt
 import os
 from pathlib import Path
 from typing import Optional, Set, Tuple
@@ -101,6 +101,16 @@ class LipsyncProperty(bpy.types.PropertyGroup):
         name="Color Multiplier",
         default=1.0,
         description="Multiplier for the color which visualize the vertex differences",
+    )
+
+    vis_option: bpy.props.EnumProperty(
+        name="Visualize Option",
+        items=[
+            ("Vector", "Vector", ""),
+            ("Amplitude", "Amplitude", ""),
+        ],
+        default="Vector",
+        description="Option for the visualization",
     )
 
 
@@ -219,6 +229,9 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
 
         row = box_visualize.row()
         row.prop(context.scene.lipsync_property, "target_obj")
+
+        row = box_visualize.row()
+        row.prop(context.scene.lipsync_property, "vis_option")
 
         row = box_visualize.row()
         row.prop(context.scene.lipsync_property, "color_multiplier")
@@ -671,6 +684,7 @@ class LipsyncVisualizeDifferenceOperator(bpy.types.Operator):
             poly.material_index = new_mat_idx
 
         color_multiplier = context.scene.lipsync_property.color_multiplier
+        vis_option = context.scene.lipsync_property.vis_option
 
         try:
             fcurves = obj.data.shape_keys.animation_data.action.fcurves
@@ -702,6 +716,16 @@ class LipsyncVisualizeDifferenceOperator(bpy.types.Operator):
                 loop_idx = poly.loop_indices[i]
                 diff = [diff_dict[fdx][loop_idx] for fdx in range(num_frame)]
 
+                diff_val = []
+                if vis_option == "Vector":
+                    diff_val = [(abs(df[0]), abs(df[1]), abs(df[2])) for df in diff]
+                elif vis_option == "Amplitude":
+                    amp = [sqrt(df[0] ** 2 + df[1] ** 2 + df[2] ** 2) for df in diff]
+                    diff_val = [(ap, ap, ap) for ap in amp]
+                else:
+                    self.report({"ERROR_INVALID_INPUT"}, "Weird visualize option")
+                    return {"CANCELLED"}
+
                 for idx in range(3):
                     fcurve = mesh.animation_data.action.fcurves.new(
                         data_path=f"vertex_colors.active.data[{loop_idx}].color",
@@ -709,7 +733,7 @@ class LipsyncVisualizeDifferenceOperator(bpy.types.Operator):
                     )
 
                     samples = [
-                        abs(diff[fdx][idx]) * color_multiplier
+                        diff_val[fdx][idx] * color_multiplier
                         for fdx in range(num_frame)
                     ]
 
