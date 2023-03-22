@@ -27,7 +27,9 @@ dependencies = [
 dev = [
     "accelerate==0.16.0",
     "black",
+    "qpsolvers",
     "tensorboard",
+    "trimesh",
 ]
 
 [tool.setuptools]

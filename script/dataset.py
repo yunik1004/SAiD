@@ -1,12 +1,14 @@
 """Define the dataset which are used in the scripts
 """
 from abc import abstractmethod, ABC
+import glob
 import os
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+import trimesh
 from said.util.audio import load_audio
 from said.util.blendshape import load_blendshape_coeffs
 
@@ -318,3 +320,69 @@ class VOCARKitVAEDataset(Dataset):
             "blendshape_coeffs": (1, num_blendshapes),
         """
         return self.blendshapes[index].unsqueeze(0)
+
+
+class VOCARKitPseudoGTOptDataset:
+    """Dataset for generating pseudo-GT blendshape coefficients"""
+
+    def __init__(
+        self,
+        neutrals_dir: str,
+        blendshapes_dir: str,
+        mesh_seqs_dir: str,
+        blendshapes_names: List[str],
+        seq_id_range: Tuple[int, int] = (1, 40),
+    ) -> None:
+        self.neutrals_dir = neutrals_dir
+        self.blendshapes_dir_dir = blendshapes_dir
+        self.mesh_seqs_dir_dir_dir = mesh_seqs_dir
+        self.blendshapes_names = blendshapes_names
+
+        self.person_ids = sorted(os.listdir(self.mesh_seqs_dir_dir_dir))
+
+        self.seq_ids = list(range(seq_id_range[0], seq_id_range[1] + 1))
+
+    def get_person_id_list(self) -> List[str]:
+        return self.person_ids
+
+    def get_seq_id_list(self) -> List[int]:
+        return self.seq_ids
+
+    def get_blendshapes(
+        self, person_id: str
+    ) -> Dict[str, Union[trimesh.base.Trimesh, Dict[str, trimesh.base.Trimesh]]]:
+        neutral_path = os.path.join(self.neutrals_dir, f"{person_id}.obj")
+        blendshapes_dir = os.path.join(self.blendshapes_dir_dir, person_id)
+
+        neutral_mesh = trimesh.load(neutral_path)
+
+        blendshapes_dict = {}
+        for bl_name in self.blendshapes_names:
+            bl_path = os.path.join(blendshapes_dir, f"{bl_name}.obj")
+            bl_mesh = trimesh.load(bl_path)
+            blendshapes_dict[bl_name] = bl_mesh
+
+        output = {}
+        output["neutral"] = neutral_mesh
+        output["blendshapes"] = blendshapes_dict
+
+        return output
+
+    def get_mesh_seq(self, person_id: str, seq_id: int) -> List[trimesh.base.Trimesh]:
+        mesh_seq_dir = os.path.join(
+            self.mesh_seqs_dir_dir_dir, person_id, f"sentence{seq_id:02}"
+        )
+
+        if not os.path.isdir(mesh_seq_dir):
+            return []
+
+        mesh_seq_paths = sorted(
+            glob.glob(os.path.join(mesh_seq_dir, "**/*.obj"), recursive=True)
+        )
+
+        mesh_seq_list = []
+        for seq_path in mesh_seq_paths:
+            mesh = trimesh.load(seq_path)
+            mesh_seq_list.append(mesh)
+
+        return mesh_seq_list
