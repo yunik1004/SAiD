@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "said"
-version = "0.2.2"
+version = "0.2.3"
 description = "Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -24,12 +24,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
+test = [
     "accelerate==0.16.0",
-    "black",
     "qpsolvers",
+    "scipy",
     "tensorboard",
     "trimesh",
+]
+style = [
+    "black",
+]
+dev = [
+    "said[style, test]",
 ]
 
 [tool.setuptools]
