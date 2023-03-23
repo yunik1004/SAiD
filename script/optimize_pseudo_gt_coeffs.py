@@ -5,13 +5,15 @@ from typing import List, Optional
 import numpy as np
 import os
 from qpsolvers import solve_qp
+from scipy import linalg as la
+from scipy import sparse as sp
 from tqdm import tqdm
 from said.util.blendshape import save_blendshape_coeffs
 from said.util.parser import parse_list
 from dataset import VOCARKitPseudoGTOptDataset
 
 
-class OptimizationProblem:
+class OptimizationProblemSingle:
     def __init__(
         self,
         neutral_vector: np.ndarray,
@@ -49,6 +51,81 @@ class OptimizationProblem:
         w_sol = np.clip(w_sol, self.lbw, self.ubw)
 
         return w_sol
+
+
+class OptimizationProblemFull:
+    def __init__(
+        self,
+        neutral_vector: np.ndarray,
+        blendshapes_matrix: np.ndarray,
+        landmark_idx_list: List[int],
+        landmark_weight: float = 10.0,
+    ) -> None:
+        self.neutral_vector = neutral_vector
+        self.num_blendshapes = blendshapes_matrix.shape[1]
+
+        # B_delta
+        self.blendshapes_matrix_delta = blendshapes_matrix - self.neutral_vector
+        self.btb = self.blendshapes_matrix_delta.T @ self.blendshapes_matrix_delta
+
+        # D
+        eye = sp.identity(self.num_blendshapes, dtype="int", format="csc")
+        self.dipole_eye = sp.bmat([[eye], [-eye]])
+
+        self.g_offset = sp.csc_matrix((0, self.num_blendshapes), dtype="int")
+
+    def optimize(
+        self, vertices_vector_list: List[np.ndarray], delta: float = 0.1
+    ) -> np.ndarray:
+        t_len = len(vertices_vector_list)
+
+        # Compute P
+        p = la.block_diag(*[self.btb for _ in range(t_len)])
+
+        # Compute q
+        q = np.vstack(
+            [
+                self.blendshapes_matrix_delta.T @ (self.neutral_vector - vvector)
+                for vvector in vertices_vector_list
+            ]
+        ).reshape(-1)
+
+        # Compute G
+        g = self.compute_g(t_len)
+
+        # Set h
+        h = np.full(g.shape[0], delta)
+
+        # Uppler/lower bound
+        lbw = np.zeros(self.num_blendshapes * t_len)
+        ubw = np.ones(self.num_blendshapes * t_len)
+
+        # Solve the problem
+        w_sol = solve_qp(
+            P=p,
+            q=q,
+            G=g,
+            h=h,
+            lb=lbw,
+            ub=ubw,
+            solver="cvxopt",
+        )
+        w_sol = np.clip(w_sol, lbw, ubw)
+
+        w_vectors_matrix = w_sol.reshape(t_len, self.num_blendshapes)
+
+        return w_vectors_matrix
+
+    def compute_g(self, t_len: int) -> sp.csc_matrix:
+        diag_g = sp.block_diag(
+            [self.dipole_eye for _ in range(t_len - 1)], format="csc"
+        )
+
+        pos_g = sp.block_diag((diag_g, self.g_offset), format="csc")
+        neg_g = sp.block_diag((self.g_offset, diag_g), format="csc")
+
+        g = pos_g - neg_g
+        return g
 
 
 def main():
@@ -157,7 +234,7 @@ def main():
         blendshapes_matrix = np.concatenate(blendshape_vectors, axis=1)
 
         # Define the optimization problem
-        opt_prob = OptimizationProblem(
+        opt_prob = OptimizationProblemFull(
             neutral_vector, blendshapes_matrix, landmark_idx_list
         )
 
@@ -165,21 +242,20 @@ def main():
             out_path = coeff_out_path(person_id, seq_id, sdx > 0)
 
             mesh_seq_list = dataset.get_mesh_seq(person_id, seq_id)
-            mesh_seq_vertices_list = [mesh.vertices for mesh in mesh_seq_list]
+            if len(mesh_seq_list) == 0:
+                continue
 
-            blendshape_weights_list = []
+            mesh_seq_vertices_list = [mesh.vertices for mesh in mesh_seq_list]
+            mesh_seq_vertices_vector_list = [
+                vertices[head_idx_list].reshape((-1, 1))
+                for vertices in mesh_seq_vertices_list
+            ]
 
             # Solve Optimization problem
-            for vdx, vertices in enumerate(mesh_seq_vertices_list):
-                vertices_vector = vertices[head_idx_list].reshape((-1, 1))
-                w_soln = opt_prob.optimize(
-                    vertices_vector,
-                    blendshape_weights_list[vdx - 1] if vdx > 0 else None,
-                )
-                blendshape_weights_list.append(w_soln)
+            w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
 
             save_blendshape_coeffs(
-                blendshape_weights_list,
+                w_soln,
                 blendshape_name_list,
                 out_path,
             )
