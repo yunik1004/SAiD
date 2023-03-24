@@ -4,6 +4,7 @@ import argparse
 from typing import List, Optional
 import numpy as np
 import os
+import pathlib
 from qpsolvers import solve_qp
 from scipy import linalg as la
 from scipy import sparse as sp
@@ -14,11 +15,22 @@ from dataset import VOCARKitPseudoGTOptDataset
 
 
 class OptimizationProblemSingle:
+    """Autoregressive optimization of pseudo-gt coefficients"""
+
     def __init__(
         self,
         neutral_vector: np.ndarray,
         blendshapes_matrix: np.ndarray,
     ) -> None:
+        """Constructor of OptimizationProblemSingle
+
+        Parameters
+        ----------
+        neutral_vector : np.ndarray
+            (3|V|, 1), neutral mesh's vertices vector
+        blendshapes_matrix : np.ndarray
+            (3|V|, num_blendshapes), [b1 | b2 | ... | b_N] blendshape mesh's vertices vectors
+        """
         self.neutral_vector = neutral_vector
 
         self.threev, self.num_blendshapes = blendshapes_matrix.shape
@@ -34,6 +46,20 @@ class OptimizationProblemSingle:
     def optimize(
         self, vertices_vector: np.ndarray, init_vals: Optional[np.ndarray]
     ) -> np.ndarray:
+        """Solve the optimization problem
+
+        Parameters
+        ----------
+        vertices_vector : np.ndarray
+            (3|V|, 1), Target mesh's vertices vector to be optimized
+        init_vals : Optional[np.ndarray]
+            (num_blendshapes,), Initial point of the optimization
+
+        Returns
+        -------
+        np.ndarray
+            (num_blendshapes,), optimization solution
+        """
         q = (
             self.blendshapes_matrix_delta.T @ (self.neutral_vector - vertices_vector)
         ).reshape(-1)
@@ -52,11 +78,22 @@ class OptimizationProblemSingle:
 
 
 class OptimizationProblemFull:
+    """Full optimization of pseudo-gt coefficients"""
+
     def __init__(
         self,
         neutral_vector: np.ndarray,
         blendshapes_matrix: np.ndarray,
     ) -> None:
+        """Constructor of OptimizationProblemFull
+
+        Parameters
+        ----------
+        neutral_vector : np.ndarray
+            (3|V|, 1), neutral mesh's vertices vector
+        blendshapes_matrix : np.ndarray
+            (3|V|, num_blendshapes), [b1 | b2 | ... | b_N] blendshape mesh's vertices vectors
+        """
         self.neutral_vector = neutral_vector
         self.num_blendshapes = blendshapes_matrix.shape[1]
 
@@ -73,10 +110,24 @@ class OptimizationProblemFull:
     def optimize(
         self, vertices_vector_list: List[np.ndarray], delta: float = 0.1
     ) -> np.ndarray:
-        t_len = len(vertices_vector_list)
+        """Solve the optimization problem
+
+        Parameters
+        ----------
+        vertices_vector_list : List[np.ndarray]
+            (3|V|, 1), List of the target mesh sequence's vertices vectors to be optimized
+        delta : float, optional
+            Bound of the |w_{t} - w_{t+1}|, by default 0.1
+
+        Returns
+        -------
+        np.ndarray
+            (seq_len, num_blendshapes), optimization solution
+        """
+        seq_len = len(vertices_vector_list)
 
         # Compute P
-        p = la.block_diag(*[self.btb for _ in range(t_len)])
+        p = la.block_diag(*[self.btb for _ in range(seq_len)])
 
         # Compute q
         q = np.vstack(
@@ -87,14 +138,14 @@ class OptimizationProblemFull:
         ).reshape(-1)
 
         # Compute G
-        g = self.compute_g(t_len)
+        g = self.compute_g(seq_len)
 
         # Set h
         h = np.full(g.shape[0], delta)
 
         # Uppler/lower bound
-        lbw = np.zeros(self.num_blendshapes * t_len)
-        ubw = np.ones(self.num_blendshapes * t_len)
+        lbw = np.zeros(self.num_blendshapes * seq_len)
+        ubw = np.ones(self.num_blendshapes * seq_len)
 
         # Solve the problem
         w_sol = solve_qp(
@@ -108,13 +159,25 @@ class OptimizationProblemFull:
         )
         w_sol = np.clip(w_sol, lbw, ubw)
 
-        w_vectors_matrix = w_sol.reshape(t_len, self.num_blendshapes)
+        w_vectors_matrix = w_sol.reshape(seq_len, self.num_blendshapes)
 
         return w_vectors_matrix
 
-    def compute_g(self, t_len: int) -> sp.csc_matrix:
+    def compute_g(self, seq_len: int) -> sp.csc_matrix:
+        """Compute G efficiently using sparse matrix
+
+        Parameters
+        ----------
+        seq_len : int
+            Length of the target mesh sequence
+
+        Returns
+        -------
+        sp.csc_matrix
+            ((seq_len - 1) * num_blendshapes, seq_len * num_blendshapes), computed G
+        """
         diag_g = sp.block_diag(
-            [self.dipole_eye for _ in range(t_len - 1)], format="csc"
+            [self.dipole_eye for _ in range(seq_len - 1)], format="csc"
         )
 
         pos_g = sp.block_diag((diag_g, self.g_offset), format="csc")
@@ -126,6 +189,8 @@ class OptimizationProblemFull:
 
 def main():
     """Main function"""
+    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+
     parser = argparse.ArgumentParser(
         description="Generate the Pseudo-GT blendshape coefficients by solving the optimization problem"
     )
@@ -150,19 +215,19 @@ def main():
     parser.add_argument(
         "--blendshape_list_path",
         type=str,
-        default="../VOCA_ARKit/blendshapes.txt",
+        default=(default_data_dir / "ARKit_blendshapes.txt").resolve(),
         help="List of the blendshapes",
     )
     parser.add_argument(
         "--head_idx_path",
         type=str,
-        default="../VOCA_ARKit/flame_head_idx.txt",
+        default=(default_data_dir / "FLAME_head_idx.txt").resolve(),
         help="List of the head indices",
     )
     parser.add_argument(
         "--blendshapes_coeffs_out_dir",
         type=str,
-        default="../output_coeffs_lmk",
+        default="../output_coeffs",
         help="Directory of the output coefficients",
     )
     args = parser.parse_args()
@@ -177,6 +242,23 @@ def main():
     blendshapes_coeffs_out_dir = args.blendshapes_coeffs_out_dir
 
     def coeff_out_path(person_id: str, seq_id: int, exists_ok: bool = False) -> str:
+        """Generate the output path of the coefficients.
+        If you want to change the output file name, then change this function
+
+        Parameters
+        ----------
+        person_id : str
+            Person id
+        seq_id : int
+            Sequence id
+        exists_ok : bool, optional
+            If false, raise error when the file already exists, by default False
+
+        Returns
+        -------
+        str
+            Output path of the coefficients
+        """
         out_dir = os.path.join(blendshapes_coeffs_out_dir, person_id)
         try:
             os.makedirs(out_dir)
