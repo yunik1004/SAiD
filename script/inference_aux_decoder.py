@@ -3,8 +3,7 @@
 import argparse
 import torch
 from said.model.aux_decoder import AuxDecoder
-from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
-from said.model.wav2vec2 import ModifiedWav2Vec2Model
+from said.model.diffusion import SAID_CDiT, SAID_UNet1D
 from said.util.audio import load_audio
 from said.util.blendshape import save_blendshape_coeffs, save_blendshape_coeffs_image
 from dataset import VOCARKIT_CLASSES

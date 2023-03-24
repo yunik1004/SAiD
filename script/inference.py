@@ -2,7 +2,6 @@
 """
 import argparse
 import os
-from diffusers import DDIMScheduler
 import torch
 from said.model.diffusion import SAID_CDiT, SAID_UNet1D
 from said.util.audio import fit_audio_unet, load_audio
@@ -132,9 +131,7 @@ def main():
 
     # Load model
     # said_model = SAID_CDiT(
-    said_model = SAID_UNet1D(
-        noise_scheduler=DDIMScheduler(beta_schedule="squaredcos_cap_v2")
-    )
+    said_model = SAID_UNet1D()
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
     said_model.to(device)
     said_model.eval()

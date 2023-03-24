@@ -2,7 +2,7 @@
 """
 import torch
 from torch import nn
-from ..ldm.openaimodel import UNetModel
+from .ldm.openaimodel import UNetModel
 
 
 class UNet1DConditionModel(nn.Module):
