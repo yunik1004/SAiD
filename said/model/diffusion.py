@@ -3,7 +3,7 @@
 from abc import ABC
 import inspect
 from typing import Dict, List, Optional, Union
-from diffusers import DDPMScheduler, SchedulerMixin
+from diffusers import DDIMScheduler, SchedulerMixin
 import numpy as np
 import torch
 from torch import nn
@@ -69,7 +69,7 @@ class SAID(ABC, nn.Module):
         self.noise_scheduler = (
             noise_scheduler
             if noise_scheduler is not None
-            else DDPMScheduler(
+            else DDIMScheduler(
                 num_train_timesteps=diffusion_steps,
                 beta_start=1e-4,
                 beta_end=2e-2,

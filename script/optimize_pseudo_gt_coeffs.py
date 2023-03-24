@@ -18,8 +18,6 @@ class OptimizationProblemSingle:
         self,
         neutral_vector: np.ndarray,
         blendshapes_matrix: np.ndarray,
-        landmark_idx_list: List[int],
-        landmark_weight: float = 10.0,
     ) -> None:
         self.neutral_vector = neutral_vector
 
@@ -58,8 +56,6 @@ class OptimizationProblemFull:
         self,
         neutral_vector: np.ndarray,
         blendshapes_matrix: np.ndarray,
-        landmark_idx_list: List[int],
-        landmark_weight: float = 10.0,
     ) -> None:
         self.neutral_vector = neutral_vector
         self.num_blendshapes = blendshapes_matrix.shape[1]
@@ -158,12 +154,6 @@ def main():
         help="List of the blendshapes",
     )
     parser.add_argument(
-        "--landmark_list_path",
-        type=str,
-        default="../VOCA_ARKit/landmarks.txt",
-        help="List of the landmark indices",
-    )
-    parser.add_argument(
         "--head_idx_path",
         type=str,
         default="../VOCA_ARKit/flame_head_idx.txt",
@@ -182,7 +172,6 @@ def main():
     mesh_seqs_dir = args.mesh_seqs_dir
 
     blendshape_list_path = args.blendshape_list_path
-    landmark_list_path = args.landmark_list_path
     head_idx_path = args.head_idx_path
 
     blendshapes_coeffs_out_dir = args.blendshapes_coeffs_out_dir
@@ -201,9 +190,6 @@ def main():
 
     # Parse blendshape name
     blendshape_name_list = parse_list(blendshape_list_path, str)
-
-    # Parse landmark indices
-    landmark_idx_list = parse_list(landmark_list_path, int)
 
     # Parse head indices
     head_idx_list = parse_list(head_idx_path, int)
@@ -234,9 +220,7 @@ def main():
         blendshapes_matrix = np.concatenate(blendshape_vectors, axis=1)
 
         # Define the optimization problem
-        opt_prob = OptimizationProblemFull(
-            neutral_vector, blendshapes_matrix, landmark_idx_list
-        )
+        opt_prob = OptimizationProblemFull(neutral_vector, blendshapes_matrix)
 
         for sdx, seq_id in enumerate(tqdm(seq_id_list, leave=False)):
             out_path = coeff_out_path(person_id, seq_id, sdx > 0)
