@@ -266,7 +266,7 @@ def main():
             if not exists_ok:
                 raise "Directory already exists"
 
-        out_path = os.path.join(out_dir, f"{seq_id:02}.csv")
+        out_path = os.path.join(out_dir, f"sentence{seq_id:02}.csv")
 
         return out_path
 
