@@ -12,59 +12,85 @@ import trimesh
 from said.util.audio import load_audio
 from said.util.blendshape import load_blendshape_coeffs
 
-VOCARKIT_CLASSES = [
-    "jawForward",
-    "jawLeft",
-    "jawRight",
-    "jawOpen",
-    "mouthClose",
-    "mouthFunnel",
-    "mouthPucker",
-    "mouthLeft",
-    "mouthRight",
-    "mouthSmileLeft",
-    "mouthSmileRight",
-    "mouthFrownLeft",
-    "mouthFrownRight",
-    "mouthDimpleLeft",
-    "mouthDimpleRight",
-    "mouthStretchLeft",
-    "mouthStretchRight",
-    "mouthRollLower",
-    "mouthRollUpper",
-    "mouthShrugLower",
-    "mouthShrugUpper",
-    "mouthPressLeft",
-    "mouthPressRight",
-    "mouthLowerDownLeft",
-    "mouthLowerDownRight",
-    "mouthUpperUpLeft",
-    "mouthUpperUpRight",
-    "cheekPuff",
-    "cheekSquintLeft",
-    "cheekSquintRight",
-    "noseSneerLeft",
-    "noseSneerRight",
-]
-
-VOCARKIT_CLASSES_MIRROR_PAIR = [
-    ("jawLeft", "jawRight"),
-    ("mouthLeft", "mouthRight"),
-    ("mouthSmileLeft", "mouthSmileRight"),
-    ("mouthFrownLeft", "mouthFrownRight"),
-    ("mouthDimpleLeft", "mouthDimpleRight"),
-    ("mouthStretchLeft", "mouthStretchRight"),
-    ("mouthPressLeft", "mouthPressRight"),
-    ("mouthLowerDownLeft", "mouthLowerDownRight"),
-    ("mouthUpperUpLeft", "mouthUpperUpRight"),
-    ("cheekSquintLeft", "cheekSquintRight"),
-    ("noseSneerLeft", "noseSneerRight"),
-]
-
 
 class VOCARKitDataset(ABC, Dataset):
     """Abstract class of VOCA-ARKit dataset"""
 
+    person_ids_train = [
+        "FaceTalk_170725_00137_TA",
+        "FaceTalk_170728_03272_TA",
+        "FaceTalk_170811_03274_TA",
+        "FaceTalk_170904_00128_TA",
+        "FaceTalk_170904_03276_TA",
+        "FaceTalk_170912_03278_TA",
+        "FaceTalk_170913_03279_TA",
+        "FaceTalk_170915_00223_TA",
+    ]
+
+    person_ids_val = [
+        "FaceTalk_170811_03275_TA",
+        "FaceTalk_170908_03277_TA",
+    ]
+
+    person_ids_test = [
+        "FaceTalk_170731_00024_TA",
+        "FaceTalk_170809_00138_TA",
+    ]
+
+    sentence_ids = list(range(1, 41))
+
+    fps = 60
+
+    default_blendshape_classes = [
+        "jawForward",
+        "jawLeft",
+        "jawRight",
+        "jawOpen",
+        "mouthClose",
+        "mouthFunnel",
+        "mouthPucker",
+        "mouthLeft",
+        "mouthRight",
+        "mouthSmileLeft",
+        "mouthSmileRight",
+        "mouthFrownLeft",
+        "mouthFrownRight",
+        "mouthDimpleLeft",
+        "mouthDimpleRight",
+        "mouthStretchLeft",
+        "mouthStretchRight",
+        "mouthRollLower",
+        "mouthRollUpper",
+        "mouthShrugLower",
+        "mouthShrugUpper",
+        "mouthPressLeft",
+        "mouthPressRight",
+        "mouthLowerDownLeft",
+        "mouthLowerDownRight",
+        "mouthUpperUpLeft",
+        "mouthUpperUpRight",
+        "cheekPuff",
+        "cheekSquintLeft",
+        "cheekSquintRight",
+        "noseSneerLeft",
+        "noseSneerRight",
+    ]
+
+    default_blendshape_classes_mirror_pair = [
+        ("jawLeft", "jawRight"),
+        ("mouthLeft", "mouthRight"),
+        ("mouthSmileLeft", "mouthSmileRight"),
+        ("mouthFrownLeft", "mouthFrownRight"),
+        ("mouthDimpleLeft", "mouthDimpleRight"),
+        ("mouthStretchLeft", "mouthStretchRight"),
+        ("mouthPressLeft", "mouthPressRight"),
+        ("mouthLowerDownLeft", "mouthLowerDownRight"),
+        ("mouthUpperUpLeft", "mouthUpperUpRight"),
+        ("cheekSquintLeft", "cheekSquintRight"),
+        ("noseSneerLeft", "noseSneerRight"),
+    ]
+
+    @abstractmethod
     def __init__(
         self,
         audio_dir: str,
@@ -82,20 +108,9 @@ class VOCARKitDataset(ABC, Dataset):
         sampling_rate : int
             Sampling rate of the audio
         """
-        self.audio_dir = audio_dir
-        self.blendshape_coeffs_dir = blendshape_coeffs_dir
-        self.sampling_rate = sampling_rate
+        pass
 
-        self.audio_paths = [
-            os.path.join(self.audio_dir, f) for f in sorted(os.listdir(self.audio_dir))
-        ]
-        self.blendshape_coeffs_paths = [
-            os.path.join(self.blendshape_coeffs_dir, f)
-            for f in sorted(os.listdir(self.blendshape_coeffs_dir))
-        ]
-
-        self.length = len(self.audio_paths)
-
+    @abstractmethod
     def __len__(self) -> int:
         """Return the size of the dataset
 
@@ -104,7 +119,7 @@ class VOCARKitDataset(ABC, Dataset):
         int
             Size of the dataset
         """
-        return self.length
+        pass
 
     @abstractmethod
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
@@ -124,6 +139,52 @@ class VOCARKitDataset(ABC, Dataset):
             }
         """
         pass
+
+    def get_data_paths(
+        self,
+        audio_dir: str,
+        blendshape_coeffs_dir: str,
+        person_ids: List[str],
+    ) -> List[Dict[str, str]]:
+        """Return the list of the data paths
+
+        Parameters
+        ----------
+        audio_dir : str
+            Directory of the audio data
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        person_ids : List[str]
+            List of the person ids
+
+        Returns
+        -------
+        List[Dict[str, str]]
+            [{
+                "audio": audio_path,
+                "coeffs": coeffs_path,
+                "person_id": person id,
+            }]
+        """
+        data_paths = []
+
+        for pid in person_ids:
+            audio_id_dir = os.path.join(audio_dir, pid)
+            coeffs_id_dir = os.path.join(blendshape_coeffs_dir, pid)
+
+            for sid in self.sentence_ids:
+                audio_path = os.path.join(audio_id_dir, f"sentence{sid:02}.wav")
+                coeffs_path = os.path.join(coeffs_id_dir, f"sentence{sid:02}.csv")
+
+                if os.path.exists(audio_path) and os.path.exists(coeffs_path):
+                    data = {
+                        "audio": audio_path,  # str
+                        "coeffs": coeffs_path,  # str
+                        "person_id": pid,  # str
+                    }
+                    data_paths.append(data)
+
+        return data_paths
 
     @staticmethod
     def collate_fn(examples: List[Dict[str, torch.FloatTensor]]) -> Dict[str, Any]:
@@ -164,11 +225,12 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         blendshape_coeffs_dir: str,
         sampling_rate: int,
         window_size: int = 120,
-        fps: int = 60,
         uncond_prob: float = 0.1,
         hflip: bool = True,
-        classes: List[str] = VOCARKIT_CLASSES,
-        classes_mirror_pair: List[Tuple[str, str]] = VOCARKIT_CLASSES_MIRROR_PAIR,
+        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes_mirror_pair: List[
+            Tuple[str, str]
+        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
     ):
         """Constructor of the class
 
@@ -182,20 +244,17 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Sampling rate of the audio
         window_size : int, optional
             Window size of the blendshape coefficients, by default 120
-        fps : int, optional
-            fps of the blendshape coefficients, by default 60
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         classes : List[str], optional
-            List of blendshape names, by default VOCARKIT_CLASSES
+            List of blendshape names, by default default_blendshape_classes
         classes_mirror_pair : List[Tuple[str, str]], optional
-            List of blendshape pairs which are mirror to each other, by default VOCARKIT_CLASSES_MIRROR_PAIR
+            List of blendshape pairs which are mirror to each other, by default default_blendshape_classes_mirror_pair
         """
-        super().__init__(audio_dir, blendshape_coeffs_dir, sampling_rate)
+        self.sampling_rate = sampling_rate
         self.window_size = window_size
-        self.fps = fps
         self.uncond_prob = uncond_prob
 
         self.hflip = hflip
@@ -210,45 +269,49 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             self.mirror_indices.extend([index_l, index_r])
             self.mirror_indices_flip.extend([index_r, index_l])
 
+        self.data_paths = self.get_data_paths(
+            audio_dir, blendshape_coeffs_dir, self.person_ids_train
+        )
+
+        self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
+
+    def __len__(self) -> int:
+        return len(self.data_paths)
+
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
-        waveform = load_audio(self.audio_paths[index], self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
+        data = self.data_paths[index]
+        waveform = load_audio(data["audio"], self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
 
         num_blendshape = blendshape_coeffs.shape[1]
         blendshape_len = blendshape_coeffs.shape[0]
-        waveform_len = waveform.shape[0]
-        waveform_patch_len = (self.sampling_rate * self.window_size) // self.fps
 
-        waveform_patch = None
-        blendshape_coeffs_patch = None
-        if blendshape_len >= self.window_size:
-            idx = random.randint(0, blendshape_len - self.window_size)
-            blendshape_coeffs_patch = blendshape_coeffs[idx : idx + self.window_size, :]
+        # Random-select the window
+        bdx = random.randint(0, max(0, blendshape_len - self.window_size))
+        wdx = (self.sampling_rate * bdx) // self.fps
 
-            waveform_patch_idx = (self.sampling_rate * idx) // self.fps
-            waveform_patch = waveform[
-                waveform_patch_idx : waveform_patch_idx + waveform_patch_len
-            ]
-        else:
-            blendshape_coeffs_patch = torch.zeros((self.window_size, num_blendshape))
-            blendshape_coeffs_patch[:blendshape_len, :] = blendshape_coeffs[:, :]
+        waveform_tmp = waveform[wdx : wdx + self.waveform_window_len]
+        coeffs_tmp = blendshape_coeffs[bdx : bdx + self.window_size, :]
 
-            waveform_patch = torch.zeros(waveform_patch_len)
-            waveform_patch[:waveform_len] = waveform[:]
+        waveform_window = torch.zeros(self.waveform_window_len)
+        coeffs_window = torch.zeros((self.window_size, num_blendshape))
+
+        waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
+        coeffs_window[: coeffs_tmp.shape[0], :] = coeffs_tmp[:]
 
         # Augmentation - hflip
         if self.hflip and random.uniform(0, 1) < 0.5:
-            blendshape_coeffs_patch[:, self.mirror_indices] = blendshape_coeffs_patch[
+            coeffs_window[:, self.mirror_indices] = coeffs_window[
                 :, self.mirror_indices_flip
             ]
 
         # Random uncondition for classifier-free guidance
         if random.uniform(0, 1) < self.uncond_prob:
-            waveform_patch = torch.zeros(waveform_patch_len)
+            waveform_window = torch.zeros(self.waveform_window_len)
 
         out = {
-            "waveform": waveform_patch,
-            "blendshape_coeffs": blendshape_coeffs_patch,
+            "waveform": waveform_window,
+            "blendshape_coeffs": coeffs_window,
         }
 
         return out
@@ -257,12 +320,76 @@ class VOCARKitTrainDataset(VOCARKitDataset):
 class VOCARKitValDataset(VOCARKitDataset):
     """Validation dataset for VOCA-ARKit"""
 
+    def __init__(
+        self,
+        audio_dir: str,
+        blendshape_coeffs_dir: str,
+        sampling_rate: int,
+        uncond_prob: float = 0.1,
+        hflip: bool = True,
+        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes_mirror_pair: List[
+            Tuple[str, str]
+        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+    ):
+        """Constructor of the class
+
+        Parameters
+        ----------
+        audio_dir : str
+            Directory of the audio data
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        sampling_rate : int
+            Sampling rate of the audio
+        uncond_prob : float, optional
+            Unconditional probability of waveform (for classifier-free guidance), by default 0.1
+        hflip : bool, optional
+            Whether do the horizontal flip, by default True
+        classes : List[str], optional
+            List of blendshape names, by default default_blendshape_classes
+        classes_mirror_pair : List[Tuple[str, str]], optional
+            List of blendshape pairs which are mirror to each other, by default default_blendshape_classes_mirror_pair
+        """
+        self.sampling_rate = sampling_rate
+        self.uncond_prob = uncond_prob
+
+        self.hflip = hflip
+        self.classes = classes
+        self.classes_mirror_pair = classes_mirror_pair
+
+        self.mirror_indices = []
+        self.mirror_indices_flip = []
+        for pair in self.classes_mirror_pair:
+            index_l = self.classes.index(pair[0])
+            index_r = self.classes.index(pair[1])
+            self.mirror_indices.extend([index_l, index_r])
+            self.mirror_indices_flip.extend([index_r, index_l])
+
+        self.data_paths = self.get_data_paths(
+            audio_dir, blendshape_coeffs_dir, self.person_ids_val
+        )
+
+    def __len__(self) -> int:
+        return len(self.data_paths)
+
     def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
-        waveform = load_audio(self.audio_paths[index], self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(self.blendshape_coeffs_paths[index])
+        data = self.data_paths[index]
+        waveform = load_audio(data["audio"], self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
+
+        waveform_len = waveform.shape[0]
+        blendshape_len = blendshape_coeffs.shape[0]
+        waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
+
+        # Adjust the waveform window
+        waveform_tmp = waveform[:waveform_window_len]
+
+        waveform_window = torch.zeros(waveform_window_len)
+        waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
 
         out = {
-            "waveform": waveform,
+            "waveform": waveform_window,
             "blendshape_coeffs": blendshape_coeffs,
         }
 

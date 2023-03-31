@@ -179,10 +179,16 @@ def main():
     )
     """
     parser.add_argument(
-        "--data_dir",
+        "--audio_dir",
         type=str,
-        default="../VOCA_ARKit",
-        help="Directory of the data",
+        default="../VOCA_ARKit/audio",
+        help="Directory of the audio data",
+    )
+    parser.add_argument(
+        "--coeffs_dir",
+        type=str,
+        default="../VOCA_ARKit/blendshape_coeffs",
+        help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
         "--output_dir",
@@ -224,10 +230,10 @@ def main():
         help="Use Exponential Moving Average of models weights",
     )
     parser.add_argument(
-        "--val_period", type=int, default=50, help="Period of validating model"
+        "--val_period", type=int, default=200, help="Period of validating model"
     )
     parser.add_argument(
-        "--val_repeat", type=int, default=10, help="Number of repetition of val dataset"
+        "--val_repeat", type=int, default=50, help="Number of repetition of val dataset"
     )
     parser.add_argument(
         "--save_period", type=int, default=200, help="Period of saving model"
@@ -236,13 +242,8 @@ def main():
 
     # vae_weights_path = args.vae_weights_path
 
-    train_dir = os.path.join(args.data_dir, "train")
-    val_dir = os.path.join(args.data_dir, "val")
-
-    train_audio_dir = os.path.join(train_dir, "audio")
-    train_blendshape_coeffs_dir = os.path.join(train_dir, "blendshape_coeffs")
-    val_audio_dir = os.path.join(val_dir, "audio")
-    val_blendshape_coeffs_dir = os.path.join(val_dir, "blendshape_coeffs")
+    audio_dir = args.audio_dir
+    coeffs_dir = args.coeffs_dir
 
     output_dir = args.output_dir
     mdm_like = args.mdm_like
@@ -275,26 +276,18 @@ def main():
 
     # Load data
     train_dataset = VOCARKitTrainDataset(
-        train_audio_dir,
-        train_blendshape_coeffs_dir,
+        audio_dir,
+        coeffs_dir,
         said_model.sampling_rate,
         window_size,
         uncond_prob=uncond_prob,
     )
-    val_dataset = VOCARKitTrainDataset(
-        val_audio_dir,
-        val_blendshape_coeffs_dir,
-        said_model.sampling_rate,
-        window_size,
-        uncond_prob=uncond_prob,
-    )
-    """
     val_dataset = VOCARKitValDataset(
-        val_audio_dir,
-        val_blendshape_coeffs_dir,
+        audio_dir,
+        coeffs_dir,
         said_model.sampling_rate,
+        uncond_prob=uncond_prob,
     )
-    """
 
     train_dataloader = DataLoader(
         train_dataset,
