@@ -458,26 +458,46 @@ class VOCARKitPseudoGTOptDataset:
         blendshapes_dir: str,
         mesh_seqs_dir: str,
         blendshapes_names: List[str],
-        seq_id_range: Tuple[int, int] = (1, 40),
     ) -> None:
+        """Constructor of the VOCARKitPseudoGTOptDataset
+
+        Parameters
+        ----------
+        neutrals_dir : str
+            Directory which contains the neutral meshes
+        blendshapes_dir : str
+            Directory which contains the blendshape meshes
+        mesh_seqs_dir : str
+            Directory which contains the mesh sequences
+        blendshapes_names : List[str]
+            List of the blendshape names
+        """
         self.neutrals_dir = neutrals_dir
         self.blendshapes_dir_dir = blendshapes_dir
         self.mesh_seqs_dir_dir_dir = mesh_seqs_dir
         self.blendshapes_names = blendshapes_names
 
-        self.person_ids = sorted(os.listdir(self.mesh_seqs_dir_dir_dir))
-
-        self.seq_ids = list(range(seq_id_range[0], seq_id_range[1] + 1))
-
-    def get_person_id_list(self) -> List[str]:
-        return self.person_ids
-
-    def get_seq_id_list(self) -> List[int]:
-        return self.seq_ids
-
     def get_blendshapes(
         self, person_id: str
     ) -> Dict[str, Union[trimesh.base.Trimesh, Dict[str, trimesh.base.Trimesh]]]:
+        """Return the dictionary of the blendshape meshes
+
+        Parameters
+        ----------
+        person_id : str
+            Person id that wants to get the blendshapes
+
+        Returns
+        -------
+        Dict[str, Union[trimesh.base.Trimesh, Dict[str, trimesh.base.Trimesh]]]
+            {
+                "neutral": trimesh.base.Trimesh, neutral mesh
+                "blendshape": Dict[str, trimesh.base.Trimesh], dictionary of the blendshape meshes
+                    {
+                        "{blendshape name}": trimesh.base.Trimesh, each blendshape meshes
+                    }
+            }
+        """
         neutral_path = os.path.join(self.neutrals_dir, f"{person_id}.obj")
         blendshapes_dir = os.path.join(self.blendshapes_dir_dir, person_id)
 
@@ -496,6 +516,20 @@ class VOCARKitPseudoGTOptDataset:
         return output
 
     def get_mesh_seq(self, person_id: str, seq_id: int) -> List[trimesh.base.Trimesh]:
+        """Return the mesh sequence
+
+        Parameters
+        ----------
+        person_id : str
+            Person id
+        seq_id : int
+            Sequence id
+
+        Returns
+        -------
+        List[trimesh.base.Trimesh]
+            List of the meshes
+        """
         mesh_seq_dir = os.path.join(
             self.mesh_seqs_dir_dir_dir, person_id, f"sentence{seq_id:02}"
         )
