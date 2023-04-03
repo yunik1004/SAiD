@@ -1,10 +1,36 @@
 """Define the utility functions related to the blendshape
 """
-from typing import List
+import pickle
+from typing import Dict, List
 import numpy as np
 import pandas as pd
 from PIL import Image
 import torch
+
+
+def load_blendshape_deltas(
+    blendshape_deltas_path: str,
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """Load the blendshape deltas
+
+    Parameters
+    ----------
+    blendshape_deltas_path : str
+        Path of the blendshape deltas file
+
+    Returns
+    -------
+    Dict[str, Dict[str, np.ndarray]]
+        {
+            "<Person ID>": {
+                "<Blendshape name>": np.ndarray, (|V|, 3)
+            }
+        }
+    """
+    with open(blendshape_deltas_path, "rb") as f:
+        blendshape_deltas = pickle.load(f)
+
+    return blendshape_deltas
 
 
 def load_blendshape_coeffs(coeffs_path: str) -> torch.FloatTensor:
