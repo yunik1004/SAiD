@@ -25,16 +25,16 @@ def main():
         help="Path of the blendshape deltas",
     )
     parser.add_argument(
-        "--out_dir",
+        "--blendshapes_out_dir",
         type=str,
-        default="../VOCA_ARKit/blendshapes_out",
+        default="../output_blendshapes",
         help="Directory of output blendshapes",
     )
     args = parser.parse_args()
 
     templates_dir = args.templates_dir
     blendshape_deltas_path = args.blendshape_deltas_path
-    out_dir = args.out_dir
+    out_dir = args.blendshapes_out_dir
 
     templates_head_dir = os.path.join(out_dir, "templates_head")
     blendshapes_head_dir = os.path.join(out_dir, "blendshapes_head")
