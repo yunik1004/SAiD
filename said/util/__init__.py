@@ -1,1 +1,1 @@
-from . import audio, blendshape, parser
+from . import audio, blendshape, mesh, parser

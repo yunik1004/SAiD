@@ -3,14 +3,18 @@
 from abc import abstractmethod, ABC
 import glob
 import os
+import pathlib
 import random
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
 import trimesh
 from said.util.audio import load_audio
-from said.util.blendshape import load_blendshape_coeffs
+from said.util.blendshape import load_blendshape_coeffs, load_blendshape_deltas
+from said.util.mesh import create_mesh, get_submesh, load_mesh
+from said.util.parser import parse_list
 
 
 class VOCARKitDataset(ABC, Dataset):
@@ -214,6 +218,83 @@ class VOCARKitDataset(ABC, Dataset):
         }
 
         return out
+
+    @staticmethod
+    def preprocess_blendshapes(
+        templates_dir: str,
+        blendshape_deltas_path: str,
+        blendshape_indices: Optional[List[int]] = None,
+        person_ids: Optional[List[str]] = None,
+        blendshape_classes: Optional[List[str]] = None,
+    ) -> Dict[str, Dict[str, Union[trimesh.Trimesh, Dict[str, trimesh.Trimesh]]]]:
+        """Preprocess the blendshapes
+
+        Parameters
+        ----------
+        templates_dir : str
+            Directory path of the templates
+        blendshape_deltas_path : str
+            Path of the blendshape deltas file
+        blendshape_indices : Optional[List[int]], optional
+            List of the blendshape indices, by default None
+        person_ids : Optional[List[str]], optional
+            List of the person ids, by default None
+        blendshape_classes : Optional[List[str]], optional
+            List of the blendshape classes, by default None
+
+        Returns
+        -------
+        Dict[str, Dict[str, Union[trimesh.Trimesh, Dict[str, trimesh.Trimesh]]]]
+            {
+                <Person id>: {
+                    "neutral": trimesh.Trimesh, neutral mesh object,
+                    "blendshapes": Dict[str, trimesh.Trimesh], {
+                        <Blendshape name>: trimesh.Trimesh, blendshape mesh object
+                    }
+                }
+            }
+        """
+        if blendshape_indices is None:
+            blendshape_indices_path = (
+                pathlib.Path(__file__).parent.parent / "data" / "FLAME_head_idx.txt"
+            )
+            blendshape_indices = parse_list(blendshape_indices_path, int)
+
+        if person_ids is None:
+            person_ids = (
+                VOCARKitDataset.person_ids_train
+                + VOCARKitDataset.person_ids_val
+                + VOCARKitDataset.person_ids_test
+            )
+
+        if blendshape_classes is None:
+            blendshape_classes = VOCARKitDataset.default_blendshape_classes
+
+        blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
+
+        blendshapes = {}
+        for pid in tqdm(person_ids):
+            template_mesh_path = os.path.join(templates_dir, f"{pid}.ply")
+            template_mesh_ori = load_mesh(template_mesh_path)
+            submesh_out = get_submesh(
+                template_mesh_ori.vertices, template_mesh_ori.faces, blendshape_indices
+            )
+
+            vertices = submesh_out["vertices"]
+            faces = submesh_out["faces"]
+
+            neutral_mesh = create_mesh(vertices, faces)
+
+            bl_deltas = blendshape_deltas[pid]
+
+            blendshapes_id = {}
+            for bl_name in blendshape_classes:
+                bl_vertices = vertices + bl_deltas[bl_name]
+                blendshapes_id[bl_name] = create_mesh(bl_vertices, faces)
+
+            blendshapes[pid] = {"neutral": neutral_mesh, "blendshapes": blendshapes_id}
+
+        return blendshapes
 
 
 class VOCARKitTrainDataset(VOCARKitDataset):

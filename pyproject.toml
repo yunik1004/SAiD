@@ -21,6 +21,7 @@ dependencies = [
     "torchaudio",
     "tqdm",
     "transformers",
+    "trimesh",
 ]
 
 [project.optional-dependencies]
@@ -29,7 +30,6 @@ test = [
     "qpsolvers",
     "scipy",
     "tensorboard",
-    "trimesh",
 ]
 style = [
     "black",
