@@ -10,7 +10,7 @@ from said.util.blendshape import (
     save_blendshape_coeffs,
     save_blendshape_coeffs_image,
 )
-from dataset import VOCARKIT_CLASSES
+from dataset import VOCARKitDataset
 
 
 def main():
@@ -22,13 +22,13 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/10000.pth",
+        default="../output/12000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
         "--audio_path",
         type=str,
-        default="../VOCA_ARKit/test/audio/FaceTalk_170731_00024_TA_sentence01.wav",
+        default="../VOCA_ARKit/audio/FaceTalk_170731_00024_TA/sentence01.wav",
         help="Path of the audio file",
     )
     parser.add_argument(
@@ -178,7 +178,7 @@ def main():
 
     save_blendshape_coeffs(
         coeffs=result,
-        classes=VOCARKIT_CLASSES,
+        classes=VOCARKitDataset.default_blendshape_classes,
         output_path=output_path,
     )
 
@@ -199,7 +199,7 @@ def main():
 
             save_blendshape_coeffs(
                 coeffs=interm_coeffs,
-                classes=VOCARKIT_CLASSES,
+                classes=VOCARKitDataset.default_blendshape_classes,
                 output_path=os.path.join(intermediate_dir, f"{timestep}.csv"),
             )
 
