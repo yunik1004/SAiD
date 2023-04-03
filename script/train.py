@@ -7,7 +7,7 @@ from accelerate import Accelerator
 from diffusers.training_utils import EMAModel
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
 from said.model.wav2vec2 import ModifiedWav2Vec2Model
@@ -212,7 +212,7 @@ def main():
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=10000, help="The number of epochs"
+        "--epochs", type=int, default=20000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate"
@@ -289,10 +289,16 @@ def main():
         uncond_prob=uncond_prob,
     )
 
+    train_sampler = RandomSampler(
+        train_dataset,
+        replacement=True,
+        num_samples=len(train_dataset),
+    )
+
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        sampler=train_sampler,
         collate_fn=VOCARKitTrainDataset.collate_fn,
     )
     val_dataloader = DataLoader(

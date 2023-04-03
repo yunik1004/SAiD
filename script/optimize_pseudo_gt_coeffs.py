@@ -11,7 +11,7 @@ from scipy import sparse as sp
 from tqdm import tqdm
 from said.util.blendshape import save_blendshape_coeffs
 from said.util.parser import parse_list
-from dataset import VOCARKitPseudoGTOptDataset
+from dataset import VOCARKitDataset, VOCARKitPseudoGTOptDataset
 
 
 class OptimizationProblemSingle:
@@ -280,8 +280,12 @@ def main():
         neutrals_dir, blendshapes_dir, mesh_seqs_dir, blendshape_name_list
     )
 
-    person_id_list = dataset.get_person_id_list()
-    seq_id_list = dataset.get_seq_id_list()
+    person_id_list = (
+        VOCARKitDataset.person_ids_train
+        + VOCARKitDataset.person_ids_val
+        + VOCARKitDataset.person_ids_test
+    )
+    seq_id_list = VOCARKitDataset.sentence_ids
 
     for person_id in tqdm(person_id_list):
         bl_out = dataset.get_blendshapes(person_id)
