@@ -19,7 +19,7 @@ def random_noise_loss(
     data: Dict[str, Any],
     device: torch.device,
     mdm_like: bool = False,
-) -> torch.FloatTensor:
+) -> Dict[str, torch.FloatTensor]:
     """Compute the loss with randomized noises
 
     Parameters
@@ -35,11 +35,16 @@ def random_noise_loss(
 
     Returns
     -------
-    torch.FloatTensor
-        MAE loss between added noise and predicted noise
+    Dict[str, torch.FloatTensor]
+        {
+            "loss_epsilon": MAE loss between added noise and predicted noise
+            "loss_reconst": MSE loss between original vertices and predicted vertices
+        }
     """
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
+    blendshape_delta = data["blendshape_delta"].to(device)
+
     coeff_latents = said_model.encode_samples(
         blendshape_coeffs * said_model.latent_scale
     )
@@ -57,10 +62,31 @@ def random_noise_loss(
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding)
 
-    criterion = nn.L1Loss()
-    loss = criterion(coeff_latents if mdm_like else noise, pred)
+    criterion_epsilon = nn.L1Loss()
+    loss_epsilon = criterion_epsilon(coeff_latents if mdm_like else noise, pred)
 
-    return loss
+    losses = {
+        "loss_epsilon": loss_epsilon,
+    }
+
+    criterion_reconst = nn.MSELoss()
+
+    if mdm_like:
+        # TODO: Not implemented & tested
+        losses["loss_reconst"] = torch.tensor(0, device=device).float()
+    else:
+        pred_latents = said_model.pred_original_sample(
+            noisy_latents, pred, random_timesteps
+        )
+
+        latents_diff = pred_latents - coeff_latents
+        vertices_diff = torch.einsum("bijk,bli->bljk", blendshape_delta, latents_diff)
+
+        loss_reconst = criterion_reconst(vertices_diff, torch.zeros_like(vertices_diff))
+
+        losses["loss_reconst"] = loss_reconst
+
+    return losses
 
 
 def train_epoch(
@@ -70,7 +96,7 @@ def train_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     ema_model: Optional[EMAModel] = None,
-) -> float:
+) -> Dict[str, float]:
     """Train the SAiD model one epoch.
 
     Parameters
@@ -90,18 +116,32 @@ def train_epoch(
 
     Returns
     -------
-    float
-        Average loss
+    Dict[str, float]
+        Average losses
+        {
+            "loss": Average loss to be optimized
+            "loss_epsilon": Average epsilon loss
+            "loss_reconst": Average reconstruction loss
+        }
     """
     device = accelerator.device
 
     said_model.train()
 
-    train_total_loss = 0
+    train_total_losses = {
+        "loss": 0,
+        "loss_epsilon": 0,
+        "loss_reconst": 0,
+    }
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data["waveform"])
-        loss = random_noise_loss(said_model, data, device, mdm_like)
+        losses = random_noise_loss(said_model, data, device, mdm_like)
+
+        loss_epsilon = losses["loss_epsilon"]
+        loss_reconst = losses["loss_reconst"]
+
+        loss = loss_epsilon + 0.1 * loss_reconst
 
         accelerator.backward(loss)
         optimizer.step()
@@ -109,12 +149,15 @@ def train_epoch(
             ema_model.step(said_model.parameters())
         optimizer.zero_grad()
 
-        train_total_loss += loss.item() * curr_batch_size
+        train_total_losses["loss"] += loss.item() * curr_batch_size
+        train_total_losses["loss_epsilon"] += loss_epsilon.item() * curr_batch_size
+        train_total_losses["loss_reconst"] += loss_reconst.item() * curr_batch_size
+
         train_total_num += curr_batch_size
 
-    train_avg_loss = train_total_loss / train_total_num
+    train_avg_losses = {k: v / train_total_num for k, v in train_total_losses.items()}
 
-    return train_avg_loss
+    return train_avg_losses
 
 
 def validate_epoch(
@@ -123,7 +166,7 @@ def validate_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     num_repeat: int = 1,
-) -> float:
+) -> Dict[str, float]:
     """Validate the SAiD model one epoch.
 
     Parameters
@@ -141,27 +184,48 @@ def validate_epoch(
 
     Returns
     -------
-    float
+    Dict[str, float]
         Average loss
+        {
+            "loss": Average loss to be optimized
+            "loss_epsilon": Average epsilon loss
+            "loss_reconst": Average reconstruction loss
+        }
     """
     device = accelerator.device
 
     said_model.eval()
 
-    val_total_loss = 0
+    val_total_losses = {
+        "loss": 0,
+        "loss_epsilon": 0,
+        "loss_reconst": 0,
+    }
     val_total_num = 0
     with torch.no_grad():
         for _ in range(num_repeat):
             for data in val_dataloader:
                 curr_batch_size = len(data["waveform"])
-                loss = random_noise_loss(said_model, data, device, mdm_like)
+                losses = random_noise_loss(said_model, data, device, mdm_like)
 
-                val_total_loss += loss.item() * curr_batch_size
+                loss_epsilon = losses["loss_epsilon"]
+                loss_reconst = losses["loss_reconst"]
+
+                loss = loss_epsilon + 0.1 * loss_reconst
+
+                val_total_losses["loss"] += loss.item() * curr_batch_size
+                val_total_losses["loss_epsilon"] += (
+                    loss_epsilon.item() * curr_batch_size
+                )
+                val_total_losses["loss_reconst"] += (
+                    loss_reconst.item() * curr_batch_size
+                )
+
                 val_total_num += curr_batch_size
 
-    val_avg_loss = val_total_loss / val_total_num
+    val_avg_losses = {k: v / val_total_num for k, v in val_total_losses.items()}
 
-    return val_avg_loss
+    return val_avg_losses
 
 
 def main():
@@ -189,6 +253,12 @@ def main():
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
+    )
+    parser.add_argument(
+        "--blendshape_deltas_path",
+        type=str,
+        default="../VOCA_ARKit/blendshape_deltas.pickle",
+        help="Path of the blendshape deltas",
     )
     parser.add_argument(
         "--output_dir",
@@ -244,6 +314,7 @@ def main():
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
+    blendshape_deltas_path = args.blendshape_deltas_path
 
     output_dir = args.output_dir
     mdm_like = args.mdm_like
@@ -278,6 +349,7 @@ def main():
     train_dataset = VOCARKitTrainDataset(
         audio_dir,
         coeffs_dir,
+        blendshape_deltas_path,
         said_model.sampling_rate,
         window_size,
         uncond_prob=uncond_prob,
@@ -285,6 +357,7 @@ def main():
     val_dataset = VOCARKitValDataset(
         audio_dir,
         coeffs_dir,
+        blendshape_deltas_path,
         said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )
@@ -339,7 +412,7 @@ def main():
 
     for epoch in range(1, epochs + 1):
         # Train the model
-        train_avg_loss = train_epoch(
+        train_avg_losses = train_epoch(
             said_model=said_model,
             train_dataloader=train_dataloader,
             optimizer=optimizer,
@@ -349,7 +422,11 @@ def main():
         )
 
         # Log
-        logs = {"Train/Loss": train_avg_loss}
+        logs = {
+            "Train/Total Loss": train_avg_losses["loss"],
+            "Train/Epsilon Loss": train_avg_losses["loss_epsilon"],
+            "Train/Reconst Loss": train_avg_losses["loss_reconst"],
+        }
 
         accelerator.wait_for_everyone()
 
@@ -359,7 +436,7 @@ def main():
 
         # Validate the model
         if epoch % val_period == 0:
-            val_avg_loss = validate_epoch(
+            val_avg_losses = validate_epoch(
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
@@ -367,7 +444,9 @@ def main():
                 num_repeat=val_repeat,
             )
             # Append the log
-            logs["Validation/Loss"] = val_avg_loss
+            logs["Validation/Total Loss"] = val_avg_losses["loss"]
+            logs["Validation/Epsilon Loss"] = val_avg_losses["loss_epsilon"]
+            logs["Validation/Reconst Loss"] = val_avg_losses["loss_reconst"]
 
         # Print logs
         if accelerator.sync_gradients:

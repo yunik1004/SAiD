@@ -99,6 +99,7 @@ class VOCARKitDataset(ABC, Dataset):
         self,
         audio_dir: str,
         blendshape_coeffs_dir: str,
+        blendshape_deltas_path: str,
         sampling_rate: int,
     ):
         """Constructor of the class
@@ -109,6 +110,8 @@ class VOCARKitDataset(ABC, Dataset):
             Directory of the audio data
         blendshape_coeffs_dir : str
             Directory of the blendshape coefficients
+        blendshape_deltas_path : str
+            Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
         """
@@ -140,6 +143,7 @@ class VOCARKitDataset(ABC, Dataset):
             {
                 "waveform": (audio_seq_len,),
                 "blendshape_coeffs": (blendshape_seq_len, num_blendshapes),
+                "blendshape_delta": (num_blendshapes, |V|, 3)
             }
         """
         pass
@@ -205,16 +209,19 @@ class VOCARKitDataset(ABC, Dataset):
             {
                 "waveform": List[np.ndarray], each: (audio_seq_len,)
                 "blendshape_coeffs": torch.FloatTensor, (Batch, blendshape_seq_len, num_blendshapes)
+                "blendshape_delta": torch.FloatTensor, (Batch, num_blendshapes, |V|, 3)
             }
         """
         examples_dict = {k: [dic[k] for dic in examples] for k in examples[0]}
 
         waveforms = [np.array(wave) for wave in examples_dict["waveform"]]
         blendshape_coeffs = torch.stack(examples_dict["blendshape_coeffs"])
+        blendshape_delta = torch.stack(examples_dict["blendshape_delta"])
 
         out = {
             "waveform": waveforms,  # List[np.ndarray]
             "blendshape_coeffs": blendshape_coeffs,  # torch.FloatTensor
+            "blendshape_delta": blendshape_delta,  # torch.FloatTensor
         }
 
         return out
@@ -304,6 +311,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         self,
         audio_dir: str,
         blendshape_coeffs_dir: str,
+        blendshape_deltas_path: str,
         sampling_rate: int,
         window_size: int = 120,
         uncond_prob: float = 0.1,
@@ -321,6 +329,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Directory of the audio data
         blendshape_coeffs_dir : str
             Directory of the blendshape coefficients
+        blendshape_deltas_path : str
+            Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
         window_size : int, optional
@@ -354,6 +364,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             audio_dir, blendshape_coeffs_dir, self.person_ids_train
         )
 
+        self.blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
+
         self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
 
     def __len__(self) -> int:
@@ -363,6 +375,9 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         data = self.data_paths[index]
         waveform = load_audio(data["audio"], self.sampling_rate)
         blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
+        blendshape_delta = torch.FloatTensor(
+            np.stack(list(self.blendshape_deltas[data["person_id"]].values()), axis=0)
+        )
 
         num_blendshape = blendshape_coeffs.shape[1]
         blendshape_len = blendshape_coeffs.shape[0]
@@ -393,6 +408,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         out = {
             "waveform": waveform_window,
             "blendshape_coeffs": coeffs_window,
+            "blendshape_delta": blendshape_delta,
         }
 
         return out
@@ -405,6 +421,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         self,
         audio_dir: str,
         blendshape_coeffs_dir: str,
+        blendshape_deltas_path: str,
         sampling_rate: int,
         uncond_prob: float = 0.1,
         hflip: bool = True,
@@ -421,6 +438,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             Directory of the audio data
         blendshape_coeffs_dir : str
             Directory of the blendshape coefficients
+        blendshape_deltas_path : str
+            Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
         uncond_prob : float, optional
@@ -451,6 +470,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             audio_dir, blendshape_coeffs_dir, self.person_ids_val
         )
 
+        self.blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
+
     def __len__(self) -> int:
         return len(self.data_paths)
 
@@ -458,6 +479,9 @@ class VOCARKitValDataset(VOCARKitDataset):
         data = self.data_paths[index]
         waveform = load_audio(data["audio"], self.sampling_rate)
         blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
+        blendshape_delta = torch.FloatTensor(
+            np.stack(list(self.blendshape_deltas[data["person_id"]].values()), axis=0)
+        )
 
         waveform_len = waveform.shape[0]
         blendshape_len = blendshape_coeffs.shape[0]
@@ -472,6 +496,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         out = {
             "waveform": waveform_window,
             "blendshape_coeffs": blendshape_coeffs,
+            "blendshape_delta": blendshape_delta,
         }
 
         return out

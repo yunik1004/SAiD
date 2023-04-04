@@ -107,6 +107,37 @@ class SAID(ABC, nn.Module):
         noise_pred = self.denoiser(noisy_samples, timesteps, audio_embedding)
         return noise_pred
 
+    def pred_original_sample(
+        self,
+        noisy_samples: torch.FloatTensor,
+        noise: torch.FloatTensor,
+        timesteps: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        """Predict the denoised sample (x_{0}) based on the noisy samples and the noise
+
+        Parameters
+        ----------
+        noisy_samples : torch.FloatTensor
+            (Batch_size, coeffs_seq_len, in_channels), Noisy sample
+        noise : torch.FloatTensor
+            (Batch_size, coeffs_seq_len, in_channels), Noise
+        timesteps : torch.LongTensor
+            (Batch_size,), Current timestep
+
+        Returns
+        -------
+        torch.FloatTensor
+            Predicted denoised sample (x_{0})
+        """
+        alpha_prod_t = self.noise_scheduler.alphas_cumprod[timesteps].view(-1, 1, 1)
+        beta_prod_t = 1 - alpha_prod_t
+
+        pred_original_sample = noisy_samples - beta_prod_t ** (
+            0.5
+        ) * noise / alpha_prod_t ** (0.5)
+
+        return pred_original_sample
+
     def process_audio(
         self, waveform: Union[np.ndarray, torch.Tensor, List[np.ndarray]]
     ) -> torch.FloatTensor:
