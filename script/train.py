@@ -96,6 +96,7 @@ def train_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     ema_model: Optional[EMAModel] = None,
+    lambda_reconst: float = 1e-3,
 ) -> Dict[str, float]:
     """Train the SAiD model one epoch.
 
@@ -113,6 +114,8 @@ def train_epoch(
         Whether predict the signal itself or just a noise, by default False
     ema_model: Optional[EMAModel]
         EMA model of said_model, by default None
+    lambda_reconst: float
+        Loss weight of the reconstruction loss, by default 1e-3
 
     Returns
     -------
@@ -141,7 +144,7 @@ def train_epoch(
         loss_epsilon = losses["loss_epsilon"]
         loss_reconst = losses["loss_reconst"]
 
-        loss = loss_epsilon + 0.1 * loss_reconst
+        loss = loss_epsilon + lambda_reconst * loss_reconst
 
         accelerator.backward(loss)
         optimizer.step()
@@ -166,6 +169,7 @@ def validate_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     num_repeat: int = 1,
+    lambda_reconst: float = 1e-3,
 ) -> Dict[str, float]:
     """Validate the SAiD model one epoch.
 
@@ -181,6 +185,8 @@ def validate_epoch(
         Whether predict the signal itself or just a noise, by default False
     num_repeat : int, optional
         Number of the repetition, by default 1
+    lambda_reconst: float
+        Loss weight of the reconstruction loss, by default 1e-3
 
     Returns
     -------
@@ -211,7 +217,7 @@ def validate_epoch(
                 loss_epsilon = losses["loss_epsilon"]
                 loss_reconst = losses["loss_reconst"]
 
-                loss = loss_epsilon + 0.1 * loss_reconst
+                loss = loss_epsilon + lambda_reconst * loss_reconst
 
                 val_total_losses["loss"] += loss.item() * curr_batch_size
                 val_total_losses["loss_epsilon"] += (
