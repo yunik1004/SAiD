@@ -129,7 +129,7 @@ class VOCARKitDataset(ABC, Dataset):
         pass
 
     @abstractmethod
-    def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
+    def __getitem__(self, index: int) -> Dict[str, Any]:
         """Return the item of the given index
 
         Parameters
@@ -139,11 +139,12 @@ class VOCARKitDataset(ABC, Dataset):
 
         Returns
         -------
-        Dict[str, torch.FloatTensor]
+        Dict[str, Any]
             {
-                "waveform": (audio_seq_len,),
-                "blendshape_coeffs": (blendshape_seq_len, num_blendshapes),
-                "blendshape_delta": (num_blendshapes, |V|, 3)
+                "waveform": torch.FloatTensor, (audio_seq_len,),
+                "blendshape_coeffs": torch.FloatTensor, (blendshape_seq_len, num_blendshapes),
+                "blendshape_delta": torch.FloatTensor, (num_blendshapes, |V|, 3)
+                "cond": bool,
             }
         """
         pass
@@ -210,6 +211,7 @@ class VOCARKitDataset(ABC, Dataset):
                 "waveform": List[np.ndarray], each: (audio_seq_len,)
                 "blendshape_coeffs": torch.FloatTensor, (Batch, blendshape_seq_len, num_blendshapes)
                 "blendshape_delta": torch.FloatTensor, (Batch, num_blendshapes, |V|, 3)
+                "cond": torch.BoolTensor, (Batch,)
             }
         """
         examples_dict = {k: [dic[k] for dic in examples] for k in examples[0]}
@@ -217,11 +219,13 @@ class VOCARKitDataset(ABC, Dataset):
         waveforms = [np.array(wave) for wave in examples_dict["waveform"]]
         blendshape_coeffs = torch.stack(examples_dict["blendshape_coeffs"])
         blendshape_delta = torch.stack(examples_dict["blendshape_delta"])
+        cond = torch.BoolTensor(examples_dict["cond"])
 
         out = {
             "waveform": waveforms,  # List[np.ndarray]
             "blendshape_coeffs": blendshape_coeffs,  # torch.FloatTensor
             "blendshape_delta": blendshape_delta,  # torch.FloatTensor
+            "cond": cond,  # torch.BoolTensor
         }
 
         return out
@@ -371,7 +375,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
     def __len__(self) -> int:
         return len(self.data_paths)
 
-    def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
+    def __getitem__(self, index: int) -> Dict[str, Any]:
         data = self.data_paths[index]
         waveform = load_audio(data["audio"], self.sampling_rate)
         blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
@@ -402,13 +406,13 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             ]
 
         # Random uncondition for classifier-free guidance
-        if random.uniform(0, 1) < self.uncond_prob:
-            waveform_window = torch.zeros(self.waveform_window_len)
+        cond = random.uniform(0, 1) > self.uncond_prob
 
         out = {
             "waveform": waveform_window,
             "blendshape_coeffs": coeffs_window,
             "blendshape_delta": blendshape_delta,
+            "cond": cond,
         }
 
         return out
@@ -475,7 +479,7 @@ class VOCARKitValDataset(VOCARKitDataset):
     def __len__(self) -> int:
         return len(self.data_paths)
 
-    def __getitem__(self, index: int) -> Dict[str, torch.FloatTensor]:
+    def __getitem__(self, index: int) -> Dict[str, Any]:
         data = self.data_paths[index]
         waveform = load_audio(data["audio"], self.sampling_rate)
         blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
@@ -493,10 +497,14 @@ class VOCARKitValDataset(VOCARKitDataset):
         waveform_window = torch.zeros(waveform_window_len)
         waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
 
+        # Random uncondition for classifier-free guidance
+        cond = random.uniform(0, 1) > self.uncond_prob
+
         out = {
             "waveform": waveform_window,
             "blendshape_coeffs": blendshape_coeffs,
             "blendshape_delta": blendshape_delta,
+            "cond": cond,
         }
 
         return out
