@@ -319,6 +319,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         sampling_rate: int,
         window_size: int = 120,
         uncond_prob: float = 0.1,
+        zero_prob: float = 0.003125,
         hflip: bool = True,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
         classes_mirror_pair: List[
@@ -341,6 +342,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Window size of the blendshape coefficients, by default 120
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
+        zero_prob : float, optional
+            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         classes : List[str], optional
@@ -351,6 +354,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         self.sampling_rate = sampling_rate
         self.window_size = window_size
         self.uncond_prob = uncond_prob
+        self.zero_prob = zero_prob
 
         self.hflip = hflip
         self.classes = classes
@@ -408,6 +412,11 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         # Random uncondition for classifier-free guidance
         cond = random.uniform(0, 1) > self.uncond_prob
 
+        # Random zero-out
+        if random.uniform(0, 1) < self.zero_prob:
+            waveform_window = torch.zeros(self.waveform_window_len)
+            coeffs_window = torch.zeros((self.window_size, num_blendshape))
+
         out = {
             "waveform": waveform_window,
             "blendshape_coeffs": coeffs_window,
@@ -428,6 +437,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         blendshape_deltas_path: str,
         sampling_rate: int,
         uncond_prob: float = 0.1,
+        zero_prob: float = 0.003125,
         hflip: bool = True,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
         classes_mirror_pair: List[
@@ -448,6 +458,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             Sampling rate of the audio
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
+        zero_prob : float, optional
+            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         classes : List[str], optional
@@ -457,6 +469,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         """
         self.sampling_rate = sampling_rate
         self.uncond_prob = uncond_prob
+        self.zero_prob = zero_prob
 
         self.hflip = hflip
         self.classes = classes
@@ -499,6 +512,11 @@ class VOCARKitValDataset(VOCARKitDataset):
 
         # Random uncondition for classifier-free guidance
         cond = random.uniform(0, 1) > self.uncond_prob
+
+        # Random zero-out
+        if random.uniform(0, 1) < self.zero_prob:
+            waveform_window = torch.zeros(self.waveform_window_len)
+            coeffs_window = torch.zeros((self.window_size, num_blendshape))
 
         out = {
             "waveform": waveform_window,

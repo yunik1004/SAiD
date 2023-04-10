@@ -132,9 +132,9 @@ class SAID(ABC, nn.Module):
         alpha_prod_t = self.noise_scheduler.alphas_cumprod[timesteps].view(-1, 1, 1)
         beta_prod_t = 1 - alpha_prod_t
 
-        pred_original_sample = noisy_samples - beta_prod_t ** (
-            0.5
-        ) * noise / alpha_prod_t ** (0.5)
+        pred_original_sample = (
+            noisy_samples - beta_prod_t**0.5 * noise
+        ) / alpha_prod_t**0.5
 
         return pred_original_sample
 
