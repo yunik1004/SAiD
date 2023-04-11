@@ -414,8 +414,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
 
         # Random zero-out
         if random.uniform(0, 1) < self.zero_prob:
-            waveform_window = torch.zeros(self.waveform_window_len)
-            coeffs_window = torch.zeros((self.window_size, num_blendshape))
+            waveform_window = torch.zeros_like(waveform_window)
+            coeffs_window = torch.zeros_like(coeffs_window)
 
         out = {
             "waveform": waveform_window,
@@ -515,8 +515,8 @@ class VOCARKitValDataset(VOCARKitDataset):
 
         # Random zero-out
         if random.uniform(0, 1) < self.zero_prob:
-            waveform_window = torch.zeros(self.waveform_window_len)
-            coeffs_window = torch.zeros((self.window_size, num_blendshape))
+            waveform_window = torch.zeros_like(waveform_window)
+            blendshape_coeffs = torch.zeros_like(blendshape_coeffs)
 
         out = {
             "waveform": waveform_window,
