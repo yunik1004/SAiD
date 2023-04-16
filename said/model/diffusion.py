@@ -341,12 +341,14 @@ class SAID(ABC, nn.Module):
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
+            """
             uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
             uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
             uncond_audio_embedding = self.get_audio_embedding(
                 uncond_waveform_processed, window_size
             )
-
+            """
+            uncond_audio_embedding = torch.zeros_like(audio_embedding)
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
         # Prepare extra kwargs for the scheduler step
@@ -499,12 +501,14 @@ class SAID(ABC, nn.Module):
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
+            """
             uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
             uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
             uncond_audio_embedding = self.get_audio_embedding(
                 uncond_waveform_processed, window_size
             )
-
+            """
+            uncond_audio_embedding = torch.zeros_like(audio_embedding)
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
         intermediates = []
