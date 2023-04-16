@@ -44,6 +44,7 @@ def random_noise_loss(
     waveform = data["waveform"]
     blendshape_coeffs = data["blendshape_coeffs"].to(device)
     blendshape_delta = data["blendshape_delta"].to(device)
+    cond = data["cond"].to(device)
 
     coeff_latents = said_model.encode_samples(
         blendshape_coeffs * said_model.latent_scale
@@ -56,11 +57,13 @@ def random_noise_loss(
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
     audio_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
+    audio_embedding_cond = audio_embedding * cond.view(-1, 1, 1)
+
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
     noisy_latents = noise_dict["noisy_samples"]
     noise = noise_dict["noise"]
 
-    pred = said_model(noisy_latents, random_timesteps, audio_embedding)
+    pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
 
     criterion_epsilon = nn.L1Loss()
     loss_epsilon = criterion_epsilon(coeff_latents if mdm_like else noise, pred)
