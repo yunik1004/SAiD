@@ -72,17 +72,19 @@ def random_noise_loss(
         "loss_epsilon": loss_epsilon,
     }
 
-    criterion_reconst = nn.MSELoss()
+    criterion_reconst = nn.L1Loss()
 
     if mdm_like:
         # TODO: Not implemented & tested
         losses["loss_reconst"] = torch.tensor(0, device=device).float()
     else:
+        """
         pred_latents = said_model.pred_original_sample(
             noisy_latents, pred, random_timesteps
         )
-
         latents_diff = pred_latents - coeff_latents
+        """
+        latents_diff = noise - pred
         vertices_diff = torch.einsum("bijk,bli->bljk", blendshape_delta, latents_diff)
 
         loss_reconst = criterion_reconst(vertices_diff, torch.zeros_like(vertices_diff))
@@ -99,7 +101,7 @@ def train_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     ema_model: Optional[EMAModel] = None,
-    lambda_reconst: float = 1e-3,
+    lambda_reconst: float = 1e2,
 ) -> Dict[str, float]:
     """Train the SAiD model one epoch.
 
@@ -118,7 +120,7 @@ def train_epoch(
     ema_model: Optional[EMAModel]
         EMA model of said_model, by default None
     lambda_reconst: float
-        Loss weight of the reconstruction loss, by default 1e-3
+        Loss weight of the reconstruction loss, by default 1e2
 
     Returns
     -------
@@ -172,7 +174,7 @@ def validate_epoch(
     accelerator: Accelerator,
     mdm_like: bool = False,
     num_repeat: int = 1,
-    lambda_reconst: float = 1e-3,
+    lambda_reconst: float = 1e2,
 ) -> Dict[str, float]:
     """Validate the SAiD model one epoch.
 
@@ -189,7 +191,7 @@ def validate_epoch(
     num_repeat : int, optional
         Number of the repetition, by default 1
     lambda_reconst: float
-        Loss weight of the reconstruction loss, by default 1e-3
+        Loss weight of the reconstruction loss, by default 1e2
 
     Returns
     -------
