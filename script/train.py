@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
 from said.model.wav2vec2 import ModifiedWav2Vec2Model
-from dataset import VOCARKitTrainDataset, VOCARKitValDataset
+from dataset.dataset_voca import VOCARKitTrainDataset, VOCARKitValDataset
 
 
 def random_noise_loss(

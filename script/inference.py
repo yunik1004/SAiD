@@ -10,7 +10,7 @@ from said.util.blendshape import (
     save_blendshape_coeffs,
     save_blendshape_coeffs_image,
 )
-from dataset import VOCARKitDataset
+from dataset.dataset_voca import VOCARKitDataset
 
 
 def main():
@@ -138,6 +138,7 @@ def main():
 
     # Load data
     waveform = load_audio(audio_path, said_model.sampling_rate)
+    waveform = torch.zeros_like(waveform)
 
     # Fit the size of waveform
     fit_output = fit_audio_unet(waveform, said_model.sampling_rate, fps, divisor_unet)
