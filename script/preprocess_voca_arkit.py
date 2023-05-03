@@ -3,7 +3,7 @@
 import argparse
 import os
 from said.util.mesh import save_mesh
-from dataset import VOCARKitDataset
+from dataset.dataset_voca import VOCARKitDataset
 
 
 def main():

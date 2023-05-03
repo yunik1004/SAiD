@@ -11,7 +11,7 @@ from scipy import sparse as sp
 from tqdm import tqdm
 from said.util.blendshape import save_blendshape_coeffs
 from said.util.parser import parse_list
-from dataset import VOCARKitDataset, VOCARKitPseudoGTOptDataset
+from dataset.dataset_voca import VOCARKitDataset, VOCARKitPseudoGTOptDataset
 
 
 class OptimizationProblemSingle:
