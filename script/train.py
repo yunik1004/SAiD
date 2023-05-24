@@ -258,14 +258,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
     )
-    """
-    parser.add_argument(
-        "--vae_weights_path",
-        type=str,
-        default="../output-vae/5000.pth",
-        help="Path of the weights of VAE",
-    )
-    """
     parser.add_argument(
         "--audio_dir",
         type=str,
