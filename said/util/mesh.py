@@ -1,8 +1,17 @@
 """Define the utility functions related to the mesh
 """
+from dataclasses import dataclass
 from typing import Dict, List
 import numpy as np
 import trimesh
+
+
+@dataclass
+class Mesh:
+    """Dataclass for mesh"""
+
+    vertices: np.ndarray  # (|V|, 3), Vertices of the mesh
+    faces: np.ndarray  # (|F|, 3), Faces of the mesh
 
 
 def load_mesh(mesh_path: str) -> trimesh.Trimesh:
@@ -22,9 +31,7 @@ def load_mesh(mesh_path: str) -> trimesh.Trimesh:
     return mesh
 
 
-def get_submesh(
-    vertices: np.ndarray, faces: np.ndarray, subindices: List[int]
-) -> Dict[str, np.ndarray]:
+def get_submesh(vertices: np.ndarray, faces: np.ndarray, subindices: List[int]) -> Mesh:
     """Get the submesh
 
     Parameters
@@ -38,11 +45,8 @@ def get_submesh(
 
     Returns
     -------
-    Dict[str, np.ndarray]
-        {
-            "vertices": (|V'|, 3), Vertices of the submesh
-            "faces":  (|F'|, 3), Faces of the submesh
-        }
+    Mesh
+        vertices: (|V'|, 3), faces: (|F'|, 3)
     """
     sub_vertices = vertices[subindices]
 
@@ -57,12 +61,7 @@ def get_submesh(
             pass
     sub_faces = np.array(sub_faces_list)
 
-    out = {
-        "vertices": sub_vertices,
-        "faces": sub_faces,
-    }
-
-    return out
+    return Mesh(vertices=sub_vertices, faces=sub_faces)
 
 
 def create_mesh(vertices: np.ndarray, faces: np.ndarray) -> trimesh.Trimesh:

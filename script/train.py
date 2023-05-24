@@ -1,6 +1,7 @@
 """Train the SAID_UNet1D model
 """
 import argparse
+from dataclasses import dataclass
 import os
 from typing import Any, Dict, Optional
 from accelerate import Accelerator
@@ -9,42 +10,61 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
-from said.model.diffusion import SAID, SAID_CDiT, SAID_UNet1D
+from said.model.diffusion import SAID, SAID_UNet1D
 from said.model.wav2vec2 import ModifiedWav2Vec2Model
-from dataset.dataset_voca import VOCARKitTrainDataset, VOCARKitValDataset
+from dataset.dataset_voca import DataBatch, VOCARKitTrainDataset, VOCARKitValDataset
+
+
+@dataclass
+class LossStepOutput:
+    """
+    Dataclass for the losses at each step
+    """
+
+    predict: torch.FloatTensor  # MAE loss for the predicted output
+    reconst: Optional[
+        torch.FloatTensor
+    ] = None  # MAE loss for the reconstruction output
+
+
+@dataclass
+class LossEpochOutput:
+    """
+    Dataclass for the averaged losses at each epoch
+    """
+
+    total: float = 0  # Averaged total loss
+    predict: float = 0  # Averaged prediction loss
+    reconst: float = 0  # Averaged reconstruction loss
 
 
 def random_noise_loss(
     said_model: SAID,
-    data: Dict[str, Any],
+    data: DataBatch,
     device: torch.device,
-    mdm_like: bool = False,
-) -> Dict[str, torch.FloatTensor]:
+    pred_signal: bool = False,
+) -> LossStepOutput:
     """Compute the loss with randomized noises
 
     Parameters
     ----------
     said_model : SAID
         SAiD model object
-    data : Dict[str, Any]
+    data : DataBatch
         Output of the VOCARKitDataset.collate_fn
     device : torch.device
         GPU device
-    mdm_like: bool
+    pred_signal: bool
         Whether predict the signal itself or just a noise, by default False
 
     Returns
     -------
-    Dict[str, torch.FloatTensor]
-        {
-            "loss_epsilon": MAE loss between added noise and predicted noise
-            "loss_reconst": MSE loss between original vertices and predicted vertices
-        }
+    LossStepOutput
+        Computed losses
     """
-    waveform = data["waveform"]
-    blendshape_coeffs = data["blendshape_coeffs"].to(device)
-    blendshape_delta = data["blendshape_delta"].to(device)
-    cond = data["cond"].to(device)
+    waveform = data.waveform
+    blendshape_coeffs = data.blendshape_coeffs.to(device)
+    cond = data.cond.to(device)
 
     coeff_latents = said_model.encode_samples(
         blendshape_coeffs * said_model.latent_scale
@@ -60,36 +80,37 @@ def random_noise_loss(
     audio_embedding_cond = audio_embedding * cond.view(-1, 1, 1)
 
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
-    noisy_latents = noise_dict["noisy_samples"]
-    noise = noise_dict["noise"]
+    noisy_latents = noise_dict.noisy_sample
+    noise = noise_dict.noise
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
 
     criterion_epsilon = nn.L1Loss()
-    loss_epsilon = criterion_epsilon(coeff_latents if mdm_like else noise, pred)
+    loss_epsilon = criterion_epsilon(coeff_latents if pred_signal else noise, pred)
 
-    losses = {
-        "loss_epsilon": loss_epsilon,
-    }
+    losses = LossStepOutput(predict=loss_epsilon)
 
     criterion_reconst = nn.L1Loss()
 
-    if mdm_like:
-        # TODO: Not implemented & tested
-        losses["loss_reconst"] = torch.tensor(0, device=device).float()
+    if data.blendshape_delta:
+        blendshape_delta = data.blendshape_delta.to(device)
+
+        if not pred_signal:
+            """
+            pred_latents = said_model.pred_original_sample(
+                noisy_latents, pred, random_timesteps
+            )
+            latents_diff = pred_latents - coeff_latents
+            """
+            latents_diff = noise - pred
+            vertices_diff = torch.einsum(
+                "bijk,bli->bljk", blendshape_delta, latents_diff
+            )
+            losses.reconst = criterion_reconst(
+                vertices_diff, torch.zeros_like(vertices_diff)
+            )
     else:
-        """
-        pred_latents = said_model.pred_original_sample(
-            noisy_latents, pred, random_timesteps
-        )
-        latents_diff = pred_latents - coeff_latents
-        """
-        latents_diff = noise - pred
-        vertices_diff = torch.einsum("bijk,bli->bljk", blendshape_delta, latents_diff)
-
-        loss_reconst = criterion_reconst(vertices_diff, torch.zeros_like(vertices_diff))
-
-        losses["loss_reconst"] = loss_reconst
+        losses.reconst = torch.tensor(0, device=device)
 
     return losses
 
@@ -99,10 +120,10 @@ def train_epoch(
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
-    mdm_like: bool = False,
+    pred_signal: bool = False,
     ema_model: Optional[EMAModel] = None,
     lambda_reconst: float = 1e2,
-) -> Dict[str, float]:
+) -> LossEpochOutput:
     """Train the SAiD model one epoch.
 
     Parameters
@@ -115,7 +136,7 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
-    mdm_like: bool
+    pred_signal: bool
         Whether predict the signal itself or just a noise, by default False
     ema_model: Optional[EMAModel]
         EMA model of said_model, by default None
@@ -124,13 +145,8 @@ def train_epoch(
 
     Returns
     -------
-    Dict[str, float]
+    LossEpochOutput
         Average losses
-        {
-            "loss": Average loss to be optimized
-            "loss_epsilon": Average epsilon loss
-            "loss_reconst": Average reconstruction loss
-        }
     """
     device = accelerator.device
 
@@ -138,18 +154,15 @@ def train_epoch(
 
     train_total_losses = {
         "loss": 0,
-        "loss_epsilon": 0,
+        "loss_predict": 0,
         "loss_reconst": 0,
     }
     train_total_num = 0
     for data in train_dataloader:
-        curr_batch_size = len(data["waveform"])
-        losses = random_noise_loss(said_model, data, device, mdm_like)
+        curr_batch_size = len(data.waveform)
+        losses = random_noise_loss(said_model, data, device, pred_signal)
 
-        loss_epsilon = losses["loss_epsilon"]
-        loss_reconst = losses["loss_reconst"]
-
-        loss = loss_epsilon + lambda_reconst * loss_reconst
+        loss = losses.predict + lambda_reconst * losses.reconst
 
         accelerator.backward(loss)
         optimizer.step()
@@ -158,12 +171,16 @@ def train_epoch(
         optimizer.zero_grad()
 
         train_total_losses["loss"] += loss.item() * curr_batch_size
-        train_total_losses["loss_epsilon"] += loss_epsilon.item() * curr_batch_size
-        train_total_losses["loss_reconst"] += loss_reconst.item() * curr_batch_size
+        train_total_losses["loss_predict"] += losses.predict.item() * curr_batch_size
+        train_total_losses["loss_reconst"] += losses.reconst.item() * curr_batch_size
 
         train_total_num += curr_batch_size
 
-    train_avg_losses = {k: v / train_total_num for k, v in train_total_losses.items()}
+    train_avg_losses = LossEpochOutput(
+        total=train_total_losses["loss"] / train_total_num,
+        predict=train_total_losses["loss_predict"] / train_total_num,
+        reconst=train_total_losses["loss_reconst"] / train_total_num,
+    )
 
     return train_avg_losses
 
@@ -172,10 +189,10 @@ def validate_epoch(
     said_model: SAID,
     val_dataloader: DataLoader,
     accelerator: Accelerator,
-    mdm_like: bool = False,
+    pred_signal: bool = False,
     num_repeat: int = 1,
     lambda_reconst: float = 1e2,
-) -> Dict[str, float]:
+) -> LossEpochOutput:
     """Validate the SAiD model one epoch.
 
     Parameters
@@ -186,7 +203,7 @@ def validate_epoch(
         Dataloader of the VOCARKitValDataset
     accelerator : Accelerator
         Accelerator object
-    mdm_like: bool
+    pred_signal: bool
         Whether predict the signal itself or just a noise, by default False
     num_repeat : int, optional
         Number of the repetition, by default 1
@@ -195,13 +212,8 @@ def validate_epoch(
 
     Returns
     -------
-    Dict[str, float]
-        Average loss
-        {
-            "loss": Average loss to be optimized
-            "loss_epsilon": Average epsilon loss
-            "loss_reconst": Average reconstruction loss
-        }
+    LossEpochOutput
+        Average losses
     """
     device = accelerator.device
 
@@ -209,32 +221,33 @@ def validate_epoch(
 
     val_total_losses = {
         "loss": 0,
-        "loss_epsilon": 0,
+        "loss_predict": 0,
         "loss_reconst": 0,
     }
     val_total_num = 0
     with torch.no_grad():
         for _ in range(num_repeat):
             for data in val_dataloader:
-                curr_batch_size = len(data["waveform"])
-                losses = random_noise_loss(said_model, data, device, mdm_like)
+                curr_batch_size = len(data.waveform)
+                losses = random_noise_loss(said_model, data, device, pred_signal)
 
-                loss_epsilon = losses["loss_epsilon"]
-                loss_reconst = losses["loss_reconst"]
-
-                loss = loss_epsilon + lambda_reconst * loss_reconst
+                loss = losses.predict + lambda_reconst * losses.reconst
 
                 val_total_losses["loss"] += loss.item() * curr_batch_size
-                val_total_losses["loss_epsilon"] += (
-                    loss_epsilon.item() * curr_batch_size
+                val_total_losses["loss_predict"] += (
+                    losses.predict.item() * curr_batch_size
                 )
                 val_total_losses["loss_reconst"] += (
-                    loss_reconst.item() * curr_batch_size
+                    losses.reconst.item() * curr_batch_size
                 )
 
                 val_total_num += curr_batch_size
 
-    val_avg_losses = {k: v / val_total_num for k, v in val_total_losses.items()}
+    val_avg_losses = LossEpochOutput(
+        total=val_total_losses["loss"] / val_total_num,
+        predict=val_total_losses["loss_predict"] / val_total_num,
+        reconst=val_total_losses["loss_reconst"] / val_total_num,
+    )
 
     return val_avg_losses
 
@@ -278,7 +291,7 @@ def main():
         help="Directory of the outputs",
     )
     parser.add_argument(
-        "--mdm_like",
+        "--pred_signal",
         type=bool,
         default=False,
         help="Whether predict the signal itself or just a noise",
@@ -321,14 +334,12 @@ def main():
     )
     args = parser.parse_args()
 
-    # vae_weights_path = args.vae_weights_path
-
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
     blendshape_deltas_path = args.blendshape_deltas_path
 
     output_dir = args.output_dir
-    mdm_like = args.mdm_like
+    pred_signal = args.pred_signal
     window_size = args.window_size
     batch_size = args.batch_size
     epochs = args.epochs
@@ -344,32 +355,25 @@ def main():
     if accelerator.is_main_process:
         accelerator.init_trackers("SAiD")
 
-    # Load model with pretrained audio encoder, VAE
-    # said_model = SAID_CDiT()
     said_model = SAID_UNet1D()
     said_model.audio_encoder = ModifiedWav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
-    """
-    said_model.vae.load_state_dict(
-        torch.load(vae_weights_path, map_location=accelerator.device)
-    )
-    """
 
     # Load data
     train_dataset = VOCARKitTrainDataset(
-        audio_dir,
-        coeffs_dir,
-        blendshape_deltas_path,
-        said_model.sampling_rate,
-        window_size,
+        audio_dir=audio_dir,
+        blendshape_coeffs_dir=coeffs_dir,
+        blendshape_deltas_path=None,  # blendshape_deltas_path,
+        sampling_rate=said_model.sampling_rate,
+        window_size=window_size,
         uncond_prob=uncond_prob,
     )
     val_dataset = VOCARKitValDataset(
-        audio_dir,
-        coeffs_dir,
-        blendshape_deltas_path,
-        said_model.sampling_rate,
+        audio_dir=audio_dir,
+        blendshape_coeffs_dir=coeffs_dir,
+        blendshape_deltas_path=None,  # blendshape_deltas_path,
+        sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )
 
@@ -395,11 +399,6 @@ def main():
     # Initialize the optimzier - freeze audio encoder, VAE
     for p in said_model.audio_encoder.parameters():
         p.requires_grad = False
-
-    """
-    for p in said_model.vae.parameters():
-        p.requires_grad = False
-    """
 
     optimizer = torch.optim.AdamW(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),
@@ -428,15 +427,15 @@ def main():
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             accelerator=accelerator,
-            mdm_like=mdm_like,
+            pred_signal=pred_signal,
             ema_model=ema_model,
         )
 
         # Log
         logs = {
-            "Train/Total Loss": train_avg_losses["loss"],
-            "Train/Epsilon Loss": train_avg_losses["loss_epsilon"],
-            "Train/Reconst Loss": train_avg_losses["loss_reconst"],
+            "Train/Total Loss": train_avg_losses.total,
+            "Train/Predict Loss": train_avg_losses.predict,
+            "Train/Reconst Loss": train_avg_losses.reconst,
         }
 
         accelerator.wait_for_everyone()
@@ -451,13 +450,13 @@ def main():
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
-                mdm_like=mdm_like,
+                pred_signal=pred_signal,
                 num_repeat=val_repeat,
             )
             # Append the log
-            logs["Validation/Total Loss"] = val_avg_losses["loss"]
-            logs["Validation/Epsilon Loss"] = val_avg_losses["loss_epsilon"]
-            logs["Validation/Reconst Loss"] = val_avg_losses["loss_reconst"]
+            logs["Validation/Total Loss"] = val_avg_losses.total
+            logs["Validation/Predict Loss"] = val_avg_losses.predict
+            logs["Validation/Reconst Loss"] = val_avg_losses.reconst
 
         # Print logs
         if accelerator.sync_gradients:

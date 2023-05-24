@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "said"
-version = "0.2.3"
+version = "0.3.0"
 description = "Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -34,8 +34,11 @@ test = [
 style = [
     "black",
 ]
+baseline = [
+    "librosa",
+]
 dev = [
-    "said[style, test]",
+    "said[style, test, baseline]",
 ]
 
 [tool.setuptools]

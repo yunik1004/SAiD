@@ -1,9 +1,18 @@
 """Define the utility functions related to the audio
 """
+from dataclasses import dataclass
 import math
 from typing import Any, Dict
 import torch
 import torchaudio
+
+
+@dataclass
+class FittedWaveform:
+    """Fitted waveform using the window"""
+
+    waveform: torch.FloatTensor
+    window_size: int
 
 
 def load_audio(audio_path: str, sampling_rate: int) -> torch.FloatTensor:
@@ -30,7 +39,7 @@ def load_audio(audio_path: str, sampling_rate: int) -> torch.FloatTensor:
 
 def fit_audio_unet(
     waveform: torch.FloatTensor, sampling_rate: int, fps: int, divisor_unet: int
-) -> Dict[str, Any]:
+) -> FittedWaveform:
     """Fit the intput audio waveform into UNet1D
 
     Parameters
@@ -46,11 +55,8 @@ def fit_audio_unet(
 
     Returns
     -------
-    Dict[str, Any]
-        {
-            "waveform": Fitted waveform
-            "window_len": Length of the window
-        }
+    FittedWaveform
+        Fitted waveform with the window
     """
     gcd = math.gcd(sampling_rate, fps)
     divisor_waveform = sampling_rate // gcd * divisor_unet
@@ -64,9 +70,4 @@ def fit_audio_unet(
         tmp[:waveform_len] = waveform[:]
         waveform = tmp
 
-    output = {
-        "waveform": waveform,
-        "window_len": window_len,
-    }
-
-    return output
+    return FittedWaveform(waveform=waveform, window_size=window_len)

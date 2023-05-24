@@ -3,7 +3,7 @@
 import argparse
 import os
 import torch
-from said.model.diffusion import SAID_CDiT, SAID_UNet1D
+from said.model.diffusion import SAID_UNet1D
 from said.util.audio import fit_audio_unet, load_audio
 from said.util.blendshape import (
     load_blendshape_coeffs,
@@ -50,7 +50,7 @@ def main():
         help="Saving directory of the intermediate outputs",
     )
     parser.add_argument(
-        "--mdm_like",
+        "--pred_signal",
         type=bool,
         default=False,
         help="Whether predict the signal itself or just a noise",
@@ -106,7 +106,7 @@ def main():
     output_path = args.output_path
     output_image_path = args.output_image_path
     intermediate_dir = args.intermediate_dir
-    mdm_like = args.mdm_like
+    pred_signal = args.pred_signal
     num_steps = args.num_steps
     strength = args.strength
     guidance_scale = args.guidance_scale
@@ -130,7 +130,6 @@ def main():
         mask = load_blendshape_coeffs(mask_path).unsqueeze(0).to(device)
 
     # Load model
-    # said_model = SAID_CDiT(
     said_model = SAID_UNet1D()
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
     said_model.to(device)
@@ -138,12 +137,12 @@ def main():
 
     # Load data
     waveform = load_audio(audio_path, said_model.sampling_rate)
-    waveform = torch.zeros_like(waveform)
+    # waveform = torch.zeros_like(waveform)
 
     # Fit the size of waveform
     fit_output = fit_audio_unet(waveform, said_model.sampling_rate, fps, divisor_unet)
-    waveform = fit_output["waveform"]
-    window_len = fit_output["window_len"]
+    waveform = fit_output.waveform
+    window_len = fit_output.window_size
 
     # Process the waveform
     waveform_processed = said_model.process_audio(waveform).to(device)
@@ -151,7 +150,7 @@ def main():
     # Inference
     with torch.no_grad():
         output = (
-            said_model.inference_mdm(
+            said_model.inference_x(
                 waveform_processed=waveform_processed,
                 init_samples=init_samples,
                 mask=mask,
@@ -161,7 +160,7 @@ def main():
                 save_intermediate=save_intermediate,
                 show_process=show_process,
             )
-            if mdm_like
+            if pred_signal
             else said_model.inference(
                 waveform_processed=waveform_processed,
                 init_samples=init_samples,
@@ -175,7 +174,7 @@ def main():
             )
         )
 
-    result = output["Result"][0, :window_len].cpu().numpy()
+    result = output.result[0, :window_len].cpu().numpy()
 
     save_blendshape_coeffs(
         coeffs=result,
@@ -186,11 +185,9 @@ def main():
     # Save coeffs as an image
     save_blendshape_coeffs_image(result, output_image_path)
 
+    # Save intermediates
     if save_intermediate:
-        intermediate = output["Intermediate"]
-
-        # Save intermediates
-        for t, interm in enumerate(reversed(intermediate)):
+        for t, interm in enumerate(reversed(output.intermediates)):
             interm_coeffs = interm[0, :window_len].cpu().numpy()
             timestep = t + 1
 

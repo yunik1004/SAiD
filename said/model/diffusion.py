@@ -1,8 +1,9 @@
 """Define the diffusion models which are used as SAiD model
 """
 from abc import ABC
+from dataclasses import dataclass
 import inspect
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 from diffusers import DDIMScheduler, SchedulerMixin
 import numpy as np
 import torch
@@ -12,10 +13,30 @@ from transformers import (
     Wav2Vec2Config,
     Wav2Vec2Processor,
 )
-from .transformer import ConditionalDiT
 from .unet_1d_condition import UNet1DConditionModel
-from .vae import BCVAE
 from .wav2vec2 import ModifiedWav2Vec2Model
+
+
+@dataclass
+class SAIDInferenceOutput:
+    """
+    Dataclass for the inference output
+    """
+
+    result: torch.FloatTensor  # (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
+    intermediates: List[
+        torch.FloatTensor
+    ]  # (Batch_size, sample_seq_len, x_dim), Intermediate blendshape coefficients
+
+
+@dataclass
+class SAIDNoiseAdditionOutput:
+    """
+    Dataclass for the noise addition output
+    """
+
+    noisy_sample: torch.FloatTensor
+    noise: torch.FloatTensor
 
 
 class SAID(ABC, nn.Module):
@@ -202,33 +223,26 @@ class SAID(ABC, nn.Module):
         return timesteps
 
     def add_noise(
-        self, samples: torch.FloatTensor, timesteps: torch.LongTensor
-    ) -> Dict[str, torch.FloatTensor]:
+        self, sample: torch.FloatTensor, timestep: torch.LongTensor
+    ) -> SAIDNoiseAdditionOutput:
         """Add the noise into the sample
 
         Parameters
         ----------
-        samples : torch.FloatTensor
-            Samples to be noised
-        timesteps : torch.LongTensor
+        sample : torch.FloatTensor
+            Sample to be noised
+        timestep : torch.LongTensor
             (num_timesteps,), Timestep of the noise scheduler
 
         Returns
         -------
-        Dict[str, torch.FloatTensor]
-            {
-                "noisy_samples": Noisy samples
-                "noise": Added noise
-            }
+        SAIDNoiseAdditionOutput
+            Noisy sample and the added noise
         """
-        noise = torch.randn(samples.shape, device=samples.device)
-        noisy_samples = self.noise_scheduler.add_noise(samples, noise, timesteps)
+        noise = torch.randn(sample.shape, device=sample.device)
+        noisy_sample = self.noise_scheduler.add_noise(sample, noise, timestep)
 
-        output = {
-            "noisy_samples": noisy_samples,
-            "noise": noise,
-        }
-        return output
+        return SAIDNoiseAdditionOutput(noisy_sample=noisy_sample, noise=noise)
 
     def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
         """Encode samples into latent
@@ -272,7 +286,7 @@ class SAID(ABC, nn.Module):
         fps: int = 60,
         save_intermediate: bool = False,
         show_process: bool = False,
-    ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
+    ) -> SAIDInferenceOutput:
         """Inference pipeline
 
         Parameters
@@ -300,11 +314,8 @@ class SAID(ABC, nn.Module):
 
         Returns
         -------
-        Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
-            {
-                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, vae_x_dim), Generated blendshape coefficients
-                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, vae_x_dim), Intermediate blendshape coefficients
-            }
+        SAIDInferenceOutput
+            Inference results and the intermediates
         """
         batch_size = waveform_processed.shape[0]
         waveform_len = waveform_processed.shape[1]
@@ -336,8 +347,8 @@ class SAID(ABC, nn.Module):
             )
 
             noise_output = self.add_noise(latents, timesteps)
-            latents = noise_output["noisy_samples"]
-            noise = noise_output["noise"]
+            latents = noise_output.noisy_sample
+            noise = noise_output.noise
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
@@ -416,14 +427,9 @@ class SAID(ABC, nn.Module):
         # Re-scaling & clipping the latent
         result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
 
-        output = {
-            "Result": result,
-            "Intermediate": intermediates,
-        }
+        return SAIDInferenceOutput(result=result, intermediates=intermediates)
 
-        return output
-
-    def inference_mdm(
+    def inference_x(
         self,
         waveform_processed: torch.FloatTensor,
         init_samples: Optional[torch.FloatTensor] = None,
@@ -434,7 +440,7 @@ class SAID(ABC, nn.Module):
         fps: int = 60,
         save_intermediate: bool = False,
         show_process: bool = False,
-    ) -> Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]:
+    ) -> SAIDInferenceOutput:
         """Inference pipeline
 
         Parameters
@@ -460,11 +466,8 @@ class SAID(ABC, nn.Module):
 
         Returns
         -------
-        Dict[str, Union[torch.FloatTensor, List[torch.FloatTensor]]]
-            {
-                "Result": torch.FloatTensor, (Batch_size, sample_seq_len, x_dim), Generated blendshape coefficients
-                "Intermediate": List[torch.FloatTensor], (Batch_size, sample_seq_len, x_dim), Intermediate blendshape coefficients
-            }
+        SAIDInferenceOutput
+            Inference results and the intermediates
         """
         batch_size = waveform_processed.shape[0]
         waveform_len = waveform_processed.shape[1]
@@ -496,8 +499,8 @@ class SAID(ABC, nn.Module):
             )
 
             noise_output = self.add_noise(latents, timesteps)
-            latents = noise_output["noisy_samples"]
-            noise = noise_output["noise"]
+            latents = noise_output.noisy_sample
+            noise = noise_output.noise
 
         audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
         if do_classifier_free_guidance:
@@ -542,7 +545,7 @@ class SAID(ABC, nn.Module):
             for temp in reversed(self.noise_scheduler.timesteps):
                 if temp >= t:
                     break
-                latents_pred = self.add_noise(latents_pred, temp)["noisy_samples"]
+                latents_pred = self.add_noise(latents_pred, temp).noisy_sample
 
             latents = latents_pred
 
@@ -573,16 +576,11 @@ class SAID(ABC, nn.Module):
         # Re-scaling & clipping the latent
         result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
 
-        output = {
-            "Result": result,
-            "Intermediate": intermediates,
-        }
-
-        return output
+        return SAIDInferenceOutput(result=result, intermediates=intermediates)
 
 
 class SAID_UNet1D(SAID):
-    """SAiD model implemented using U-Net 1D model. Masking is not supported"""
+    """SAiD model implemented using U-Net 1D model"""
 
     def __init__(
         self,
@@ -624,147 +622,4 @@ class SAID_UNet1D(SAID):
             in_channels=in_channels,
             out_channels=in_channels,
             cross_attention_dim=self.audio_config.hidden_size,
-        )
-
-
-class SAID_UNet1D_LDM(SAID_UNet1D):
-    """SAiD LDM implemented using U-Net 1D model"""
-
-    def __init__(
-        self,
-        audio_config: Optional[Wav2Vec2Config] = None,
-        audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: Optional[SchedulerMixin] = None,
-        vae_x_dim: int = 32,
-        vae_h_dim: int = 16,
-        vae_z_dim: int = 8,
-        diffusion_steps: int = 100,
-        latent_scale: float = 1,
-    ):
-        """Constructor of SAID_UNet1D
-
-        Parameters
-        ----------
-        audio_config : Optional[Wav2Vec2Config], optional
-            Wav2Vec2Config object, by default None
-        audio_processor : Optional[Wav2Vec2Processor], optional
-            Wav2Vec2Processor object, by default None
-        noise_scheduler : Optional[SchedulerMixin], optional
-            scheduler object, by default None
-        vae_x_dim : int
-            Dimension of the input, by default 32
-        vae_h_dim : int
-            Dimension of the hidden layer, by default 16
-        vae_z_dim : int
-            Dimension of the latent, by default 8
-        diffusion_steps : int
-            The number of diffusion steps, by default 1000
-        latent_scale : float
-            Scaling the latent, by default 1
-        """
-        super(SAID_UNet1D_LDM, self).__init__(
-            audio_config=audio_config,
-            audio_processor=audio_processor,
-            noise_scheduler=noise_scheduler,
-            in_channels=vae_z_dim,
-            diffusion_steps=diffusion_steps,
-            latent_scale=latent_scale,
-        )
-
-        # VAE
-        self.vae = BCVAE(x_dim=vae_x_dim, h_dim=vae_h_dim, z_dim=vae_z_dim)
-
-    def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
-        """Encode samples into latent
-
-        Parameters
-        ----------
-        samples : torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_x_dim), Samples
-
-        Returns
-        -------
-        torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_z_dim), Output latent
-        """
-        latent_stats = self.vae.encode(samples)
-        latents = self.vae.reparametrize(
-            latent_stats["mean"], latent_stats["log_var"], True
-        )
-        return latents
-
-    def decode_latent(self, latent: torch.FloatTensor) -> torch.FloatTensor:
-        """Decode latent into samples
-
-        Parameters
-        ----------
-        latent : torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_z_dim), Latent
-
-        Returns
-        -------
-        torch.FloatTensor
-            (Batch_size, sample_seq_len, vae_x_dim), Output samples
-        """
-        return self.vae.decode(latent)
-
-
-class SAID_CDiT(SAID):
-    """SAiD model implemented using Conditional DiT model"""
-
-    def __init__(
-        self,
-        audio_config: Optional[Wav2Vec2Config] = None,
-        audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: Optional[SchedulerMixin] = None,
-        in_channels: int = 32,
-        feature_dim: int = 256,
-        num_heads: int = 8,
-        num_layers: int = 8,
-        diffusion_steps: int = 1000,
-        latent_scale: float = 1,
-    ):
-        """Constructor of SAID_CDiT
-
-        Parameters
-        ----------
-        audio_config : Optional[Wav2Vec2Config], optional
-            Wav2Vec2Config object, by default None
-        audio_processor : Optional[Wav2Vec2Processor], optional
-            Wav2Vec2Processor object, by default None
-        noise_scheduler : Optional[SchedulerMixin], optional
-            scheduler object, by default None
-        in_channels : int
-            Dimension of the input, by default 32
-        feature_dim : int
-            Dimension of the model feature, by default 256
-        num_heads : int
-            The number of heads in transformer, by default 4
-        num_layers : int
-            The number of transformer layers, by default 8
-        diffusion_steps : int
-            The number of diffusion steps, by default 1000
-        latent_scale : float
-            Scaling the latent, by default 1
-        """
-        super(SAID_CDiT, self).__init__(
-            audio_config=audio_config,
-            audio_processor=audio_processor,
-            noise_scheduler=noise_scheduler,
-            in_channels=in_channels,
-            diffusion_steps=diffusion_steps,
-            latent_scale=latent_scale,
-        )
-        self.feature_dim = feature_dim
-        self.num_heads = num_heads
-        self.num_layers = num_layers
-
-        # Denoiser
-        self.denoiser = ConditionalDiT(
-            in_channels=in_channels,
-            out_channels=in_channels,
-            cond_in_channels=self.audio_config.hidden_size,
-            feature_dim=self.feature_dim,
-            num_heads=self.num_heads,
-            num_layers=self.num_layers,
         )

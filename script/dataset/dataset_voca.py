@@ -2,6 +2,7 @@
 """
 from abc import abstractmethod, ABC
 import glob
+from dataclasses import dataclass
 import os
 import pathlib
 import random
@@ -15,6 +16,45 @@ from said.util.audio import load_audio
 from said.util.blendshape import load_blendshape_coeffs, load_blendshape_deltas
 from said.util.mesh import create_mesh, get_submesh, load_mesh
 from said.util.parser import parse_list
+
+
+@dataclass
+class DataItem:
+    """Dataclass for the data item"""
+
+    waveform: torch.FloatTensor  # (audio_seq_len,)
+    blendshape_coeffs: torch.FloatTensor  # (blendshape_seq_len, num_blendshapes)
+    cond: bool = True  # If false, uncondition for classifier-free guidance
+    blendshape_delta: Optional[torch.FloatTensor] = None  # (num_blendshapes, |V|, 3)
+
+
+@dataclass
+class DataBatch:
+    """Dataclass for the data batch"""
+
+    waveform: List[np.ndarray]  # List[(audio_seq_len,)] with length batch_size
+    blendshape_coeffs: torch.FloatTensor  # (batch_size, blendshape_seq_len, num_blendshapes)
+    cond: torch.BoolTensor  # (batch_size,)
+    blendshape_delta: Optional[
+        torch.FloatTensor
+    ] = None  # (batch_size, num_blendshapes, |V|, 3)
+
+
+@dataclass
+class ExpressionBases:
+    """Dataclass for the expression bases (including neutral)"""
+
+    neutral: trimesh.Trimesh  # Neutral mesh object
+    blendshapes: Dict[str, trimesh.Trimesh]  # <blendshape name>: blendshape mesh object
+
+
+@dataclass
+class VOCARKitDataPath:
+    """Dataclass for the VOCARKit data path"""
+
+    person_id: str
+    audio: str
+    blendshape_coeffs: str
 
 
 class VOCARKitDataset(ABC, Dataset):
@@ -101,7 +141,7 @@ class VOCARKitDataset(ABC, Dataset):
         blendshape_coeffs_dir: str,
         blendshape_deltas_path: str,
         sampling_rate: int,
-    ):
+    ) -> None:
         """Constructor of the class
 
         Parameters
@@ -129,7 +169,7 @@ class VOCARKitDataset(ABC, Dataset):
         pass
 
     @abstractmethod
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> DataItem:
         """Return the item of the given index
 
         Parameters
@@ -139,13 +179,8 @@ class VOCARKitDataset(ABC, Dataset):
 
         Returns
         -------
-        Dict[str, Any]
-            {
-                "waveform": torch.FloatTensor, (audio_seq_len,),
-                "blendshape_coeffs": torch.FloatTensor, (blendshape_seq_len, num_blendshapes),
-                "blendshape_delta": torch.FloatTensor, (num_blendshapes, |V|, 3)
-                "cond": bool,
-            }
+        DataItem
+            DataItem object
         """
         pass
 
@@ -154,7 +189,7 @@ class VOCARKitDataset(ABC, Dataset):
         audio_dir: str,
         blendshape_coeffs_dir: str,
         person_ids: List[str],
-    ) -> List[Dict[str, str]]:
+    ) -> List[VOCARKitDataPath]:
         """Return the list of the data paths
 
         Parameters
@@ -168,12 +203,8 @@ class VOCARKitDataset(ABC, Dataset):
 
         Returns
         -------
-        List[Dict[str, str]]
-            [{
-                "audio": audio_path,
-                "coeffs": coeffs_path,
-                "person_id": person id,
-            }]
+        List[VOCARKitDataPath]
+            List of the VOCARKitDataPath objects
         """
         data_paths = []
 
@@ -186,49 +217,42 @@ class VOCARKitDataset(ABC, Dataset):
                 coeffs_path = os.path.join(coeffs_id_dir, f"sentence{sid:02}.csv")
 
                 if os.path.exists(audio_path) and os.path.exists(coeffs_path):
-                    data = {
-                        "audio": audio_path,  # str
-                        "coeffs": coeffs_path,  # str
-                        "person_id": pid,  # str
-                    }
+                    data = VOCARKitDataPath(
+                        person_id=pid, audio=audio_path, blendshape_coeffs=coeffs_path
+                    )
                     data_paths.append(data)
 
         return data_paths
 
     @staticmethod
-    def collate_fn(examples: List[Dict[str, torch.FloatTensor]]) -> Dict[str, Any]:
+    def collate_fn(examples: List[DataItem]) -> DataBatch:
         """Collate function which is used for dataloader
 
         Parameters
         ----------
-        examples : List[Dict[str, torch.FloatTensor]]
+        examples : List[DataItem]
             List of the outputs of __getitem__
 
         Returns
         -------
-        Dict[str, Any]
-            {
-                "waveform": List[np.ndarray], each: (audio_seq_len,)
-                "blendshape_coeffs": torch.FloatTensor, (Batch, blendshape_seq_len, num_blendshapes)
-                "blendshape_delta": torch.FloatTensor, (Batch, num_blendshapes, |V|, 3)
-                "cond": torch.BoolTensor, (Batch,)
-            }
+        DataBatch
+            DataBatch object
         """
-        examples_dict = {k: [dic[k] for dic in examples] for k in examples[0]}
+        waveforms = [np.array(item.waveform) for item in examples]
+        blendshape_coeffss = torch.stack([item.blendshape_coeffs for item in examples])
+        conds = torch.BoolTensor([item.cond for item in examples])
+        blendshape_deltas = None
+        if len(examples) > 0 and examples[0].blendshape_delta:
+            blendshape_deltas = torch.stack(
+                [item.blendshape_delta for item in examples]
+            )
 
-        waveforms = [np.array(wave) for wave in examples_dict["waveform"]]
-        blendshape_coeffs = torch.stack(examples_dict["blendshape_coeffs"])
-        blendshape_delta = torch.stack(examples_dict["blendshape_delta"])
-        cond = torch.BoolTensor(examples_dict["cond"])
-
-        out = {
-            "waveform": waveforms,  # List[np.ndarray]
-            "blendshape_coeffs": blendshape_coeffs,  # torch.FloatTensor
-            "blendshape_delta": blendshape_delta,  # torch.FloatTensor
-            "cond": cond,  # torch.BoolTensor
-        }
-
-        return out
+        return DataBatch(
+            waveform=waveforms,
+            blendshape_coeffs=blendshape_coeffss,
+            cond=conds,
+            blendshape_delta=blendshape_deltas,
+        )
 
     @staticmethod
     def preprocess_blendshapes(
@@ -237,7 +261,7 @@ class VOCARKitDataset(ABC, Dataset):
         blendshape_indices: Optional[List[int]] = None,
         person_ids: Optional[List[str]] = None,
         blendshape_classes: Optional[List[str]] = None,
-    ) -> Dict[str, Dict[str, Union[trimesh.Trimesh, Dict[str, trimesh.Trimesh]]]]:
+    ) -> Dict[str, ExpressionBases]:
         """Preprocess the blendshapes
 
         Parameters
@@ -255,14 +279,9 @@ class VOCARKitDataset(ABC, Dataset):
 
         Returns
         -------
-        Dict[str, Dict[str, Union[trimesh.Trimesh, Dict[str, trimesh.Trimesh]]]]
+        Dict[str, ExpressionBases]
             {
-                <Person id>: {
-                    "neutral": trimesh.Trimesh, neutral mesh object,
-                    "blendshapes": Dict[str, trimesh.Trimesh], {
-                        <Blendshape name>: trimesh.Trimesh, blendshape mesh object
-                    }
-                }
+                <Person id>: expression bases
             }
         """
         if blendshape_indices is None:
@@ -283,7 +302,7 @@ class VOCARKitDataset(ABC, Dataset):
 
         blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
 
-        blendshapes = {}
+        expressions = {}
         for pid in tqdm(person_ids):
             template_mesh_path = os.path.join(templates_dir, f"{pid}.ply")
             template_mesh_ori = load_mesh(template_mesh_path)
@@ -291,21 +310,23 @@ class VOCARKitDataset(ABC, Dataset):
                 template_mesh_ori.vertices, template_mesh_ori.faces, blendshape_indices
             )
 
-            vertices = submesh_out["vertices"]
-            faces = submesh_out["faces"]
+            vertices = submesh_out.vertices
+            faces = submesh_out.faces
 
             neutral_mesh = create_mesh(vertices, faces)
 
             bl_deltas = blendshape_deltas[pid]
 
-            blendshapes_id = {}
+            blendshapes_dict = {}
             for bl_name in blendshape_classes:
                 bl_vertices = vertices + bl_deltas[bl_name]
-                blendshapes_id[bl_name] = create_mesh(bl_vertices, faces)
+                blendshapes_dict[bl_name] = create_mesh(bl_vertices, faces)
 
-            blendshapes[pid] = {"neutral": neutral_mesh, "blendshapes": blendshapes_id}
+            expressions[pid] = ExpressionBases(
+                neutral=neutral_mesh, blendshapes=blendshapes_dict
+            )
 
-        return blendshapes
+        return expressions
 
 
 class VOCARKitTrainDataset(VOCARKitDataset):
@@ -315,7 +336,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         self,
         audio_dir: str,
         blendshape_coeffs_dir: str,
-        blendshape_deltas_path: str,
+        blendshape_deltas_path: Optional[str],
         sampling_rate: int,
         window_size: int = 120,
         uncond_prob: float = 0.1,
@@ -325,7 +346,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         classes_mirror_pair: List[
             Tuple[str, str]
         ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
-    ):
+    ) -> None:
         """Constructor of the class
 
         Parameters
@@ -334,7 +355,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Directory of the audio data
         blendshape_coeffs_dir : str
             Directory of the blendshape coefficients
-        blendshape_deltas_path : str
+        blendshape_deltas_path : Optional[str]
             Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
@@ -372,19 +393,27 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             audio_dir, blendshape_coeffs_dir, self.person_ids_train
         )
 
-        self.blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
+        self.blendshape_deltas = (
+            load_blendshape_deltas(blendshape_deltas_path)
+            if blendshape_deltas_path
+            else None
+        )
 
         self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
 
     def __len__(self) -> int:
         return len(self.data_paths)
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data["audio"], self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
-        blendshape_delta = torch.FloatTensor(
-            np.stack(list(self.blendshape_deltas[data["person_id"]].values()), axis=0)
+        waveform = load_audio(data.audio, self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+        blendshape_delta = (
+            torch.FloatTensor(
+                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+            )
+            if self.blendshape_deltas
+            else None
         )
 
         num_blendshape = blendshape_coeffs.shape[1]
@@ -417,14 +446,12 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             waveform_window = torch.zeros_like(waveform_window)
             coeffs_window = torch.zeros_like(coeffs_window)
 
-        out = {
-            "waveform": waveform_window,
-            "blendshape_coeffs": coeffs_window,
-            "blendshape_delta": blendshape_delta,
-            "cond": cond,
-        }
-
-        return out
+        return DataItem(
+            waveform=waveform_window,
+            blendshape_coeffs=coeffs_window,
+            cond=cond,
+            blendshape_delta=blendshape_delta,
+        )
 
 
 class VOCARKitValDataset(VOCARKitDataset):
@@ -434,7 +461,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         self,
         audio_dir: str,
         blendshape_coeffs_dir: str,
-        blendshape_deltas_path: str,
+        blendshape_deltas_path: Optional[str],
         sampling_rate: int,
         uncond_prob: float = 0.1,
         zero_prob: float = 0.003125,
@@ -452,7 +479,7 @@ class VOCARKitValDataset(VOCARKitDataset):
             Directory of the audio data
         blendshape_coeffs_dir : str
             Directory of the blendshape coefficients
-        blendshape_deltas_path : str
+        blendshape_deltas_path : Optional[str]
             Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
@@ -487,17 +514,25 @@ class VOCARKitValDataset(VOCARKitDataset):
             audio_dir, blendshape_coeffs_dir, self.person_ids_val
         )
 
-        self.blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
+        self.blendshape_deltas = (
+            load_blendshape_deltas(blendshape_deltas_path)
+            if blendshape_deltas_path
+            else None
+        )
 
     def __len__(self) -> int:
         return len(self.data_paths)
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data["audio"], self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(data["coeffs"])
-        blendshape_delta = torch.FloatTensor(
-            np.stack(list(self.blendshape_deltas[data["person_id"]].values()), axis=0)
+        waveform = load_audio(data.audio, self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+        blendshape_delta = (
+            torch.FloatTensor(
+                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+            )
+            if self.blendshape_deltas
+            else None
         )
 
         waveform_len = waveform.shape[0]
@@ -518,67 +553,12 @@ class VOCARKitValDataset(VOCARKitDataset):
             waveform_window = torch.zeros_like(waveform_window)
             blendshape_coeffs = torch.zeros_like(blendshape_coeffs)
 
-        out = {
-            "waveform": waveform_window,
-            "blendshape_coeffs": blendshape_coeffs,
-            "blendshape_delta": blendshape_delta,
-            "cond": cond,
-        }
-
-        return out
-
-
-class VOCARKitVAEDataset(Dataset):
-    """Abstract class of VOCA-ARKit dataset for VAE"""
-
-    def __init__(self, blendshape_coeffs_dir: str):
-        """Constructor of the class
-
-        Parameters
-        ----------
-        blendshape_coeffs_dir : str
-            Directory of the blendshape coefficients
-        """
-        self.blendshape_coeffs_dir = blendshape_coeffs_dir
-
-        self.blendshape_coeffs_paths = [
-            os.path.join(self.blendshape_coeffs_dir, f)
-            for f in sorted(os.listdir(self.blendshape_coeffs_dir))
-        ]
-
-        bl_seq_list = []
-        for path in self.blendshape_coeffs_paths:
-            bl_seq = load_blendshape_coeffs(path)
-            bl_seq_list.append(bl_seq)
-
-        self.blendshapes = torch.cat(bl_seq_list, dim=0)
-
-        self.length = self.blendshapes.shape[0]
-
-    def __len__(self) -> int:
-        """Return the size of the dataset
-
-        Returns
-        -------
-        int
-            Size of the dataset
-        """
-        return self.length
-
-    def __getitem__(self, index: int) -> torch.FloatTensor:
-        """Return the item of the given index
-
-        Parameters
-        ----------
-        index : int
-            Index of the item
-
-        Returns
-        -------
-        torch.FloatTensor
-            "blendshape_coeffs": (1, num_blendshapes),
-        """
-        return self.blendshapes[index].unsqueeze(0)
+        return DataItem(
+            waveform=waveform_window,
+            blendshape_coeffs=blendshape_coeffs,
+            cond=cond,
+            blendshape_delta=blendshape_delta,
+        )
 
 
 class VOCARKitPseudoGTOptDataset:
@@ -609,9 +589,7 @@ class VOCARKitPseudoGTOptDataset:
         self.mesh_seqs_dir_dir_dir = mesh_seqs_dir
         self.blendshapes_names = blendshapes_names
 
-    def get_blendshapes(
-        self, person_id: str
-    ) -> Dict[str, Union[trimesh.base.Trimesh, Dict[str, trimesh.base.Trimesh]]]:
+    def get_blendshapes(self, person_id: str) -> ExpressionBases:
         """Return the dictionary of the blendshape meshes
 
         Parameters
@@ -621,14 +599,8 @@ class VOCARKitPseudoGTOptDataset:
 
         Returns
         -------
-        Dict[str, Union[trimesh.base.Trimesh, Dict[str, trimesh.base.Trimesh]]]
-            {
-                "neutral": trimesh.base.Trimesh, neutral mesh
-                "blendshape": Dict[str, trimesh.base.Trimesh], dictionary of the blendshape meshes
-                    {
-                        "{blendshape name}": trimesh.base.Trimesh, each blendshape meshes
-                    }
-            }
+        ExpressionBases
+            Expression bases object
         """
         neutral_path = os.path.join(self.neutrals_dir, f"{person_id}.obj")
         blendshapes_dir = os.path.join(self.blendshapes_dir_dir, person_id)
@@ -641,11 +613,7 @@ class VOCARKitPseudoGTOptDataset:
             bl_mesh = trimesh.load(bl_path)
             blendshapes_dict[bl_name] = bl_mesh
 
-        output = {}
-        output["neutral"] = neutral_mesh
-        output["blendshapes"] = blendshapes_dict
-
-        return output
+        return ExpressionBases(neutral=neutral_mesh, blendshapes=blendshapes_dict)
 
     def get_mesh_seq(self, person_id: str, seq_id: int) -> List[trimesh.base.Trimesh]:
         """Return the mesh sequence
