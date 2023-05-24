@@ -47,13 +47,13 @@ def main():
     bls = VOCARKitDataset.preprocess_blendshapes(templates_dir, blendshape_deltas_path)
 
     # Save the blendshapes
-    for pid, mesh_dicts in bls.items():
+    for pid, bases in bls.items():
         neutral_path = os.path.join(templates_head_dir, f"{pid}.obj")
         bl_dir = os.path.join(blendshapes_head_dir, f"{pid}")
         os.makedirs(bl_dir)
 
-        neutral_mesh = mesh_dicts["neutral"]
-        bl_meshes = mesh_dicts["blendshapes"]
+        neutral_mesh = bases.neutral
+        bl_meshes = bases.blendshapes
 
         # Save neutral
         save_mesh(neutral_mesh, neutral_path)

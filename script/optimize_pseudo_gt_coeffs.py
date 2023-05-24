@@ -290,8 +290,8 @@ def main():
     for person_id in tqdm(person_id_list):
         bl_out = dataset.get_blendshapes(person_id)
 
-        neutral_mesh = bl_out["neutral"]
-        blendshapes_meshes_dict = bl_out["blendshapes"]
+        neutral_mesh = bl_out.neutral
+        blendshapes_meshes_dict = bl_out.blendshapes
 
         neutral_vertices = neutral_mesh.vertices
         blendshapes_vertices_list = [
