@@ -453,7 +453,7 @@ def main():
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
-                pred_signal=pred_signal,
+                prediction_type=prediction_type,
                 num_repeat=val_repeat,
             )
             # Append the log
