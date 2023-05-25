@@ -4,7 +4,8 @@ from abc import ABC
 from dataclasses import dataclass
 import inspect
 from typing import List, Optional, Union
-from diffusers import DDIMScheduler, SchedulerMixin
+from diffusers import DDIMScheduler
+from diffusers.schedulers.scheduling_ddim import betas_for_alpha_bar
 import numpy as np
 import torch
 from torch import nn
@@ -90,10 +91,14 @@ class SAID(ABC, nn.Module):
         # Noise scheduler
         self.noise_scheduler = DDIMScheduler(
             num_train_timesteps=diffusion_steps,
-            beta_start=1e-4,
-            beta_end=2e-2,
             beta_schedule="squaredcos_cap_v2",
             prediction_type=prediction_type,
+        )
+        # Relieve the clipping
+        self.noise_scheduler.betas = betas_for_alpha_bar(diffusion_steps, 1 - 1e-15)
+        self.noise_scheduler.alphas = 1.0 - self.noise_scheduler.betas
+        self.noise_scheduler.alphas_cumprod = torch.cumprod(
+            self.noise_scheduler.alphas, dim=0
         )
 
     def forward(
@@ -451,8 +456,6 @@ class SAID_UNet1D(SAID):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
-        noise_scheduler : Optional[SchedulerMixin], optional
-            scheduler object, by default None
         in_channels : int
             Dimension of the input, by default 32
         diffusion_steps : int
