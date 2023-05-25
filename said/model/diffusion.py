@@ -37,6 +37,7 @@ class SAIDNoiseAdditionOutput:
 
     noisy_sample: torch.FloatTensor
     noise: torch.FloatTensor
+    velocity: torch.FloatTensor
 
 
 class SAID(ABC, nn.Module):
@@ -48,10 +49,10 @@ class SAID(ABC, nn.Module):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: Optional[SchedulerMixin] = None,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
+        prediction_type: str = "epsilon",
     ):
         """Constructor of SAID_UNet1D
 
@@ -61,14 +62,14 @@ class SAID(ABC, nn.Module):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
-        noise_scheduler : Optional[SchedulerMixin], optional
-            scheduler object, by default None
         in_channels : int
             Dimension of the input, by default 32
         diffusion_steps : int
             The number of diffusion steps, by default 1000
         latent_scale : float
             Scaling the latent, by default 1
+        prediction_type: str
+            Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
         """
         super(SAID, self).__init__()
 
@@ -87,15 +88,12 @@ class SAID(ABC, nn.Module):
         self.latent_scale = latent_scale
 
         # Noise scheduler
-        self.noise_scheduler = (
-            noise_scheduler
-            if noise_scheduler is not None
-            else DDIMScheduler(
-                num_train_timesteps=diffusion_steps,
-                beta_start=1e-4,
-                beta_end=2e-2,
-                beta_schedule="squaredcos_cap_v2",
-            )
+        self.noise_scheduler = DDIMScheduler(
+            num_train_timesteps=diffusion_steps,
+            beta_start=1e-4,
+            beta_end=2e-2,
+            beta_schedule="squaredcos_cap_v2",
+            prediction_type=prediction_type,
         )
 
     def forward(
@@ -241,8 +239,11 @@ class SAID(ABC, nn.Module):
         """
         noise = torch.randn(sample.shape, device=sample.device)
         noisy_sample = self.noise_scheduler.add_noise(sample, noise, timestep)
+        velocity = self.noise_scheduler.get_velocity(sample, noise, timestep)
 
-        return SAIDNoiseAdditionOutput(noisy_sample=noisy_sample, noise=noise)
+        return SAIDNoiseAdditionOutput(
+            noisy_sample=noisy_sample, noise=noise, velocity=velocity
+        )
 
     def encode_samples(self, samples: torch.FloatTensor) -> torch.FloatTensor:
         """Encode samples into latent
@@ -392,162 +393,13 @@ class SAID(ABC, nn.Module):
 
             if do_classifier_free_guidance:
                 noise_pred_uncond, noise_pred_audio = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (
+                noise_pred = noise_pred_audio + guidance_scale * (
                     noise_pred_audio - noise_pred_uncond
                 )
 
             latents = self.noise_scheduler.step(
                 noise_pred, t, latents, **extra_step_kwargs
             ).prev_sample
-
-            # Masking
-            if init_samples is not None and mask is not None:
-                init_latents_noisy = init_latents
-
-                tdx_next = t_start + idx + 1
-                if tdx_next < num_inference_steps:
-                    t_next = self.noise_scheduler.timesteps[tdx_next]
-                    init_latents_noisy = self.noise_scheduler.add_noise(
-                        init_latents, noise, t_next
-                    )
-
-                latents = init_latents_noisy * mask + latents * (1 - mask)
-
-            # Start clipping after 90% done
-            """
-            if idx / init_timestep > 0.9:
-                latents = (
-                    self.encode_samples(
-                        self.decode_latent(latents / self.latent_scale).clamp(0, 1)
-                    )
-                    * self.latent_scale
-                )
-            """
-
-        # Re-scaling & clipping the latent
-        result = self.decode_latent(latents / self.latent_scale).clamp(0, 1)
-
-        return SAIDInferenceOutput(result=result, intermediates=intermediates)
-
-    def inference_x(
-        self,
-        waveform_processed: torch.FloatTensor,
-        init_samples: Optional[torch.FloatTensor] = None,
-        mask: Optional[torch.FloatTensor] = None,
-        num_inference_steps: int = 100,
-        strength: float = 1.0,
-        guidance_scale: float = 2.5,
-        fps: int = 60,
-        save_intermediate: bool = False,
-        show_process: bool = False,
-    ) -> SAIDInferenceOutput:
-        """Inference pipeline
-
-        Parameters
-        ----------
-        waveform_processed : torch.FloatTensor
-            (Batch_size, T_a), Processed mono waveform
-        init_samples : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, x_dim), Starting point for the process, by default None
-        mask : Optional[torch.FloatTensor], optional
-            (Batch_size, sample_seq_len, x_dim), Mask the region not to be changed, by default None
-        num_inference_steps : int, optional
-            The number of denoising steps, by default 100
-        strength: float, optional
-            How much to paint. Must be between 0 and 1, by default 1.0
-        guidance_scale : float, optional
-            Guidance scale in classifier-free guidance, by default 2.5
-        fps : int, optional
-            The number of frames per second, by default 60
-        save_intermediate: bool, optional
-            Return the intermediate results, by default False
-        show_process: bool, optional
-            Visualize the inference process, by default False
-
-        Returns
-        -------
-        SAIDInferenceOutput
-            Inference results and the intermediates
-        """
-        batch_size = waveform_processed.shape[0]
-        waveform_len = waveform_processed.shape[1]
-        in_channels = self.denoiser.in_channels
-        device = waveform_processed.device
-        do_classifier_free_guidance = guidance_scale > 1.0
-        window_size = int(waveform_len / self.sampling_rate * fps)
-
-        self.noise_scheduler.set_timesteps(num_inference_steps, device=device)
-
-        latents = (
-            torch.randn(batch_size, window_size, in_channels, device=device)
-            if init_samples is None
-            else self.encode_samples(init_samples)
-        )
-
-        # Scaling the latent
-        latents *= self.latent_scale * self.noise_scheduler.init_noise_sigma
-
-        init_latents = latents.clone()
-        init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
-
-        # Add additional noise
-        noise = None
-        if init_samples is not None:
-            timestep = self.noise_scheduler.timesteps[-init_timestep]
-            timesteps = torch.tensor(
-                [timestep] * batch_size, dtype=torch.long, device=device
-            )
-
-            noise_output = self.add_noise(latents, timesteps)
-            latents = noise_output.noisy_sample
-            noise = noise_output.noise
-
-        audio_embedding = self.get_audio_embedding(waveform_processed, window_size)
-        if do_classifier_free_guidance:
-            """
-            uncond_waveform = [np.zeros((waveform_len)) for _ in range(batch_size)]
-            uncond_waveform_processed = self.process_audio(uncond_waveform).to(device)
-            uncond_audio_embedding = self.get_audio_embedding(
-                uncond_waveform_processed, window_size
-            )
-            """
-            uncond_audio_embedding = torch.zeros_like(audio_embedding)
-            audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
-
-        intermediates = []
-
-        t_start = num_inference_steps - init_timestep
-        for idx, t in enumerate(
-            tqdm(
-                self.noise_scheduler.timesteps[t_start:],
-                disable=not show_process,
-            )
-        ):
-            if save_intermediate:
-                interm = self.decode_latent(latents / self.latent_scale)
-                intermediates.append(interm)
-
-            latent_model_input = (
-                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-            )
-            latent_model_input = self.noise_scheduler.scale_model_input(
-                latent_model_input, t
-            )
-
-            latents_pred = self.forward(latent_model_input, t, audio_embedding)
-
-            if do_classifier_free_guidance:
-                latents_pred_uncond, latents_pred_audio = latents_pred.chunk(2)
-                latents_pred = latents_pred_uncond + guidance_scale * (
-                    latents_pred_audio - latents_pred_uncond
-                )
-
-            for temp in reversed(self.noise_scheduler.timesteps):
-                if temp >= t:
-                    break
-                latents_pred = self.add_noise(latents_pred, temp).noisy_sample
-
-            latents = latents_pred
 
             # Masking
             if init_samples is not None and mask is not None:
@@ -586,10 +438,10 @@ class SAID_UNet1D(SAID):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: Optional[SchedulerMixin] = None,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
+        prediction_type: str = "epsilon",
     ):
         """Constructor of SAID_UNet1D
 
@@ -607,14 +459,16 @@ class SAID_UNet1D(SAID):
             The number of diffusion steps, by default 1000
         latent_scale : float
             Scaling the latent, by default 1
+        prediction_type: str
+            Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
         """
         super(SAID_UNet1D, self).__init__(
             audio_config=audio_config,
             audio_processor=audio_processor,
-            noise_scheduler=noise_scheduler,
             in_channels=in_channels,
             diffusion_steps=diffusion_steps,
             latent_scale=latent_scale,
+            prediction_type=prediction_type,
         )
 
         # Denoiser

@@ -42,7 +42,7 @@ def random_noise_loss(
     said_model: SAID,
     data: DataBatch,
     device: torch.device,
-    pred_signal: bool = False,
+    prediction_type: str = "epsilon",
 ) -> LossStepOutput:
     """Compute the loss with randomized noises
 
@@ -54,8 +54,8 @@ def random_noise_loss(
         Output of the VOCARKitDataset.collate_fn
     device : torch.device
         GPU device
-    pred_signal: bool
-        Whether predict the signal itself or just a noise, by default False
+    prediction_type: str
+        Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
 
     Returns
     -------
@@ -82,11 +82,22 @@ def random_noise_loss(
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
     noisy_latents = noise_dict.noisy_sample
     noise = noise_dict.noise
+    velocity = noise_dict.velocity
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
 
     criterion_epsilon = nn.L1Loss()
-    loss_epsilon = criterion_epsilon(coeff_latents if pred_signal else noise, pred)
+
+    # Set answer corresponding to prediction_type
+    answer = None
+    if prediction_type == "epsilon":
+        answer = noise
+    elif prediction_type == "sample":
+        answer = coeff_latents
+    elif prediction_type == "v_prediction":
+        answer = velocity
+
+    loss_epsilon = criterion_epsilon(answer, pred)
 
     losses = LossStepOutput(predict=loss_epsilon)
 
@@ -95,7 +106,7 @@ def random_noise_loss(
     if data.blendshape_delta:
         blendshape_delta = data.blendshape_delta.to(device)
 
-        if not pred_signal:
+        if prediction_type == "epsilon":
             """
             pred_latents = said_model.pred_original_sample(
                 noisy_latents, pred, random_timesteps
@@ -120,7 +131,7 @@ def train_epoch(
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
-    pred_signal: bool = False,
+    prediction_type: str = "epsilon",
     ema_model: Optional[EMAModel] = None,
     lambda_reconst: float = 1e2,
 ) -> LossEpochOutput:
@@ -136,8 +147,8 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
-    pred_signal: bool
-        Whether predict the signal itself or just a noise, by default False
+    prediction_type: str
+        Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     ema_model: Optional[EMAModel]
         EMA model of said_model, by default None
     lambda_reconst: float
@@ -160,7 +171,7 @@ def train_epoch(
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data.waveform)
-        losses = random_noise_loss(said_model, data, device, pred_signal)
+        losses = random_noise_loss(said_model, data, device, prediction_type)
 
         loss = losses.predict + lambda_reconst * losses.reconst
 
@@ -189,7 +200,7 @@ def validate_epoch(
     said_model: SAID,
     val_dataloader: DataLoader,
     accelerator: Accelerator,
-    pred_signal: bool = False,
+    prediction_type: str = "epsilon",
     num_repeat: int = 1,
     lambda_reconst: float = 1e2,
 ) -> LossEpochOutput:
@@ -203,8 +214,8 @@ def validate_epoch(
         Dataloader of the VOCARKitValDataset
     accelerator : Accelerator
         Accelerator object
-    pred_signal: bool
-        Whether predict the signal itself or just a noise, by default False
+    prediction_type: str
+        Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     num_repeat : int, optional
         Number of the repetition, by default 1
     lambda_reconst: float
@@ -229,7 +240,7 @@ def validate_epoch(
         for _ in range(num_repeat):
             for data in val_dataloader:
                 curr_batch_size = len(data.waveform)
-                losses = random_noise_loss(said_model, data, device, pred_signal)
+                losses = random_noise_loss(said_model, data, device, prediction_type)
 
                 loss = losses.predict + lambda_reconst * losses.reconst
 
@@ -283,10 +294,10 @@ def main():
         help="Directory of the outputs",
     )
     parser.add_argument(
-        "--pred_signal",
-        type=bool,
-        default=False,
-        help="Whether predict the signal itself or just a noise",
+        "--prediction_type",
+        type=str,
+        default="epsilon",
+        help="Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'",
     )
     parser.add_argument(
         "--window_size",
@@ -331,7 +342,7 @@ def main():
     blendshape_deltas_path = args.blendshape_deltas_path
 
     output_dir = args.output_dir
-    pred_signal = args.pred_signal
+    prediction_type = args.prediction_type
     window_size = args.window_size
     batch_size = args.batch_size
     epochs = args.epochs
@@ -419,7 +430,7 @@ def main():
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             accelerator=accelerator,
-            pred_signal=pred_signal,
+            prediction_type=prediction_type,
             ema_model=ema_model,
         )
 
