@@ -561,6 +561,62 @@ class VOCARKitValDataset(VOCARKitDataset):
         )
 
 
+class VOCARKitEvalDataset(VOCARKitDataset):
+    """Evaluation dataset for VOCA-ARKit"""
+
+    def __init__(
+        self,
+        audio_dir: str,
+        blendshape_coeffs_dir: str,
+        blendshape_deltas_path: Optional[str],
+        sampling_rate: int,
+        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+    ):
+        self.sampling_rate = sampling_rate
+        self.classes = classes
+
+        self.data_paths = self.get_data_paths(
+            audio_dir, blendshape_coeffs_dir, self.person_ids_val
+        )
+
+        self.blendshape_deltas = (
+            load_blendshape_deltas(blendshape_deltas_path)
+            if blendshape_deltas_path
+            else None
+        )
+
+    def __len__(self) -> int:
+        return len(self.data_paths)
+
+    def __getitem__(self, index: int) -> DataItem:
+        data = self.data_paths[index]
+        waveform = load_audio(data.audio, self.sampling_rate)
+        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+        blendshape_delta = (
+            torch.FloatTensor(
+                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+            )
+            if self.blendshape_deltas
+            else None
+        )
+
+        waveform_len = waveform.shape[0]
+        blendshape_len = blendshape_coeffs.shape[0]
+        waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
+
+        # Adjust the waveform window
+        waveform_tmp = waveform[:waveform_window_len]
+
+        waveform_window = torch.zeros(waveform_window_len)
+        waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
+
+        return DataItem(
+            waveform=waveform_window,
+            blendshape_coeffs=blendshape_coeffs,
+            blendshape_delta=blendshape_delta,
+        )
+
+
 class VOCARKitPseudoGTOptDataset:
     """Dataset for generating pseudo-GT blendshape coefficients"""
 

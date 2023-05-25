@@ -2,7 +2,9 @@
 """
 from dataclasses import dataclass
 import math
-from typing import Any, Dict
+from typing import Any, Dict, List
+import librosa
+import numpy as np
 import torch
 import torchaudio
 
@@ -71,3 +73,24 @@ def fit_audio_unet(
         waveform = tmp
 
     return FittedWaveform(waveform=waveform, window_size=window_len)
+
+
+def compute_audio_beat_time(waveform: np.ndarray, sampling_rate: int) -> List[float]:
+    """Compute the audio beat time
+
+    Parameters
+    ----------
+    waveform : np.ndarray
+        (T_a), Mono waveform
+    sampling_rate : int
+        Sampling rate of the audio
+
+    Returns
+    -------
+    List[float]
+        Audio beat time (secs)
+    """
+    audio_beat_time = librosa.onset.onset_detect(
+        y=waveform, sr=sampling_rate, units="time"
+    )
+    return audio_beat_time
