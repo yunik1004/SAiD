@@ -50,10 +50,10 @@ def main():
         help="Saving directory of the intermediate outputs",
     )
     parser.add_argument(
-        "--pred_signal",
-        type=bool,
-        default=False,
-        help="Whether predict the signal itself or just a noise",
+        "--prediction_type",
+        type=str,
+        default="epsilon",
+        help="Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'",
     )
     parser.add_argument(
         "--save_intermediate",
@@ -106,7 +106,7 @@ def main():
     output_path = args.output_path
     output_image_path = args.output_image_path
     intermediate_dir = args.intermediate_dir
-    pred_signal = args.pred_signal
+    prediction_type = args.prediction_type
     num_steps = args.num_steps
     strength = args.strength
     guidance_scale = args.guidance_scale
@@ -130,7 +130,7 @@ def main():
         mask = load_blendshape_coeffs(mask_path).unsqueeze(0).to(device)
 
     # Load model
-    said_model = SAID_UNet1D()
+    said_model = SAID_UNet1D(prediction_type=prediction_type)
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
     said_model.to(device)
     said_model.eval()
@@ -149,29 +149,16 @@ def main():
 
     # Inference
     with torch.no_grad():
-        output = (
-            said_model.inference_x(
-                waveform_processed=waveform_processed,
-                init_samples=init_samples,
-                mask=mask,
-                num_inference_steps=num_steps,
-                strength=strength,
-                guidance_scale=guidance_scale,
-                save_intermediate=save_intermediate,
-                show_process=show_process,
-            )
-            if pred_signal
-            else said_model.inference(
-                waveform_processed=waveform_processed,
-                init_samples=init_samples,
-                mask=mask,
-                num_inference_steps=num_steps,
-                strength=strength,
-                guidance_scale=guidance_scale,
-                eta=eta,
-                save_intermediate=save_intermediate,
-                show_process=show_process,
-            )
+        output = said_model.inference(
+            waveform_processed=waveform_processed,
+            init_samples=init_samples,
+            mask=mask,
+            num_inference_steps=num_steps,
+            strength=strength,
+            guidance_scale=guidance_scale,
+            eta=eta,
+            save_intermediate=save_intermediate,
+            show_process=show_process,
         )
 
     result = output.result[0, :window_len].cpu().numpy()
