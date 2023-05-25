@@ -263,7 +263,7 @@ def validate_epoch(
     return val_avg_losses
 
 
-def main():
+def main() -> None:
     """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "said"
 version = "0.3.0"
-description = "Audio-driven Speech Animation with Diffusion"
+description = "Blendshape-based Audio-driven Speech Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
 authors = [
@@ -14,9 +14,11 @@ authors = [
 dependencies = [
     "diffusers[torch]==0.12.1",
     "einops",
+    "librosa",
     "numpy",
     "pandas",
     "pillow",
+    "scipy",
     "torch",
     "torchaudio",
     "tqdm",
@@ -28,17 +30,13 @@ dependencies = [
 test = [
     "accelerate==0.16.0",
     "qpsolvers",
-    "scipy",
     "tensorboard",
 ]
 style = [
     "black",
 ]
-baseline = [
-    "librosa",
-]
 dev = [
-    "said[style, test, baseline]",
+    "said[style, test]",
 ]
 
 [tool.setuptools]
