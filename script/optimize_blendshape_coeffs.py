@@ -1,7 +1,6 @@
 """Generate the Pseudo-GT blendshape coefficients
 """
 import argparse
-from typing import List, Optional
 import numpy as np
 import os
 import pathlib

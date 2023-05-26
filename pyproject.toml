@@ -12,6 +12,7 @@ authors = [
     { name = "inkyupark", email = "inkyupark@krafton.com" },
 ]
 dependencies = [
+    "cvxopt",
     "diffusers[torch]==0.12.1",
     "einops",
     "librosa",

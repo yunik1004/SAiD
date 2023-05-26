@@ -1,5 +1,6 @@
 """Define the optimization problem to parse blendshape coefficients
 """
+from typing import List, Optional
 import numpy as np
 from qpsolvers import solve_qp
 from scipy import linalg as la
