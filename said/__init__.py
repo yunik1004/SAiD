@@ -1,1 +1,1 @@
-from . import metric, model, util
+from . import metric, model, optimize, util
