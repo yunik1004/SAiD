@@ -69,6 +69,18 @@ def main() -> None:
         default="cuda:0",
         help="GPU/CPU device",
     )
+    parser.add_argument(
+        "--num_repeats",
+        type=int,
+        default=10,
+        help="Number of repetitions in inference for each audio",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed. Set the negative value if you don't want to control the randomness",
+    )
     args = parser.parse_args()
 
     weights_path = args.weights_path
@@ -82,6 +94,13 @@ def main() -> None:
     fps = args.fps
     divisor_unet = args.divisor_unet
     device = args.device
+
+    num_repeats = args.num_repeats
+    seed = args.seed
+
+    # Set random seed
+    if seed >= 0:
+        torch.manual_seed(seed)
 
     # Load model
     said_model = SAID_UNet1D(prediction_type=prediction_type)
@@ -111,12 +130,10 @@ def main() -> None:
 
             pid = data_path.person_id
             audio_path = data_path.audio
-            output_filename = f"{os.path.splitext(os.path.basename(audio_path))[0]}.csv"
+            output_filename_base = os.path.splitext(os.path.basename(audio_path))[0]
             output_file_dir = os.path.join(output_dir, pid)
-
             if not os.path.exists(output_file_dir):
                 os.makedirs(output_file_dir)
-            output_path = os.path.join(output_file_dir, output_filename)
 
             # Fit the size of waveform
             fit_output = fit_audio_unet(
@@ -128,23 +145,27 @@ def main() -> None:
             # Process the waveform
             waveform_processed = said_model.process_audio(waveform).to(device)
 
-            # Inference
-            output = said_model.inference(
-                waveform_processed=waveform_processed,
-                num_inference_steps=num_steps,
-                strength=strength,
-                guidance_scale=guidance_scale,
-                eta=eta,
-                show_process=False,
-            )
+            for rdx in range(num_repeats):
+                # Inference
+                output = said_model.inference(
+                    waveform_processed=waveform_processed,
+                    num_inference_steps=num_steps,
+                    strength=strength,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    show_process=False,
+                )
 
-            result = output.result[0, :window_len].cpu().numpy()
+                result = output.result[0, :window_len].cpu().numpy()
 
-            save_blendshape_coeffs(
-                coeffs=result,
-                classes=VOCARKitDataset.default_blendshape_classes,
-                output_path=output_path,
-            )
+                output_filename = f"{output_filename_base}-{rdx}.csv"
+                output_path = os.path.join(output_file_dir, output_filename)
+
+                save_blendshape_coeffs(
+                    coeffs=result,
+                    classes=VOCARKitDataset.default_blendshape_classes,
+                    output_path=output_path,
+                )
 
 
 if __name__ == "__main__":

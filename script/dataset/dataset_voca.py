@@ -6,7 +6,8 @@ from dataclasses import dataclass
 import os
 import pathlib
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union
+import re
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -198,18 +199,29 @@ class VOCARKitDataset(ABC, Dataset):
             )
 
             for sid in self.sentence_ids:
-                audio_path = os.path.join(audio_id_dir, f"sentence{sid:02}.wav")
-                coeffs_path = (
-                    os.path.join(coeffs_id_dir, f"sentence{sid:02}.csv")
-                    if coeffs_id_dir
-                    else None
-                )
+                filename_base = f"sentence{sid:02}"
+                audio_path = os.path.join(audio_id_dir, f"{filename_base}.wav")
 
-                if os.path.exists(audio_path) and (
-                    coeffs_path is None or os.path.exists(coeffs_path)
-                ):
+                if not os.path.exists(audio_path):
+                    continue
+
+                if coeffs_id_dir and os.path.exists(coeffs_id_dir):
+                    coeffs_pattern = re.compile(f"^{filename_base}(-.+)?\.csv$")
+                    filename_list = [
+                        s for s in os.listdir(coeffs_id_dir) if coeffs_pattern.match(s)
+                    ]
+                    for filename in filename_list:
+                        coeffs_path = os.path.join(coeffs_id_dir, filename)
+                        if os.path.exists(coeffs_path):
+                            data = VOCARKitDataPath(
+                                person_id=pid,
+                                audio=audio_path,
+                                blendshape_coeffs=coeffs_path,
+                            )
+                            data_paths.append(data)
+                else:
                     data = VOCARKitDataPath(
-                        person_id=pid, audio=audio_path, blendshape_coeffs=coeffs_path
+                        person_id=pid, audio=audio_path, blendshape_coeffs=None
                     )
                     data_paths.append(data)
 
