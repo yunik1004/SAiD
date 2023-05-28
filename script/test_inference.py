@@ -15,7 +15,7 @@ def main() -> None:
     """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Evaluate the output using VOCA-ARKit dataset"
+        description="Generate the inference outputs using VOCA-ARKit test dataset"
     )
     parser.add_argument(
         "--weights_path",

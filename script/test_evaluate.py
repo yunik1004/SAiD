@@ -63,7 +63,7 @@ def main() -> None:
     """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Evaluate the output using VOCA-ARKit dataset"
+        description="Evaluate the output based on the VOCA-ARKit test dataset"
     )
     parser.add_argument(
         "--audio_dir",
