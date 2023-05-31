@@ -157,7 +157,11 @@ def main():
 
             for rdx in range(num_repeat):
                 # Solve Optimization problem
-                w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
+                init_vals = np.random.uniform(
+                    size=(len(mesh_seq_vertices_vector_list), opt_prob.num_blendshapes)
+                )
+
+                w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list, init_vals)
 
                 out_path = coeff_out_path(person_id, seq_id, rdx, sdx > 0 or rdx > 0)
 

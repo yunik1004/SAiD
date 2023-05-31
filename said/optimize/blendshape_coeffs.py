@@ -101,7 +101,10 @@ class OptimizationProblemFull:
         self.g_offset = sp.csc_matrix((0, self.num_blendshapes), dtype="int")
 
     def optimize(
-        self, vertices_vector_list: List[np.ndarray], delta: float = 0.1
+        self,
+        vertices_vector_list: List[np.ndarray],
+        init_vals: Optional[np.ndarray] = None,
+        delta: float = 0.1,
     ) -> np.ndarray:
         """Solve the optimization problem
 
@@ -109,6 +112,8 @@ class OptimizationProblemFull:
         ----------
         vertices_vector_list : List[np.ndarray]
             (3|V|, 1), List of the target mesh sequence's vertices vectors to be optimized
+        init_vals: Optional[np.ndarray]
+            (seq_len, num_blendshapes), initial value of the optimization
         delta : float, optional
             Bound of the |w_{t} - w_{t+1}|, by default 0.1
 
@@ -140,9 +145,6 @@ class OptimizationProblemFull:
         lbw = np.zeros(self.num_blendshapes * seq_len)
         ubw = np.ones(self.num_blendshapes * seq_len)
 
-        # Set initial values
-        initvals = np.random.uniform(size=self.num_blendshapes * seq_len)
-
         # Solve the problem
         w_sol = solve_qp(
             P=p,
@@ -152,7 +154,7 @@ class OptimizationProblemFull:
             lb=lbw,
             ub=ubw,
             solver="cvxopt",
-            initvals=initvals,
+            initvals=init_vals.reshape(-1),
         )
         w_sol = np.clip(w_sol, lbw, ubw)
 
