@@ -542,7 +542,6 @@ class VOCARKitValDataset(VOCARKitDataset):
             else None
         )
 
-        waveform_len = waveform.shape[0]
         blendshape_len = blendshape_coeffs.shape[0]
         waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
 
@@ -611,7 +610,6 @@ class VOCARKitTestDataset(VOCARKitDataset):
 
         waveform_window = waveform
         if blendshape_coeffs is not None:
-            waveform_len = waveform.shape[0]
             blendshape_len = blendshape_coeffs.shape[0]
             waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
 
@@ -667,7 +665,6 @@ class VOCARKitEvalDataset(VOCARKitDataset):
             else None
         )
 
-        waveform_len = waveform.shape[0]
         blendshape_len = blendshape_coeffs.shape[0]
         waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
 
@@ -926,7 +923,6 @@ class VOCARKitVAEDataset(VOCARKitDataset):
                 [item.blendshape_coeffs for item in examples]
             )
         conds = torch.BoolTensor([item.cond for item in examples])
-        blendshape_deltas = None
 
         return DataBatch(
             waveform=[],

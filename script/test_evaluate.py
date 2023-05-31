@@ -3,8 +3,6 @@
 import argparse
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
-from said.util.audio import load_audio
-from said.util.blendshape import load_blendshape_coeffs
 from said.metric.beat_consistency import beat_consistency_score
 from dataset.dataset_voca import VOCARKitEvalDataset
 
@@ -101,28 +99,20 @@ def main() -> None:
         default=0.1,
         help="Threshold for computing beat consistency score",
     )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default="../output",
-        help="Directory of the outputs",
-    )
     args = parser.parse_args()
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
-    blendshape_deltas_path = args.blendshape_deltas_path
+    blendshape_deltas_path = None  # args.blendshape_deltas_path
     sampling_rate = args.sampling_rate
     fps = args.fps
     bc_threshold = args.bc_threshold
-
-    output_dir = args.output_dir
 
     # Load data
     eval_dataset = VOCARKitEvalDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=None,  # blendshape_deltas_path,
+        blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=sampling_rate,
     )
 
