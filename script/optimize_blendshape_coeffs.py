@@ -1,6 +1,7 @@
 """Generate the Pseudo-GT blendshape coefficients
 """
 import argparse
+from concurrent.futures import as_completed, ProcessPoolExecutor
 import numpy as np
 import os
 import pathlib
@@ -60,6 +61,12 @@ def main():
         default=20,
         help="Number of repetitions of the coefficients generation per each sequence",
     )
+    parser.add_argument(
+        "--num_process",
+        type=int,
+        default=10,
+        help="Number of processes for the multi-processing",
+    )
     args = parser.parse_args()
 
     neutrals_dir = args.neutrals_dir
@@ -72,6 +79,7 @@ def main():
     blendshapes_coeffs_out_dir = args.blendshapes_coeffs_out_dir
 
     num_repeat = args.num_repeat
+    num_process = args.num_process
 
     def coeff_out_path(
         person_id: str, seq_id: int, repeat_number: int, exists_ok: bool = False
@@ -123,6 +131,9 @@ def main():
     )
     seq_id_list = VOCARKitDataset.sentence_ids
 
+    # Multi-processing
+    pool = ProcessPoolExecutor(max_workers=num_process)
+
     for person_id in tqdm(person_id_list):
         bl_out = dataset.get_blendshapes(person_id)
 
@@ -155,16 +166,23 @@ def main():
                 for vertices in mesh_seq_vertices_list
             ]
 
-            for rdx in range(num_repeat):
-                # Solve Optimization problem
+            # Solve optimization problem
+            procs = []
+            for _ in range(num_repeat):
                 init_vals = np.random.uniform(
                     size=(len(mesh_seq_vertices_vector_list), opt_prob.num_blendshapes)
                 )
+                procs.append(
+                    pool.submit(
+                        opt_prob.optimize, mesh_seq_vertices_vector_list, init_vals
+                    )
+                )
 
-                w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list, init_vals)
+            # Save the coefficients
+            for rdx, p in enumerate(as_completed(procs)):
+                w_soln = p.result()
 
                 out_path = coeff_out_path(person_id, seq_id, rdx, sdx > 0 or rdx > 0)
-
                 save_blendshape_coeffs(
                     w_soln,
                     blendshape_name_list,
