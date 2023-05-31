@@ -19,6 +19,7 @@ dependencies = [
     "numpy",
     "pandas",
     "pillow",
+    "pytorch-fid",
     "qpsolvers",
     "scipy",
     "torch",
