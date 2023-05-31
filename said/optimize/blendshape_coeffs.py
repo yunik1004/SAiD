@@ -140,6 +140,9 @@ class OptimizationProblemFull:
         lbw = np.zeros(self.num_blendshapes * seq_len)
         ubw = np.ones(self.num_blendshapes * seq_len)
 
+        # Set initial values
+        initvals = np.random.uniform(size=self.num_blendshapes * seq_len)
+
         # Solve the problem
         w_sol = solve_qp(
             P=p,
@@ -149,6 +152,7 @@ class OptimizationProblemFull:
             lb=lbw,
             ub=ubw,
             solver="cvxopt",
+            initvals=initvals,
         )
         w_sol = np.clip(w_sol, lbw, ubw)
 
