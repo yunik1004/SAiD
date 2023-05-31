@@ -276,7 +276,7 @@ def main():
         collate_fn=VOCARKitVAEDataset.collate_fn,
     )
     val_dataloader = DataLoader(
-        train_dataset,
+        val_dataset,
         batch_size=1,
         shuffle=False,
         collate_fn=VOCARKitVAEDataset.collate_fn,

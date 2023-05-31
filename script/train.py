@@ -3,7 +3,7 @@
 import argparse
 from dataclasses import dataclass
 import os
-from typing import Any, Dict, Optional
+from typing import Optional
 from accelerate import Accelerator
 from diffusers.training_utils import EMAModel
 import torch
@@ -339,7 +339,7 @@ def main() -> None:
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
-    blendshape_deltas_path = args.blendshape_deltas_path
+    blendshape_deltas_path = None  # args.blendshape_deltas_path
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
@@ -367,7 +367,7 @@ def main() -> None:
     train_dataset = VOCARKitTrainDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=None,  # blendshape_deltas_path,
+        blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=said_model.sampling_rate,
         window_size=window_size,
         uncond_prob=uncond_prob,
@@ -375,7 +375,7 @@ def main() -> None:
     val_dataset = VOCARKitValDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=None,  # blendshape_deltas_path,
+        blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )

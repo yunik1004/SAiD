@@ -26,7 +26,7 @@ class OptimizationProblemSingle:
         """
         self.neutral_vector = neutral_vector
 
-        self.threev, self.num_blendshapes = blendshapes_matrix.shape
+        self.num_blendshapes = blendshapes_matrix.shape[1]
 
         # B_delta
         self.blendshapes_matrix_delta = blendshapes_matrix - self.neutral_vector
