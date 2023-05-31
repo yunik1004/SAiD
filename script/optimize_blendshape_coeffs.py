@@ -64,7 +64,7 @@ def main():
     parser.add_argument(
         "--num_process",
         type=int,
-        default=10,
+        default=3,
         help="Number of processes for the multi-processing",
     )
     args = parser.parse_args()
