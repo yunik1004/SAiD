@@ -23,7 +23,7 @@ from said.util.parser import parse_list
 class DataItem:
     """Dataclass for the data item"""
 
-    waveform: torch.FloatTensor  # (audio_seq_len,)
+    waveform: Optional[torch.FloatTensor]  # (audio_seq_len,)
     blendshape_coeffs: Optional[
         torch.FloatTensor
     ]  # (blendshape_seq_len, num_blendshapes)
@@ -58,7 +58,7 @@ class VOCARKitDataPath:
     """Dataclass for the VOCARKit data path"""
 
     person_id: str
-    audio: str
+    audio: Optional[str]
     blendshape_coeffs: Optional[str]
 
 
@@ -770,3 +770,166 @@ class VOCARKitPseudoGTOptDataset:
             mesh_seq_list.append(mesh)
 
         return mesh_seq_list
+
+
+class VOCARKitVAEDataset(VOCARKitDataset):
+    """Abstract class of VOCA-ARKit dataset for VAE"""
+
+    def __init__(
+        self,
+        blendshape_coeffs_dir: str,
+        window_size: int = 120,
+        zero_prob: float = 0.003125,
+        hflip: bool = True,
+        dataset_type: str = "train",
+        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes_mirror_pair: List[
+            Tuple[str, str]
+        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+    ) -> None:
+        """Constructor of the class
+
+        Parameters
+        ----------
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        window_size : int, optional
+            Window size of the blendshape coefficients, by default 120
+        zero_prob : float, optional
+            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
+        hflip : bool, optional
+            Whether do the horizontal flip, by default True
+        dataset_type: str, optional
+            Type of the dataset, whether "train", "val", and "test", by default "train"
+        classes : List[str], optional
+            List of blendshape names, by default default_blendshape_classes
+        classes_mirror_pair : List[Tuple[str, str]], optional
+            List of blendshape pairs which are mirror to each other, by default default_blendshape_classes_mirror_pair
+        """
+        self.window_size = window_size
+        self.zero_prob = zero_prob
+
+        self.hflip = hflip
+        self.classes = classes
+        self.classes_mirror_pair = classes_mirror_pair
+
+        self.mirror_indices = []
+        self.mirror_indices_flip = []
+        for pair in self.classes_mirror_pair:
+            index_l = self.classes.index(pair[0])
+            index_r = self.classes.index(pair[1])
+            self.mirror_indices.extend([index_l, index_r])
+            self.mirror_indices_flip.extend([index_r, index_l])
+
+        person_ids = None
+        if dataset_type == "train":
+            person_ids = self.person_ids_train
+        elif dataset_type == "val":
+            person_ids = self.person_ids_val
+        else:
+            person_ids = self.person_ids_test
+
+        self.data_paths = self.get_data_paths(blendshape_coeffs_dir, person_ids)
+
+    def __len__(self) -> int:
+        return len(self.data_paths)
+
+    def __getitem__(self, index: int) -> DataItem:
+        data = self.data_paths[index]
+        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+
+        num_blendshape = blendshape_coeffs.shape[1]
+        blendshape_len = blendshape_coeffs.shape[0]
+
+        # Random-select the window
+        bdx = random.randint(0, max(0, blendshape_len - self.window_size))
+        coeffs_tmp = blendshape_coeffs[bdx : bdx + self.window_size, :]
+        coeffs_window = torch.zeros((self.window_size, num_blendshape))
+        coeffs_window[: coeffs_tmp.shape[0], :] = coeffs_tmp[:]
+
+        # Augmentation - hflip
+        if self.hflip and random.uniform(0, 1) < 0.5:
+            coeffs_window[:, self.mirror_indices] = coeffs_window[
+                :, self.mirror_indices_flip
+            ]
+
+        # Random zero-out
+        if random.uniform(0, 1) < self.zero_prob:
+            coeffs_window = torch.zeros_like(coeffs_window)
+
+        return DataItem(
+            waveform=None,
+            blendshape_coeffs=coeffs_window,
+        )
+
+    def get_data_paths(
+        self,
+        blendshape_coeffs_dir: str,
+        person_ids: List[str],
+    ) -> List[VOCARKitDataPath]:
+        """Return the list of the data paths
+
+        Parameters
+        ----------
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        person_ids : List[str]
+            List of the person ids
+
+        Returns
+        -------
+        List[VOCARKitDataPath]
+            List of the VOCARKitDataPath objects
+        """
+        data_paths = []
+
+        for pid in person_ids:
+            coeffs_id_dir = os.path.join(blendshape_coeffs_dir, pid)
+            if coeffs_id_dir is None or not os.path.exists(coeffs_id_dir):
+                continue
+
+            for sid in self.sentence_ids:
+                filename_base = f"sentence{sid:02}"
+                coeffs_pattern = re.compile(f"^{filename_base}(-.+)?\.csv$")
+                filename_list = [
+                    s for s in os.listdir(coeffs_id_dir) if coeffs_pattern.match(s)
+                ]
+                for filename in filename_list:
+                    coeffs_path = os.path.join(coeffs_id_dir, filename)
+                    if os.path.exists(coeffs_path):
+                        data = VOCARKitDataPath(
+                            person_id=pid,
+                            audio=None,
+                            blendshape_coeffs=coeffs_path,
+                        )
+                        data_paths.append(data)
+
+        return data_paths
+
+    @staticmethod
+    def collate_fn(examples: List[DataItem]) -> DataBatch:
+        """Collate function which is used for dataloader
+
+        Parameters
+        ----------
+        examples : List[DataItem]
+            List of the outputs of __getitem__
+
+        Returns
+        -------
+        DataBatch
+            DataBatch object
+        """
+        blendshape_coeffss = None
+        if len(examples) > 0 and examples[0].blendshape_coeffs is not None:
+            blendshape_coeffss = torch.stack(
+                [item.blendshape_coeffs for item in examples]
+            )
+        conds = torch.BoolTensor([item.cond for item in examples])
+        blendshape_deltas = None
+
+        return DataBatch(
+            waveform=[],
+            blendshape_coeffs=blendshape_coeffss,
+            cond=conds,
+        )

@@ -3,8 +3,12 @@
 import argparse
 import torch
 from said.model.vae import BCVAE
-from said.util.blendshape import load_blendshape_coeffs, save_blendshape_coeffs
-from dataset import VOCARKIT_CLASSES
+from said.util.blendshape import (
+    load_blendshape_coeffs,
+    save_blendshape_coeffs,
+    save_blendshape_coeffs_image,
+)
+from dataset.dataset_voca import VOCARKitDataset
 
 
 def main():
@@ -22,8 +26,8 @@ def main():
     parser.add_argument(
         "--blendshape_coeffs_path",
         type=str,
-        default="../VOCA_ARKit/test/blendshape_coeffs/FaceTalk_170913_03279_TA_sentence01.csv",
-        help="Path of the weights of VAE",
+        default="../VOCA_ARKit/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
+        help="Path of the input blendshape coefficients file (csv format)",
     )
     parser.add_argument(
         "--output_path",
@@ -32,16 +36,16 @@ def main():
         help="Path of the output blendshape coefficients file (csv format)",
     )
     parser.add_argument(
+        "--output_image_path",
+        type=str,
+        default="../out.png",
+        help="Path of the image of the output blendshape coefficients",
+    )
+    parser.add_argument(
         "--use_noise",
         type=bool,
         default=True,
         help="Use the noise when reconstructing the coefficients",
-    )
-    parser.add_argument(
-        "--align_noise",
-        type=bool,
-        default=True,
-        help="Align the noise during the whole sequence",
     )
     parser.add_argument(
         "--device",
@@ -54,8 +58,8 @@ def main():
     weights_path = args.weights_path
     blendshape_coeffs_path = args.blendshape_coeffs_path
     output_path = args.output_path
+    output_image_path = args.output_image_path
     use_noise = args.use_noise
-    align_noise = args.align_noise
     device = args.device
 
     # Load model
@@ -65,20 +69,27 @@ def main():
     said_vae.eval()
 
     # Load data
-    blendshape_coeffs = load_blendshape_coeffs(blendshape_coeffs_path).unsqueeze(0)
-    blendshape_coeffs = blendshape_coeffs.to(device)
+    blendshape_coeffs = (
+        load_blendshape_coeffs(blendshape_coeffs_path)[: said_vae.seq_len]
+        .unsqueeze(0)
+        .to(device)
+    )
 
     # Inference
     with torch.no_grad():
-        output = said_vae(blendshape_coeffs, use_noise, align_noise)
+        output = said_vae(blendshape_coeffs, use_noise)
 
-    blendshape_coeffs_reconst = output["reconstruction"]
+    blendshape_coeffs_reconst = output.coeffs_reconst
+
+    result = blendshape_coeffs_reconst[0].cpu().numpy()
 
     save_blendshape_coeffs(
-        coeffs=blendshape_coeffs_reconst[0].cpu().numpy(),
-        classes=VOCARKIT_CLASSES,
+        coeffs=result,
+        classes=VOCARKitDataset.default_blendshape_classes,
         output_path=output_path,
     )
+
+    save_blendshape_coeffs_image(result, output_image_path)
 
 
 if __name__ == "__main__":
