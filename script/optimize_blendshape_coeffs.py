@@ -159,7 +159,7 @@ def main():
                 # Solve Optimization problem
                 w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
 
-                out_path = coeff_out_path(person_id, seq_id, rdx, sdx > 0)
+                out_path = coeff_out_path(person_id, seq_id, rdx, sdx > 0 or rdx > 0)
 
                 save_blendshape_coeffs(
                     w_soln,
