@@ -54,6 +54,12 @@ def main():
         default="../output_coeffs",
         help="Directory of the output coefficients",
     )
+    parser.add_argument(
+        "--num_repeat",
+        type=int,
+        default=20,
+        help="Number of repetitions of the coefficients generation per each sequence",
+    )
     args = parser.parse_args()
 
     neutrals_dir = args.neutrals_dir
@@ -65,7 +71,11 @@ def main():
 
     blendshapes_coeffs_out_dir = args.blendshapes_coeffs_out_dir
 
-    def coeff_out_path(person_id: str, seq_id: int, exists_ok: bool = False) -> str:
+    num_repeat = args.num_repeat
+
+    def coeff_out_path(
+        person_id: str, seq_id: int, repeat_number: int, exists_ok: bool = False
+    ) -> str:
         """Generate the output path of the coefficients.
         If you want to change the output file name, then change this function
 
@@ -75,6 +85,8 @@ def main():
             Person id
         seq_id : int
             Sequence id
+        repeat_number: int
+            Repetition ordinal
         exists_ok : bool, optional
             If false, raise error when the file already exists, by default False
 
@@ -90,7 +102,7 @@ def main():
             if not exists_ok:
                 raise "Directory already exists"
 
-        out_path = os.path.join(out_dir, f"sentence{seq_id:02}.csv")
+        out_path = os.path.join(out_dir, f"sentence{seq_id:02}-{repeat_number}.csv")
 
         return out_path
 
@@ -133,8 +145,6 @@ def main():
         opt_prob = OptimizationProblemFull(neutral_vector, blendshapes_matrix)
 
         for sdx, seq_id in enumerate(tqdm(seq_id_list, leave=False)):
-            out_path = coeff_out_path(person_id, seq_id, sdx > 0)
-
             mesh_seq_list = dataset.get_mesh_seq(person_id, seq_id)
             if len(mesh_seq_list) == 0:
                 continue
@@ -145,14 +155,17 @@ def main():
                 for vertices in mesh_seq_vertices_list
             ]
 
-            # Solve Optimization problem
-            w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
+            for rdx in range(num_repeat):
+                # Solve Optimization problem
+                w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
 
-            save_blendshape_coeffs(
-                w_soln,
-                blendshape_name_list,
-                out_path,
-            )
+                out_path = coeff_out_path(person_id, seq_id, rdx, sdx > 0)
+
+                save_blendshape_coeffs(
+                    w_soln,
+                    blendshape_name_list,
+                    out_path,
+                )
 
 
 if __name__ == "__main__":
