@@ -154,7 +154,7 @@ class OptimizationProblemFull:
             lb=lbw,
             ub=ubw,
             solver="cvxopt",
-            initvals=init_vals.reshape(-1),
+            initvals=None if init_vals is None else init_vals.reshape(-1),
         )
         w_sol = np.clip(w_sol, lbw, ubw)
 
