@@ -29,6 +29,8 @@ class DataItem:
     ]  # (blendshape_seq_len, num_blendshapes)
     cond: bool = True  # If false, uncondition for classifier-free guidance
     blendshape_delta: Optional[torch.FloatTensor] = None  # (num_blendshapes, |V|, 3)
+    person_id: Optional[str] = None
+    sentence_id: Optional[int] = None
 
 
 @dataclass
@@ -43,6 +45,8 @@ class DataBatch:
     blendshape_delta: Optional[
         torch.FloatTensor
     ] = None  # (batch_size, num_blendshapes, |V|, 3)
+    person_ids: Optional[List[str]] = None
+    sentence_ids: Optional[List[int]] = None
 
 
 @dataclass
@@ -58,6 +62,7 @@ class VOCARKitDataPath:
     """Dataclass for the VOCARKit data path"""
 
     person_id: str
+    sentence_id: int
     audio: Optional[str]
     blendshape_coeffs: Optional[str]
 
@@ -215,13 +220,17 @@ class VOCARKitDataset(ABC, Dataset):
                         if os.path.exists(coeffs_path):
                             data = VOCARKitDataPath(
                                 person_id=pid,
+                                sentence_id=sid,
                                 audio=audio_path,
                                 blendshape_coeffs=coeffs_path,
                             )
                             data_paths.append(data)
                 else:
                     data = VOCARKitDataPath(
-                        person_id=pid, audio=audio_path, blendshape_coeffs=None
+                        person_id=pid,
+                        sentence_id=sid,
+                        audio=audio_path,
+                        blendshape_coeffs=None,
                     )
                     data_paths.append(data)
 
@@ -254,11 +263,21 @@ class VOCARKitDataset(ABC, Dataset):
                 [item.blendshape_delta for item in examples]
             )
 
+        person_ids = None
+        if len(examples) > 0 and examples[0].person_id is not None:
+            person_ids = [item.person_id for item in examples]
+
+        sentence_ids = None
+        if len(examples) > 0 and examples[0].sentence_id is not None:
+            sentence_ids = [item.sentence_id for item in examples]
+
         return DataBatch(
             waveform=waveforms,
             blendshape_coeffs=blendshape_coeffss,
             cond=conds,
             blendshape_delta=blendshape_deltas,
+            person_ids=person_ids,
+            sentence_ids=sentence_ids,
         )
 
     @staticmethod
@@ -678,6 +697,8 @@ class VOCARKitEvalDataset(VOCARKitDataset):
             waveform=waveform_window,
             blendshape_coeffs=blendshape_coeffs,
             blendshape_delta=blendshape_delta,
+            person_id=data.person_id,
+            sentence_id=data.sentence_id,
         )
 
 
