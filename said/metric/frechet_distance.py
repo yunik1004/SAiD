@@ -28,9 +28,9 @@ def get_statistic(data: List[np.ndarray]) -> Statistic:
         mean, covariance of the data
     """
     mean = np.mean(data, axis=0)
-    covariance = np.cov(data)
+    covariance = np.cov(data, rowvar=False)
 
-    return Statistics(
+    return Statistic(
         mean=mean,
         cov=covariance,
     )

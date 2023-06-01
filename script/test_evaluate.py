@@ -2,8 +2,13 @@
 """
 import argparse
 from dataclasses import dataclass
+from typing import List, Union
+import numpy as np
+import torch
 from torch.utils.data import DataLoader
 from said.metric.beat_consistency import beat_consistency_score
+from said.metric.frechet_distance import frechet_distance, get_statistic
+from said.model.vae import BCVAE
 from dataset.dataset_voca import VOCARKitEvalDataset
 
 
@@ -14,12 +19,111 @@ class EvalMetrics:
     """
 
     beat_consistency_score: float
+    frechet_distance: float
 
 
-def evaluate(
-    eval_dataloader: DataLoader, sampling_rate: int, fps: int, bc_threshold: float
-) -> EvalMetrics:
-    """Evaluate the data
+@dataclass
+class LatentInfo:
+    """
+    Dataclass for the latent
+    """
+
+    person_id: str
+    sentence_id: int
+    frame_start: int
+    latent: np.ndarray
+
+
+def generate_latents_info(
+    vae: BCVAE,
+    dataloader: DataLoader,
+    device: Union[str, torch.device],
+    window_step_size: int,
+) -> List[LatentInfo]:
+    """
+    Generate the latent infos
+
+    Parameters
+    ----------
+    vae: BCVAE
+        VAE object
+    dataloader: DataLoader
+        Data loader
+    device: Union[str, torch.device],
+        GPU/CPU device
+    window_step_size: int
+        Step of the window movements
+
+    Returns
+    -------
+    List[LatentInfo]
+        Latent infos of dataset
+    """
+    latents_info = []
+
+    with torch.no_grad():
+        for data in dataloader:
+            person_id = data.person_ids[0]
+            sentence_id = data.sentence_ids[0]
+            coeffs = data.blendshape_coeffs.to(device)
+
+            coeffs_len = coeffs.shape[1]
+            num_windows = (coeffs_len - vae.seq_len) // window_step_size + 1
+
+            for wdx in range(num_windows):
+                frame_start = window_step_size * wdx
+                coeffs_window = coeffs[:, frame_start : frame_start + vae.seq_len]
+                latent = vae.encode(coeffs_window).mean[0].cpu().numpy()
+
+                latent_info = LatentInfo(
+                    person_id=person_id,
+                    sentence_id=sentence_id,
+                    frame_start=frame_start,
+                    latent=latent,
+                )
+
+                latents_info.append(latent_info)
+
+    return latents_info
+
+
+def filter_latent_infos(
+    eval_latents_info: List[LatentInfo],
+    real_latents_info: List[LatentInfo],
+) -> List[LatentInfo]:
+    """
+    Filter the eval latents infos by remaining the infos with person id and sentence id in real infos
+
+    Parameters
+    ----------
+    eval_latents_info: List[LatentInfo]
+        Latent infos in evaluation dataset
+    real_latents_info: List[LatentInfo]
+        Latent infos in real dataset
+
+    Returns
+    -------
+    List[LatentInfo]
+        Filtered latent infos of evaluation dataset
+    """
+    real_latents_groups = {
+        (info.person_id, info.sentence_id) for info in real_latents_info
+    }
+    eval_latents_info_filtered = [
+        info
+        for info in eval_latents_info
+        if (info.person_id, info.sentence_id) in real_latents_groups
+    ]
+    return eval_latents_info_filtered
+
+
+def evaluate_beat_consistency_score(
+    eval_dataloader: DataLoader,
+    sampling_rate: int,
+    fps: int,
+    bc_threshold: float,
+) -> float:
+    """Evaluate the beat consistency score
 
     Parameters
     ----------
@@ -34,8 +138,8 @@ def evaluate(
 
     Returns
     -------
-    EvalMetrics
-        Evaluation metrics
+    float
+        Beat consistency score
     """
     list_waveform = []
     list_blendshape_coeffs = []
@@ -46,7 +150,7 @@ def evaluate(
         list_waveform.append(waveform)
         list_blendshape_coeffs.append(coeffs)
 
-    bc = beat_consistency_score(
+    return beat_consistency_score(
         list_waveform=list_waveform,
         list_blendshape_coeffs=list_blendshape_coeffs,
         sampling_rate=sampling_rate,
@@ -54,7 +158,90 @@ def evaluate(
         threshold=bc_threshold,
     )
 
-    return EvalMetrics(beat_consistency_score=bc)
+
+def evalute_frechet_distance(
+    eval_latents_info: List[LatentInfo],
+    real_latents_info: List[LatentInfo],
+) -> float:
+    eval_latents = [info.latent for info in eval_latents_info]
+    real_latents = [info.latent for info in real_latents_info]
+
+    eval_statistic = get_statistic(eval_latents)
+    real_statistic = get_statistic(real_latents)
+
+    return frechet_distance(
+        mu1=eval_statistic.mean,
+        sigma1=eval_statistic.cov,
+        mu2=real_statistic.mean,
+        sigma2=real_statistic.cov,
+    )
+
+
+def evaluate(
+    eval_dataloader: DataLoader,
+    real_dataloader: DataLoader,
+    sampling_rate: int,
+    fps: int,
+    bc_threshold: float,
+    vae: BCVAE,
+    device: Union[str, torch.device],
+    window_step_size: int,
+) -> EvalMetrics:
+    """Evaluate the data
+
+    Parameters
+    ----------
+    eval_dataloader: DataLoader
+        Dataloader of the VOCARKitEvalDataset
+    real_dataloader: DataLoader
+        Dataloader of the real dataset
+    sampling_rate: int
+        Sampling rate of the waveform
+    fps: int
+        FPS of the blendshape coefficients sequence
+    bc_threshold: float
+        Threshold for computing beat consistency score
+    vae: BCVAE
+        VAE object for generating latents
+    device: Union[str, torch.device]
+        GPU/CPU device
+    window_step_size: int
+        Step of the window movements for the latent generation
+
+    Returns
+    -------
+    EvalMetrics
+        Evaluation metrics
+    """
+    # Compute beat consistency score
+    bc = evaluate_beat_consistency_score(
+        eval_dataloader=eval_dataloader,
+        sampling_rate=sampling_rate,
+        fps=fps,
+        bc_threshold=bc_threshold,
+    )
+
+    # Generate latents
+    eval_latents_info = generate_latents_info(
+        vae, eval_dataloader, device, window_step_size
+    )
+    real_latents_info = generate_latents_info(
+        vae, real_dataloader, device, window_step_size
+    )
+
+    # Filter the eval latents
+    eval_latents_info_filtered = filter_latent_infos(
+        eval_latents_info=eval_latents_info,
+        real_latents_info=real_latents_info,
+    )
+
+    # Compute frechet distance
+    fd = evalute_frechet_distance(
+        eval_latents_info=eval_latents_info_filtered,
+        real_latents_info=real_latents_info,
+    )
+
+    return EvalMetrics(beat_consistency_score=bc, frechet_distance=fd)
 
 
 def main() -> None:
@@ -74,6 +261,18 @@ def main() -> None:
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
+    )
+    parser.add_argument(
+        "--coeffs_real_dir",
+        type=str,
+        default="../VOCA_ARKit/blendshape_coeffs",
+        help="Directory of the blendshape coefficients data",
+    )
+    parser.add_argument(
+        "--vae_weights_path",
+        type=str,
+        default="../output/20000.pth",
+        help="Path of the weights of VAE",
     )
     parser.add_argument(
         "--blendshape_deltas_path",
@@ -99,19 +298,48 @@ def main() -> None:
         default=0.1,
         help="Threshold for computing beat consistency score",
     )
+    parser.add_argument(
+        "--window_step_size",
+        type=int,
+        default=1,
+        help="Step of the window movements for the latent generation",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda:0",
+        help="GPU/CPU device",
+    )
     args = parser.parse_args()
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
+    coeffs_real_dir = args.coeffs_real_dir
+    vae_weights_path = args.vae_weights_path
     blendshape_deltas_path = None  # args.blendshape_deltas_path
     sampling_rate = args.sampling_rate
     fps = args.fps
     bc_threshold = args.bc_threshold
+    window_step_size = args.window_step_size
+    device = args.device
+
+    # Load VAE
+    said_vae = BCVAE()
+    said_vae.load_state_dict(torch.load(vae_weights_path, map_location=device))
+    said_vae.to(device)
+    said_vae.eval()
 
     # Load data
     eval_dataset = VOCARKitEvalDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
+        blendshape_deltas_path=blendshape_deltas_path,
+        sampling_rate=sampling_rate,
+    )
+
+    real_dataset = VOCARKitEvalDataset(
+        audio_dir=audio_dir,
+        blendshape_coeffs_dir=coeffs_real_dir,
         blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=sampling_rate,
     )
@@ -123,14 +351,26 @@ def main() -> None:
         collate_fn=VOCARKitEvalDataset.collate_fn,
     )
 
+    real_dataloader = DataLoader(
+        real_dataset,
+        batch_size=1,
+        shuffle=False,
+        collate_fn=VOCARKitEvalDataset.collate_fn,
+    )
+
     # Evaluate the data
     eval_metrics = evaluate(
         eval_dataloader=eval_dataloader,
+        real_dataloader=real_dataloader,
         sampling_rate=sampling_rate,
         fps=fps,
         bc_threshold=bc_threshold,
+        vae=said_vae,
+        device=device,
+        window_step_size=window_step_size,
     )
 
+    # Print the output
     print(eval_metrics)
 
 
