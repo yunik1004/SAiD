@@ -1,6 +1,7 @@
 """Evaluate the data
 """
 import argparse
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Union
 import numpy as np
@@ -8,6 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 from said.metric.beat_consistency import beat_consistency_score
 from said.metric.frechet_distance import frechet_distance, get_statistic
+from said.metric.multimodality import multimodality
 from said.model.vae import BCVAE
 from dataset.dataset_voca import VOCARKitEvalDataset
 
@@ -20,6 +22,7 @@ class EvalMetrics:
 
     beat_consistency_score: float
     frechet_distance: float
+    multimodality: float
 
 
 @dataclass
@@ -39,6 +42,7 @@ def generate_latents_info(
     dataloader: DataLoader,
     device: Union[str, torch.device],
     window_step_size: int,
+    padding: int = 0,
 ) -> List[LatentInfo]:
     """
     Generate the latent infos
@@ -53,6 +57,8 @@ def generate_latents_info(
         GPU/CPU device
     window_step_size: int
         Step of the window movements
+    padding: int, optional
+        Amount of right padding applied to the input, by default 0
 
     Returns
     -------
@@ -68,7 +74,7 @@ def generate_latents_info(
             coeffs = data.blendshape_coeffs.to(device)
 
             coeffs_len = coeffs.shape[1]
-            num_windows = (coeffs_len - vae.seq_len) // window_step_size + 1
+            num_windows = (coeffs_len - vae.seq_len) // window_step_size + 1 - padding
 
             for wdx in range(num_windows):
                 frame_start = window_step_size * wdx
@@ -92,7 +98,7 @@ def filter_latent_infos(
     real_latents_info: List[LatentInfo],
 ) -> List[LatentInfo]:
     """
-    Filter the eval latents infos by remaining the infos with person id and sentence id in real infos
+    Filter the eval latents infos by remaining the infos with person id, sentence id, frame start overlapped
 
     Parameters
     ----------
@@ -103,22 +109,26 @@ def filter_latent_infos(
 
     Returns
     -------
-    List[LatentInfo]
+    List[LatentInfo]:
         Filtered latent infos of evaluation dataset
     """
     real_latents_groups = {
-        (info.person_id, info.sentence_id) for info in real_latents_info
+        (info.person_id, info.sentence_id, info.frame_start)
+        for info in real_latents_info
     }
+
     eval_latents_info_filtered = [
         info
         for info in eval_latents_info
-        if (info.person_id, info.sentence_id) in real_latents_groups
+        if (info.person_id, info.sentence_id, info.frame_start) in real_latents_groups
     ]
+
     return eval_latents_info_filtered
 
 
 def evaluate_beat_consistency_score(
     eval_dataloader: DataLoader,
+    real_dataloader: DataLoader,
     sampling_rate: int,
     fps: int,
     bc_threshold: float,
@@ -128,7 +138,9 @@ def evaluate_beat_consistency_score(
     Parameters
     ----------
     eval_dataloader: DataLoader
-        Dataloader of the VOCARKitEvalDataset
+        Dataloader of the eval dataset
+    real_dataloader: DataLoader
+        Dataloader of the real dataset. It is required to remove eval data which is not in real dataset.
     sampling_rate: int
         Sampling rate of the waveform
     fps: int
@@ -141,14 +153,19 @@ def evaluate_beat_consistency_score(
     float
         Beat consistency score
     """
+    real_data_groups = {
+        (data.person_ids[0], data.sentence_ids[0]) for data in real_dataloader
+    }
+
     list_waveform = []
     list_blendshape_coeffs = []
     for data in eval_dataloader:
-        waveform = data.waveform[0]
-        coeffs = data.blendshape_coeffs[0].numpy()
+        if (data.person_ids[0], data.sentence_ids[0]) in real_data_groups:
+            waveform = data.waveform[0]
+            coeffs = data.blendshape_coeffs[0].numpy()
 
-        list_waveform.append(waveform)
-        list_blendshape_coeffs.append(coeffs)
+            list_waveform.append(waveform)
+            list_blendshape_coeffs.append(coeffs)
 
     return beat_consistency_score(
         list_waveform=list_waveform,
@@ -163,6 +180,20 @@ def evalute_frechet_distance(
     eval_latents_info: List[LatentInfo],
     real_latents_info: List[LatentInfo],
 ) -> float:
+    """Evaluate the Frechet distance
+
+    Parameters
+    ----------
+    eval_latents_info: List[LatentInfo]
+        Latent infos in evaluation dataset
+    real_latents_info: List[LatentInfo]
+        Latent infos in real dataset
+
+    Returns
+    -------
+    float
+        Frechet distance
+    """
     eval_latents = [info.latent for info in eval_latents_info]
     real_latents = [info.latent for info in real_latents_info]
 
@@ -175,6 +206,39 @@ def evalute_frechet_distance(
         mu2=real_statistic.mean,
         sigma2=real_statistic.cov,
     )
+
+
+def evalute_multimodality(
+    latents_info: List[LatentInfo],
+) -> float:
+    """Evaluate the multimodality
+
+    Parameters
+    ----------
+    latents_info: List[LatentInfo]
+        Latent infos
+
+    Returns
+    -------
+    float
+        Multimodality
+    """
+    latents_dict = defaultdict(list)
+    for info in latents_info:
+        latents_dict[(info.person_id, info.sentence_id, info.frame_start)].append(
+            info.latent
+        )
+
+    latents_subset1 = []
+    latents_subset2 = []
+
+    for latents in latents_dict.values():
+        half_len = len(latents) // 2
+
+        latents_subset1.extend(latents[:half_len])
+        latents_subset2.extend(latents[half_len : 2 * half_len])
+
+    return multimodality(latents_subset1, latents_subset2)
 
 
 def evaluate(
@@ -216,6 +280,7 @@ def evaluate(
     # Compute beat consistency score
     bc = evaluate_beat_consistency_score(
         eval_dataloader=eval_dataloader,
+        real_dataloader=real_dataloader,
         sampling_rate=sampling_rate,
         fps=fps,
         bc_threshold=bc_threshold,
@@ -223,10 +288,17 @@ def evaluate(
 
     # Generate latents
     eval_latents_info = generate_latents_info(
-        vae, eval_dataloader, device, window_step_size
+        vae,
+        eval_dataloader,
+        device,
+        window_step_size,
     )
     real_latents_info = generate_latents_info(
-        vae, real_dataloader, device, window_step_size
+        vae,
+        real_dataloader,
+        device,
+        window_step_size,
+        padding=2,  # Padding is required to use same real dataset
     )
 
     # Filter the eval latents
@@ -241,7 +313,16 @@ def evaluate(
         real_latents_info=real_latents_info,
     )
 
-    return EvalMetrics(beat_consistency_score=bc, frechet_distance=fd)
+    # Compute multimodality
+    multimodality = evalute_multimodality(
+        latents_info=eval_latents_info_filtered,
+    )
+
+    return EvalMetrics(
+        beat_consistency_score=bc,
+        frechet_distance=fd,
+        multimodality=multimodality,
+    )
 
 
 def main() -> None:
