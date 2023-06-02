@@ -30,6 +30,11 @@ def beat_consistency_score(
         Threshold for finding peaks
     sigma: float
         Parameter to normalize sequences, by default 0.1
+
+    Returns
+    -------
+    float
+        Beat consistency score
     """
     # Find audio beats
     list_audio_beats = [
