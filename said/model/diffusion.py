@@ -94,12 +94,15 @@ class SAID(ABC, nn.Module):
             beta_schedule="squaredcos_cap_v2",
             prediction_type=prediction_type,
         )
+
+        """
         # Relieve the clipping
         self.noise_scheduler.betas = betas_for_alpha_bar(diffusion_steps, 1 - 1e-15)
         self.noise_scheduler.alphas = 1.0 - self.noise_scheduler.betas
         self.noise_scheduler.alphas_cumprod = torch.cumprod(
             self.noise_scheduler.alphas, dim=0
         )
+        """
 
     def forward(
         self,
