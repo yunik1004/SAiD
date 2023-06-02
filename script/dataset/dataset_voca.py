@@ -917,6 +917,7 @@ class VOCARKitVAEDataset(VOCARKitDataset):
                     if os.path.exists(coeffs_path):
                         data = VOCARKitDataPath(
                             person_id=pid,
+                            sentence_id=sid,
                             audio=None,
                             blendshape_coeffs=coeffs_path,
                         )
