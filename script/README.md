@@ -52,24 +52,6 @@ optional arguments:
                         Path of the blendshape deltas
   --output_dir OUTPUT_DIR
                         Directory of the outputs
-  --prediction_type PREDICTION_TYPE
-                        Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'
-  --window_size WINDOW_SIZE
-                        Window size of the blendshape coefficients sequence at training
-  --batch_size BATCH_SIZE
-                        Batch size at training
-  --epochs EPOCHS       The number of epochs
-  --learning_rate LEARNING_RATE
-                        Learning rate
-  --uncond_prob UNCOND_PROB
-                        Unconditional probability of waveform (for classifier-free guidance)
-  --ema EMA             Use Exponential Moving Average of models weights
-  --val_period VAL_PERIOD
-                        Period of validating model
-  --val_repeat VAL_REPEAT
-                        Number of repetition of val dataset
-  --save_period SAVE_PERIOD
-                        Period of saving model
 ```
 
 ## Evaluation
@@ -86,17 +68,12 @@ optional arguments:
                         Directory of the audio data
   --output_dir OUTPUT_DIR
                         Directory of the outputs
-  --prediction_type PREDICTION_TYPE
-                        Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'
   --num_steps NUM_STEPS
                         Number of inference steps
   --strength STRENGTH   How much to paint
   --guidance_scale GUIDANCE_SCALE
                         Guidance scale
   --eta ETA             Eta for DDIMScheduler, between [0, 1]
-  --fps FPS             FPS of the blendshape coefficients sequence
-  --divisor_unet DIVISOR_UNET
-                        Length of the blendshape coefficients sequence should be divided by this number
   --device DEVICE       GPU/CPU device
   --num_repeats NUM_REPEATS
                         Number of repetitions in inference for each audio
@@ -115,11 +92,6 @@ optional arguments:
                         Directory of the blendshape coefficients data
   --blendshape_deltas_path BLENDSHAPE_DELTAS_PATH
                         Path of the blendshape deltas
-  --sampling_rate SAMPLING_RATE
-                        Sampling rate of the audio
-  --fps FPS             FPS of the blendshape coefficients sequence
-  --bc_threshold BC_THRESHOLD
-                        Threshold for computing beat consistency score
   --output_dir OUTPUT_DIR
                         Directory of the outputs
 ```
@@ -142,8 +114,6 @@ optional arguments:
                         Path of the image of the output blendshape coefficients
   --intermediate_dir INTERMEDIATE_DIR
                         Saving directory of the intermediate outputs
-  --prediction_type PREDICTION_TYPE
-                        Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'
   --save_intermediate SAVE_INTERMEDIATE
                         Save the intermediate outputs
   --num_steps NUM_STEPS
@@ -152,9 +122,6 @@ optional arguments:
   --guidance_scale GUIDANCE_SCALE
                         Guidance scale
   --eta ETA             Eta for DDIMScheduler, between [0, 1]
-  --fps FPS             FPS of the blendshape coefficients sequence
-  --divisor_unet DIVISOR_UNET
-                        Length of the blendshape coefficients sequence should be divided by this number
   --device DEVICE       GPU/CPU device
   --init_sample_path INIT_SAMPLE_PATH
                         Path of the initial sample file (csv format)
