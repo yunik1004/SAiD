@@ -28,10 +28,6 @@ optional arguments:
                         Directory of the blendshape meshes
   --mesh_seqs_dir MESH_SEQS_DIR
                         Directory of the mesh sequences
-  --blendshape_list_path BLENDSHAPE_LIST_PATH
-                        List of the blendshapes
-  --head_idx_path HEAD_IDX_PATH
-                        List of the head indices
   --blendshapes_coeffs_out_dir BLENDSHAPES_COEFFS_OUT_DIR
                         Directory of the output coefficients
 ```
@@ -48,8 +44,6 @@ optional arguments:
                         Directory of the audio data
   --coeffs_dir COEFFS_DIR
                         Directory of the blendshape coefficients data
-  --blendshape_deltas_path BLENDSHAPE_DELTAS_PATH
-                        Path of the blendshape deltas
   --output_dir OUTPUT_DIR
                         Directory of the outputs
 ```
@@ -90,8 +84,6 @@ optional arguments:
                         Directory of the audio data
   --coeffs_dir COEFFS_DIR
                         Directory of the blendshape coefficients data
-  --blendshape_deltas_path BLENDSHAPE_DELTAS_PATH
-                        Path of the blendshape deltas
   --output_dir OUTPUT_DIR
                         Directory of the outputs
 ```
@@ -110,12 +102,6 @@ optional arguments:
                         Path of the audio file
   --output_path OUTPUT_PATH
                         Path of the output blendshape coefficients file (csv format)
-  --output_image_path OUTPUT_IMAGE_PATH
-                        Path of the image of the output blendshape coefficients
-  --intermediate_dir INTERMEDIATE_DIR
-                        Saving directory of the intermediate outputs
-  --save_intermediate SAVE_INTERMEDIATE
-                        Save the intermediate outputs
   --num_steps NUM_STEPS
                         Number of inference steps
   --strength STRENGTH   How much to paint
