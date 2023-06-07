@@ -133,8 +133,6 @@ def main():
         opt_prob = OptimizationProblemFull(neutral_vector, blendshapes_matrix)
 
         for sdx, seq_id in enumerate(tqdm(seq_id_list, leave=False)):
-            out_path = coeff_out_path(person_id, seq_id, sdx > 0)
-
             mesh_seq_list = dataset.get_mesh_seq(person_id, seq_id)
             if len(mesh_seq_list) == 0:
                 continue
@@ -153,6 +151,9 @@ def main():
 
             # Solve Optimization problem
             w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
+
+            # Save outputs
+            out_path = coeff_out_path(person_id, seq_id, sdx > 0)
 
             save_blendshape_coeffs(
                 w_soln,
