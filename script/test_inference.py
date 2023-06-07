@@ -1,6 +1,7 @@
 """Generate the inference results from the test data
 """
 import argparse
+import math
 import os
 import torch
 from torch.utils.data import DataLoader
@@ -42,7 +43,7 @@ def main() -> None:
         help="Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'",
     )
     parser.add_argument(
-        "--num_steps", type=int, default=100, help="Number of inference steps"
+        "--num_steps", type=int, default=1000, help="Number of inference steps"
     )
     parser.add_argument("--strength", type=float, default=1.0, help="How much to paint")
     parser.add_argument(
@@ -72,8 +73,11 @@ def main() -> None:
     parser.add_argument(
         "--num_repeats",
         type=int,
-        default=40,
+        default=56,
         help="Number of repetitions in inference for each audio",
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=64, help="Batch size for the repetition"
     )
     parser.add_argument(
         "--seed",
@@ -96,6 +100,7 @@ def main() -> None:
     device = args.device
 
     num_repeats = args.num_repeats
+    batch_size = args.batch_size
     seed = args.seed
 
     # Set random seed
@@ -144,11 +149,18 @@ def main() -> None:
 
             # Process the waveform
             waveform_processed = said_model.process_audio(waveform).to(device)
+            waveform_processed_batch = waveform_processed.repeat(batch_size, 1)
 
-            for rdx in range(num_repeats):
-                # Inference
+            # Inference
+            rdx = 0
+            num_chunks = math.ceil(num_repeats / batch_size)
+            chunk_remainder = num_repeats - (num_chunks - 1) * batch_size
+            for cdx in range(num_chunks):
+                chunk_size = batch_size if cdx < num_chunks - 1 else chunk_remainder
+                waveform_processed_chunk = waveform_processed_batch[:chunk_size]
+
                 output = said_model.inference(
-                    waveform_processed=waveform_processed,
+                    waveform_processed=waveform_processed_chunk,
                     num_inference_steps=num_steps,
                     strength=strength,
                     guidance_scale=guidance_scale,
@@ -156,16 +168,21 @@ def main() -> None:
                     show_process=False,
                 )
 
-                result = output.result[0, :window_len].cpu().numpy()
+                results = output.result[:, :window_len].cpu().numpy()
 
-                output_filename = f"{output_filename_base}-{rdx}.csv"
-                output_path = os.path.join(output_file_dir, output_filename)
+                for sdx in range(chunk_size):
+                    result = results[sdx]
 
-                save_blendshape_coeffs(
-                    coeffs=result,
-                    classes=VOCARKitDataset.default_blendshape_classes,
-                    output_path=output_path,
-                )
+                    output_filename = f"{output_filename_base}-{rdx}.csv"
+                    output_path = os.path.join(output_file_dir, output_filename)
+
+                    save_blendshape_coeffs(
+                        coeffs=result,
+                        classes=VOCARKitDataset.default_blendshape_classes,
+                        output_path=output_path,
+                    )
+
+                    rdx += 1
 
 
 if __name__ == "__main__":
