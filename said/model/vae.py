@@ -148,7 +148,8 @@ class BCDecoder(nn.Module):
             nn.LeakyReLU(0.2, True),
             nn.Conv1d(32, 32, 3),
             nn.Conv1d(32, out_channels, 3),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(),
+            nn.Tanh(),
         )
 
     def forward(self, latent: torch.Tensor) -> torch.Tensor:
