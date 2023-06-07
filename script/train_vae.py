@@ -54,14 +54,18 @@ def elbo_loss(
     blendshape_coeffs = data.to(device)
     output = said_vae(blendshape_coeffs)
 
+    batch_size = blendshape_coeffs.shape[0]
+
     mean = output.mean
     log_var = output.log_var
     blendshape_coeffs_reconst = output.coeffs_reconst
 
-    l1_func = torch.nn.L1Loss()
+    l1_func = torch.nn.L1Loss(reduction="sum")
 
-    reconst_loss = l1_func(blendshape_coeffs_reconst, blendshape_coeffs)
-    kld_loss = 0.5 * torch.mean(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1)
+    reconst_loss = l1_func(blendshape_coeffs_reconst, blendshape_coeffs) / batch_size
+    kld_loss = 0.5 * torch.mean(
+        torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1, dim=1)
+    )
 
     return LossStepOutput(reconst=reconst_loss, regularize=kld_loss)
 
@@ -215,12 +219,12 @@ def main():
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=20000, help="The number of epochs"
+        "--epochs", type=int, default=100000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-3, help="Learning rate"
     )
-    parser.add_argument("--beta", type=float, default=1e-2, help="Loss weight")
+    parser.add_argument("--beta", type=float, default=0.1, help="Loss weight")
     parser.add_argument(
         "--val_period", type=int, default=50, help="Period of validating model"
     )
@@ -231,7 +235,7 @@ def main():
         help="Number of repetitions of the validation dataset",
     )
     parser.add_argument(
-        "--save_period", type=int, default=200, help="Period of saving model"
+        "--save_period", type=int, default=500, help="Period of saving model"
     )
     args = parser.parse_args()
 
