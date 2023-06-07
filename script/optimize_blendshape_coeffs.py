@@ -46,7 +46,7 @@ def main():
         "--head_idx_path",
         type=str,
         default=(default_data_dir / "FLAME_head_idx.txt").resolve(),
-        help="List of the head indices",
+        help="List of the head indices. Empty string will disable this option.",
     )
     parser.add_argument(
         "--blendshapes_coeffs_out_dir",
@@ -98,7 +98,7 @@ def main():
     blendshape_name_list = parse_list(blendshape_list_path, str)
 
     # Parse head indices
-    head_idx_list = parse_list(head_idx_path, int)
+    head_idx_list = None if head_idx_path == "" else parse_list(head_idx_path, int)
 
     dataset = VOCARKitPseudoGTOptDataset(
         neutrals_dir, blendshapes_dir, mesh_seqs_dir, blendshape_name_list
@@ -140,10 +140,16 @@ def main():
                 continue
 
             mesh_seq_vertices_list = [mesh.vertices for mesh in mesh_seq_list]
-            mesh_seq_vertices_vector_list = [
-                vertices[head_idx_list].reshape((-1, 1))
-                for vertices in mesh_seq_vertices_list
-            ]
+            mesh_seq_vertices_vector_list = []
+            if head_idx_list is None:
+                mesh_seq_vertices_vector_list = [
+                    vertices.reshape((-1, 1)) for vertices in mesh_seq_vertices_list
+                ]
+            else:
+                mesh_seq_vertices_vector_list = [
+                    vertices[head_idx_list].reshape((-1, 1))
+                    for vertices in mesh_seq_vertices_list
+                ]
 
             # Solve Optimization problem
             w_soln = opt_prob.optimize(mesh_seq_vertices_vector_list)
