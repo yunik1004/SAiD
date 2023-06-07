@@ -746,12 +746,12 @@ class VOCARKitPseudoGTOptDataset:
         neutral_path = os.path.join(self.neutrals_dir, f"{person_id}.obj")
         blendshapes_dir = os.path.join(self.blendshapes_dir_dir, person_id)
 
-        neutral_mesh = trimesh.load(neutral_path)
+        neutral_mesh = load_mesh(neutral_path)
 
         blendshapes_dict = {}
         for bl_name in self.blendshapes_names:
             bl_path = os.path.join(blendshapes_dir, f"{bl_name}.obj")
-            bl_mesh = trimesh.load(bl_path)
+            bl_mesh = load_mesh(bl_path)
             blendshapes_dict[bl_name] = bl_mesh
 
         return ExpressionBases(neutral=neutral_mesh, blendshapes=blendshapes_dict)
@@ -784,7 +784,7 @@ class VOCARKitPseudoGTOptDataset:
 
         mesh_seq_list = []
         for seq_path in mesh_seq_paths:
-            mesh = trimesh.load(seq_path)
+            mesh = load_mesh(seq_path)
             mesh_seq_list.append(mesh)
 
         return mesh_seq_list
