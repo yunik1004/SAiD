@@ -368,6 +368,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         uncond_prob: float = 0.1,
         zero_prob: float = 0.003125,
         hflip: bool = True,
+        delay: bool = True,
+        delay_thres: int = 1,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
         classes_mirror_pair: List[
             Tuple[str, str]
@@ -393,6 +395,10 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Zero-out probability of waveform and blendshape coefficients, by default 0.003125
         hflip : bool, optional
             Whether do the horizontal flip, by default True
+        delay : bool, optional
+            Whether do the delaying, by default True
+        delay_thres: int, optional
+            Maximum amount of delaying, by default 1
         classes : List[str], optional
             List of blendshape names, by default default_blendshape_classes
         classes_mirror_pair : List[Tuple[str, str]], optional
@@ -404,6 +410,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         self.zero_prob = zero_prob
 
         self.hflip = hflip
+        self.delay = delay
+        self.delay_thres = delay_thres
         self.classes = classes
         self.classes_mirror_pair = classes_mirror_pair
 
@@ -448,6 +456,11 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         # Random-select the window
         bdx = random.randint(0, max(0, blendshape_len - self.window_size))
         wdx = (self.sampling_rate * bdx) // self.fps
+        if self.delay and random.uniform(0, 1) < 0.5:
+            wdelays = list(range(max(wdx - self.delay_thres, 0), wdx)) + list(
+                range(wdx + 1, wdx + self.delay_thres + 1)
+            )
+            wdx = random.choice(wdelays)
 
         waveform_tmp = waveform[wdx : wdx + self.waveform_window_len]
         coeffs_tmp = blendshape_coeffs[bdx : bdx + self.window_size, :]

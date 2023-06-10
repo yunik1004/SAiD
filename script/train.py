@@ -22,9 +22,7 @@ class LossStepOutput:
     """
 
     predict: torch.FloatTensor  # MAE loss for the predicted output
-    reconst: Optional[
-        torch.FloatTensor
-    ] = None  # MAE loss for the reconstruction output
+    velocity: torch.FloatTensor  # MAE loss for the velocity
 
 
 @dataclass
@@ -35,7 +33,7 @@ class LossEpochOutput:
 
     total: float = 0  # Averaged total loss
     predict: float = 0  # Averaged prediction loss
-    reconst: float = 0  # Averaged reconstruction loss
+    velocity: float = 0  # Averaged velocity loss
 
 
 def random_noise_loss(
@@ -86,7 +84,7 @@ def random_noise_loss(
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
 
-    criterion_epsilon = nn.L1Loss()
+    criterion_pred = nn.L1Loss()
 
     # Set answer corresponding to prediction_type
     answer = None
@@ -97,33 +95,9 @@ def random_noise_loss(
     elif prediction_type == "v_prediction":
         answer = velocity
 
-    loss_epsilon = criterion_epsilon(answer, pred)
+    loss_pred = criterion_pred(answer, pred)
 
-    losses = LossStepOutput(predict=loss_epsilon)
-
-    criterion_reconst = nn.L1Loss()
-
-    if data.blendshape_delta:
-        blendshape_delta = data.blendshape_delta.to(device)
-
-        if prediction_type == "epsilon":
-            """
-            pred_latents = said_model.pred_original_sample(
-                noisy_latents, pred, random_timesteps
-            )
-            latents_diff = pred_latents - coeff_latents
-            """
-            latents_diff = noise - pred
-            vertices_diff = torch.einsum(
-                "bijk,bli->bljk", blendshape_delta, latents_diff
-            )
-            losses.reconst = criterion_reconst(
-                vertices_diff, torch.zeros_like(vertices_diff)
-            )
-    else:
-        losses.reconst = torch.tensor(0, device=device)
-
-    return losses
+    return LossStepOutput(predict=loss_pred)
 
 
 def train_epoch(
@@ -133,7 +107,6 @@ def train_epoch(
     accelerator: Accelerator,
     prediction_type: str = "epsilon",
     ema_model: Optional[EMAModel] = None,
-    lambda_reconst: float = 1e2,
 ) -> LossEpochOutput:
     """Train the SAiD model one epoch.
 
@@ -151,8 +124,6 @@ def train_epoch(
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     ema_model: Optional[EMAModel]
         EMA model of said_model, by default None
-    lambda_reconst: float
-        Loss weight of the reconstruction loss, by default 1e2
 
     Returns
     -------
@@ -166,14 +137,13 @@ def train_epoch(
     train_total_losses = {
         "loss": 0,
         "loss_predict": 0,
-        "loss_reconst": 0,
     }
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data.waveform)
         losses = random_noise_loss(said_model, data, device, prediction_type)
 
-        loss = losses.predict + lambda_reconst * losses.reconst
+        loss = losses.predict
 
         accelerator.backward(loss)
         optimizer.step()
@@ -183,14 +153,12 @@ def train_epoch(
 
         train_total_losses["loss"] += loss.item() * curr_batch_size
         train_total_losses["loss_predict"] += losses.predict.item() * curr_batch_size
-        train_total_losses["loss_reconst"] += losses.reconst.item() * curr_batch_size
 
         train_total_num += curr_batch_size
 
     train_avg_losses = LossEpochOutput(
         total=train_total_losses["loss"] / train_total_num,
         predict=train_total_losses["loss_predict"] / train_total_num,
-        reconst=train_total_losses["loss_reconst"] / train_total_num,
     )
 
     return train_avg_losses
@@ -202,7 +170,6 @@ def validate_epoch(
     accelerator: Accelerator,
     prediction_type: str = "epsilon",
     num_repeat: int = 1,
-    lambda_reconst: float = 1e2,
 ) -> LossEpochOutput:
     """Validate the SAiD model one epoch.
 
@@ -218,8 +185,6 @@ def validate_epoch(
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     num_repeat : int, optional
         Number of the repetition, by default 1
-    lambda_reconst: float
-        Loss weight of the reconstruction loss, by default 1e2
 
     Returns
     -------
@@ -233,7 +198,6 @@ def validate_epoch(
     val_total_losses = {
         "loss": 0,
         "loss_predict": 0,
-        "loss_reconst": 0,
     }
     val_total_num = 0
     with torch.no_grad():
@@ -242,14 +206,11 @@ def validate_epoch(
                 curr_batch_size = len(data.waveform)
                 losses = random_noise_loss(said_model, data, device, prediction_type)
 
-                loss = losses.predict + lambda_reconst * losses.reconst
+                loss = losses.predict
 
                 val_total_losses["loss"] += loss.item() * curr_batch_size
                 val_total_losses["loss_predict"] += (
                     losses.predict.item() * curr_batch_size
-                )
-                val_total_losses["loss_reconst"] += (
-                    losses.reconst.item() * curr_batch_size
                 )
 
                 val_total_num += curr_batch_size
@@ -257,7 +218,6 @@ def validate_epoch(
     val_avg_losses = LossEpochOutput(
         total=val_total_losses["loss"] / val_total_num,
         predict=val_total_losses["loss_predict"] / val_total_num,
-        reconst=val_total_losses["loss_reconst"] / val_total_num,
     )
 
     return val_avg_losses
@@ -280,12 +240,6 @@ def main() -> None:
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
-    )
-    parser.add_argument(
-        "--blendshape_deltas_path",
-        type=str,
-        default="../VOCA_ARKit/blendshape_deltas.pickle",
-        help="Path of the blendshape deltas",
     )
     parser.add_argument(
         "--output_dir",
@@ -339,7 +293,6 @@ def main() -> None:
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
-    blendshape_deltas_path = None  # args.blendshape_deltas_path
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
@@ -367,7 +320,7 @@ def main() -> None:
     train_dataset = VOCARKitTrainDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=blendshape_deltas_path,
+        blendshape_deltas_path=None,
         sampling_rate=said_model.sampling_rate,
         window_size=window_size,
         uncond_prob=uncond_prob,
@@ -375,7 +328,7 @@ def main() -> None:
     val_dataset = VOCARKitValDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=blendshape_deltas_path,
+        blendshape_deltas_path=None,
         sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )
@@ -438,7 +391,6 @@ def main() -> None:
         logs = {
             "Train/Total Loss": train_avg_losses.total,
             "Train/Predict Loss": train_avg_losses.predict,
-            "Train/Reconst Loss": train_avg_losses.reconst,
         }
 
         accelerator.wait_for_everyone()
@@ -459,7 +411,6 @@ def main() -> None:
             # Append the log
             logs["Validation/Total Loss"] = val_avg_losses.total
             logs["Validation/Predict Loss"] = val_avg_losses.predict
-            logs["Validation/Reconst Loss"] = val_avg_losses.reconst
 
         # Print logs
         if accelerator.sync_gradients:

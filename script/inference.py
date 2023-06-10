@@ -66,7 +66,7 @@ def main():
     )
     parser.add_argument("--strength", type=float, default=1.0, help="How much to paint")
     parser.add_argument(
-        "--guidance_scale", type=float, default=2.5, help="Guidance scale"
+        "--guidance_scale", type=float, default=2.0, help="Guidance scale"
     )
     parser.add_argument(
         "--eta", type=float, default=0.0, help="Eta for DDIMScheduler, between [0, 1]"
