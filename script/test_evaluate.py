@@ -3,6 +3,7 @@
 import argparse
 from collections import defaultdict
 from dataclasses import dataclass
+import statistics
 from typing import List, Union
 import numpy as np
 import torch
@@ -10,8 +11,17 @@ from torch.utils.data import DataLoader
 from said.metric.beat_consistency import beat_consistency_score
 from said.metric.frechet_distance import frechet_distance, get_statistic
 from said.metric.multimodality import multimodality
+from said.metric.wind import get_statistic_gmm, wind
 from said.model.vae import BCVAE
 from dataset.dataset_voca import VOCARKitEvalDataset
+
+
+@dataclass
+class StatisticMetric:
+    """Dataclass for the statistic of metric"""
+
+    mean: float
+    std: float
 
 
 @dataclass
@@ -23,6 +33,7 @@ class EvalMetrics:
     beat_consistency_score: float
     frechet_distance: float
     multimodality: float
+    wind: StatisticMetric
 
 
 @dataclass
@@ -241,12 +252,53 @@ def evalute_multimodality(
     return multimodality(latents_subset1, latents_subset2)
 
 
+def evalute_wind(
+    eval_latents_info: List[LatentInfo],
+    real_latents_info: List[LatentInfo],
+    num_clusters: int,
+    num_repeats: int,
+) -> StatisticMetric:
+    """Evaluate WInD
+
+    Parameters
+    ----------
+    eval_latents_info: List[LatentInfo]
+        Latent infos in evaluation dataset
+    real_latents_info: List[LatentInfo]
+        Latent infos in real dataset
+    num_clusters: int
+        The number of clusters in GMM
+    num_repeats: int
+        The number of repeatitions to get WInD
+
+    Returns
+    -------
+    StatisticMetric
+        Statistics of WInD
+    """
+    eval_latents = [info.latent for info in eval_latents_info]
+    real_latents = [info.latent for info in real_latents_info]
+
+    scores = []
+    for _ in range(10):
+        eval_stats = get_statistic_gmm(data=eval_latents, num_clusters=num_clusters)
+        real_stats = get_statistic_gmm(data=real_latents, num_clusters=num_clusters)
+        scores.append(wind(stats1=eval_stats, stats2=real_stats))
+
+    return StatisticMetric(
+        mean=statistics.mean(scores),
+        std=statistics.stdev(scores),
+    )
+
+
 def evaluate(
     eval_dataloader: DataLoader,
     real_dataloader: DataLoader,
     sampling_rate: int,
     fps: int,
     bc_threshold: float,
+    wind_num_clusters: int,
+    wind_num_repeats: int,
     vae: BCVAE,
     device: Union[str, torch.device],
     window_step_size: int,
@@ -265,6 +317,10 @@ def evaluate(
         FPS of the blendshape coefficients sequence
     bc_threshold: float
         Threshold for computing beat consistency score
+    wind_num_clusters: int
+        The number of clusters for computing WInD
+    wind_num_repeats: int
+        The number of repetitions for computing WInD
     vae: BCVAE
         VAE object for generating latents
     device: Union[str, torch.device]
@@ -318,10 +374,19 @@ def evaluate(
         latents_info=eval_latents_info_filtered,
     )
 
+    # Compute wind
+    wind = evalute_wind(
+        eval_latents_info=eval_latents_info_filtered,
+        real_latents_info=real_latents_info,
+        num_clusters=wind_num_clusters,
+        num_repeats=wind_num_repeats,
+    )
+
     return EvalMetrics(
         beat_consistency_score=bc,
         frechet_distance=fd,
         multimodality=multimodality,
+        wind=wind,
     )
 
 
@@ -380,6 +445,18 @@ def main() -> None:
         help="Threshold for computing beat consistency score",
     )
     parser.add_argument(
+        "--wind_num_clusters",
+        type=int,
+        default=10,
+        help="The number of clusters for computing WInD",
+    )
+    parser.add_argument(
+        "--wind_num_repeats",
+        type=int,
+        default=10,
+        help="The number of repetitions for computing WInD",
+    )
+    parser.add_argument(
         "--window_step_size",
         type=int,
         default=1,
@@ -401,6 +478,8 @@ def main() -> None:
     sampling_rate = args.sampling_rate
     fps = args.fps
     bc_threshold = args.bc_threshold
+    wind_num_clusters = args.wind_num_clusters
+    wind_num_repeats = args.wind_num_repeats
     window_step_size = args.window_step_size
     device = args.device
 
@@ -446,6 +525,8 @@ def main() -> None:
         sampling_rate=sampling_rate,
         fps=fps,
         bc_threshold=bc_threshold,
+        wind_num_clusters=wind_num_clusters,
+        wind_num_repeats=wind_num_repeats,
         vae=said_vae,
         device=device,
         window_step_size=window_step_size,

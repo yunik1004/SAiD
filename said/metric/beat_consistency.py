@@ -3,7 +3,7 @@
 from typing import List
 import numpy as np
 from scipy.signal import find_peaks
-from said.util.audio import compute_audio_beat_time
+from ..util.audio import compute_audio_beat_time
 
 
 def beat_consistency_score(
