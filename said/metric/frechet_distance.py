@@ -24,7 +24,7 @@ def get_statistic(data: List[np.ndarray]) -> Statistic:
 
     Returns
     -------
-    Statistics
+    Statistic
         mean, covariance of the data
     """
     mean = np.mean(data, axis=0)

@@ -21,6 +21,7 @@ dependencies = [
     "pillow",
     "pytorch-fid",
     "qpsolvers",
+    "scikit-learn",
     "scipy",
     "torch",
     "torchaudio",
