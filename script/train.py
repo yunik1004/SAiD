@@ -84,8 +84,6 @@ def random_noise_loss(
 
     pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
 
-    criterion_pred = nn.L1Loss()
-
     # Set answer corresponding to prediction_type
     answer = None
     if prediction_type == "epsilon":
@@ -95,9 +93,17 @@ def random_noise_loss(
     elif prediction_type == "v_prediction":
         answer = velocity
 
+    criterion_pred = nn.L1Loss()
+    criterion_velocity = nn.L1Loss()
+
     loss_pred = criterion_pred(answer, pred)
 
-    return LossStepOutput(predict=loss_pred)
+    answer_diff = answer[:, 1:, :] - answer[:, :-1, :]
+    pred_diff = pred[:, 1:, :] - pred[:, :-1, :]
+
+    loss_vel = criterion_velocity(answer_diff, pred_diff)
+
+    return LossStepOutput(predict=loss_pred, velocity=loss_vel)
 
 
 def train_epoch(
@@ -137,13 +143,14 @@ def train_epoch(
     train_total_losses = {
         "loss": 0,
         "loss_predict": 0,
+        "loss_velocity": 0,
     }
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data.waveform)
         losses = random_noise_loss(said_model, data, device, prediction_type)
 
-        loss = losses.predict
+        loss = losses.predict + 1 * losses.velocity
 
         accelerator.backward(loss)
         optimizer.step()
@@ -153,12 +160,14 @@ def train_epoch(
 
         train_total_losses["loss"] += loss.item() * curr_batch_size
         train_total_losses["loss_predict"] += losses.predict.item() * curr_batch_size
+        train_total_losses["loss_velocity"] += losses.velocity.item() * curr_batch_size
 
         train_total_num += curr_batch_size
 
     train_avg_losses = LossEpochOutput(
         total=train_total_losses["loss"] / train_total_num,
         predict=train_total_losses["loss_predict"] / train_total_num,
+        velocity=train_total_losses["loss_velocity"] / train_total_num,
     )
 
     return train_avg_losses
@@ -198,6 +207,7 @@ def validate_epoch(
     val_total_losses = {
         "loss": 0,
         "loss_predict": 0,
+        "loss_velocity": 0,
     }
     val_total_num = 0
     with torch.no_grad():
@@ -206,11 +216,14 @@ def validate_epoch(
                 curr_batch_size = len(data.waveform)
                 losses = random_noise_loss(said_model, data, device, prediction_type)
 
-                loss = losses.predict
+                loss = losses.predict + 1 * losses.velocity
 
                 val_total_losses["loss"] += loss.item() * curr_batch_size
                 val_total_losses["loss_predict"] += (
                     losses.predict.item() * curr_batch_size
+                )
+                val_total_losses["loss_velocity"] += (
+                    losses.velocity.item() * curr_batch_size
                 )
 
                 val_total_num += curr_batch_size
@@ -218,6 +231,7 @@ def validate_epoch(
     val_avg_losses = LossEpochOutput(
         total=val_total_losses["loss"] / val_total_num,
         predict=val_total_losses["loss_predict"] / val_total_num,
+        velocity=val_total_losses["loss_velocity"] / val_total_num,
     )
 
     return val_avg_losses
@@ -263,7 +277,7 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=20000, help="The number of epochs"
+        "--epochs", type=int, default=100000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate"
@@ -391,6 +405,7 @@ def main() -> None:
         logs = {
             "Train/Total Loss": train_avg_losses.total,
             "Train/Predict Loss": train_avg_losses.predict,
+            "Train/Velocity Loss": train_avg_losses.velocity,
         }
 
         accelerator.wait_for_everyone()
@@ -411,6 +426,7 @@ def main() -> None:
             # Append the log
             logs["Validation/Total Loss"] = val_avg_losses.total
             logs["Validation/Predict Loss"] = val_avg_losses.predict
+            logs["Validation/Velocity Loss"] = val_avg_losses.velocity
 
         # Print logs
         if accelerator.sync_gradients:

@@ -22,7 +22,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/12000.pth",
+        default="../output/30000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
@@ -62,7 +62,7 @@ def main():
         help="Save the intermediate outputs",
     )
     parser.add_argument(
-        "--num_steps", type=int, default=100, help="Number of inference steps"
+        "--num_steps", type=int, default=1000, help="Number of inference steps"
     )
     parser.add_argument("--strength", type=float, default=1.0, help="How much to paint")
     parser.add_argument(
