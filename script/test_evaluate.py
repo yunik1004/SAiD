@@ -447,7 +447,7 @@ def main() -> None:
     parser.add_argument(
         "--wind_num_clusters",
         type=int,
-        default=10,
+        default=5,
         help="The number of clusters for computing WInD",
     )
     parser.add_argument(
