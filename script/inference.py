@@ -22,7 +22,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/30000.pth",
+        default="../output/25000.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(

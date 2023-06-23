@@ -111,6 +111,7 @@ def train_epoch(
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
+    weight_vel: float,
     prediction_type: str = "epsilon",
     ema_model: Optional[EMAModel] = None,
 ) -> LossEpochOutput:
@@ -126,6 +127,8 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
+    weight_vel: float
+        Weight for the velocity loss
     prediction_type: str
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     ema_model: Optional[EMAModel]
@@ -150,7 +153,7 @@ def train_epoch(
         curr_batch_size = len(data.waveform)
         losses = random_noise_loss(said_model, data, device, prediction_type)
 
-        loss = losses.predict + 1 * losses.velocity
+        loss = losses.predict + weight_vel * losses.velocity
 
         accelerator.backward(loss)
         optimizer.step()
@@ -177,6 +180,7 @@ def validate_epoch(
     said_model: SAID,
     val_dataloader: DataLoader,
     accelerator: Accelerator,
+    weight_vel: float,
     prediction_type: str = "epsilon",
     num_repeat: int = 1,
 ) -> LossEpochOutput:
@@ -190,6 +194,8 @@ def validate_epoch(
         Dataloader of the VOCARKitValDataset
     accelerator : Accelerator
         Accelerator object
+    weight_vel: float
+        Weight for the velocity loss
     prediction_type: str
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     num_repeat : int, optional
@@ -277,7 +283,7 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=100000, help="The number of epochs"
+        "--epochs", type=int, default=30000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate"
@@ -287,6 +293,12 @@ def main() -> None:
         type=float,
         default=0.25,
         help="Unconditional probability of waveform (for classifier-free guidance)",
+    )
+    parser.add_argument(
+        "--weight_vel",
+        type=float,
+        default=1.0,
+        help="Weight for the velocity loss",
     )
     parser.add_argument(
         "--ema",
@@ -315,6 +327,7 @@ def main() -> None:
     epochs = args.epochs
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
+    weight_vel = args.weight_vel
     ema = args.ema
     val_period = args.val_period
     val_repeat = args.val_repeat
@@ -397,6 +410,7 @@ def main() -> None:
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             accelerator=accelerator,
+            weight_vel=weight_vel,
             prediction_type=prediction_type,
             ema_model=ema_model,
         )
@@ -420,6 +434,7 @@ def main() -> None:
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
+                weight_vel=weight_vel,
                 prediction_type=prediction_type,
                 num_repeat=val_repeat,
             )
