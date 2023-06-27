@@ -6,7 +6,6 @@ from dataclasses import dataclass
 import statistics
 from typing import List, Union
 import numpy as np
-import scipy.stats as st
 import torch
 from torch.utils.data import DataLoader
 from said.metric.beat_consistency import beat_consistency_score
@@ -18,11 +17,11 @@ from dataset.dataset_voca import VOCARKitEvalDataset
 
 
 @dataclass
-class ConfidenceInterval:
-    """Dataclass for the confidence interval"""
+class StatisticMetric:
+    """Dataclass for the statistic of metric"""
 
     mean: float
-    radius: float
+    std: float
 
 
 @dataclass
@@ -34,7 +33,7 @@ class EvalMetrics:
     beat_consistency_score: float
     frechet_distance: float
     multimodality: float
-    wind: ConfidenceInterval
+    wind: StatisticMetric
 
 
 @dataclass
@@ -258,7 +257,7 @@ def evalute_wind(
     real_latents_info: List[LatentInfo],
     num_clusters: int,
     num_repeats: int,
-) -> ConfidenceInterval:
+) -> StatisticMetric:
     """Evaluate WInD
 
     Parameters
@@ -274,8 +273,8 @@ def evalute_wind(
 
     Returns
     -------
-    ConfidenceInterval
-        95% confidence interval of WInD
+    StatisticMetric
+        Statistics of WInD
     """
     eval_latents = [info.latent for info in eval_latents_info]
     real_latents = [info.latent for info in real_latents_info]
@@ -286,15 +285,9 @@ def evalute_wind(
         real_stats = get_statistic_gmm(data=real_latents, num_clusters=num_clusters)
         scores.append(wind(stats1=eval_stats, stats2=real_stats))
 
-    conf_interval = st.norm.interval(
-        alpha=0.95, loc=statistics.mean(scores), scale=st.sem(scores)
-    )
-    conf_mean = (conf_interval[0] + conf_interval[1]) / 2
-    conf_radius = (conf_interval[1] - conf_interval[0]) / 2
-
-    return ConfidenceInterval(
-        mean=conf_mean,
-        radius=conf_radius,
+    return StatisticMetric(
+        mean=statistics.mean(scores),
+        std=statistics.stdev(scores),
     )
 
 
