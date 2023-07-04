@@ -73,7 +73,7 @@ def main() -> None:
     parser.add_argument(
         "--num_repeats",
         type=int,
-        default=56,
+        default=72,
         help="Number of repetitions in inference for each audio",
     )
     parser.add_argument(
