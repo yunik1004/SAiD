@@ -307,6 +307,12 @@ def main() -> None:
         help="Use Exponential Moving Average of models weights",
     )
     parser.add_argument(
+        "--ema_decay",
+        type=float,
+        default=0.99,
+        help="Ema decay rate",
+    )
+    parser.add_argument(
         "--val_period", type=int, default=200, help="Period of validating model"
     )
     parser.add_argument(
@@ -329,6 +335,7 @@ def main() -> None:
     uncond_prob = args.uncond_prob
     weight_vel = args.weight_vel
     ema = args.ema
+    ema_decay = args.ema_decay
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
@@ -395,7 +402,7 @@ def main() -> None:
     )
 
     # Prepare the EMA model
-    ema_model = EMAModel(said_model.parameters(), decay=0.99) if ema else None
+    ema_model = EMAModel(said_model.parameters(), decay=ema_decay) if ema else None
 
     # Set the progress bar
     progress_bar = tqdm(
