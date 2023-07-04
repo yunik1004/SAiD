@@ -23,6 +23,7 @@ class LossStepOutput:
 
     predict: torch.FloatTensor  # MAE loss for the predicted output
     velocity: torch.FloatTensor  # MAE loss for the velocity
+    vertex: Optional[torch.FloatTensor]  # MAE loss for the reconstructed vertex
 
 
 @dataclass
@@ -34,6 +35,7 @@ class LossEpochOutput:
     total: float = 0  # Averaged total loss
     predict: float = 0  # Averaged prediction loss
     velocity: float = 0  # Averaged velocity loss
+    vertex: float = 0  # Averaged vertex loss
 
 
 def random_noise_loss(
@@ -62,6 +64,7 @@ def random_noise_loss(
     """
     waveform = data.waveform
     blendshape_coeffs = data.blendshape_coeffs.to(device)
+    blendshape_delta = data.blendshape_delta.to(device)
     cond = data.cond.to(device)
 
     coeff_latents = said_model.encode_samples(
@@ -95,6 +98,7 @@ def random_noise_loss(
 
     criterion_pred = nn.L1Loss()
     criterion_velocity = nn.L1Loss()
+    criterion_vertex = nn.L1Loss()
 
     loss_pred = criterion_pred(answer, pred)
 
@@ -103,7 +107,32 @@ def random_noise_loss(
 
     loss_vel = criterion_velocity(answer_diff, pred_diff)
 
-    return LossStepOutput(predict=loss_pred, velocity=loss_vel)
+    loss_vertex = None
+    if blendshape_delta is not None:
+        b, k, v, i = blendshape_delta.shape
+        _, t, _ = answer.shape
+
+        blendshape_delta_norm = torch.norm(blendshape_delta, p=1, dim=[1, 2, 3]) / (
+            k * v * i
+        )
+        blendshape_delta_normalized = torch.div(
+            blendshape_delta,
+            blendshape_delta_norm.view(-1, 1, 1, 1),
+        )
+
+        be_answer = torch.bmm(answer, blendshape_delta_normalized.view(b, k, v * i))
+        be_pred = torch.bmm(pred, blendshape_delta_normalized.view(b, k, v * i))
+
+        # be_answer = torch.einsum("bkvi,btk->btvi", blendshape_delta_normalized, answer)
+        # be_pred = torch.einsum("bkvi,btk->btvi", blendshape_delta_normalized, pred)
+
+        loss_vertex = criterion_vertex(be_answer, be_pred)
+
+    return LossStepOutput(
+        predict=loss_pred,
+        velocity=loss_vel,
+        vertex=loss_vertex,
+    )
 
 
 def train_epoch(
@@ -112,6 +141,7 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
     weight_vel: float,
+    weight_vertex: float,
     prediction_type: str = "epsilon",
     ema_model: Optional[EMAModel] = None,
 ) -> LossEpochOutput:
@@ -129,6 +159,8 @@ def train_epoch(
         Accelerator object
     weight_vel: float
         Weight for the velocity loss
+    weight_vertex: float
+        Weight for the vertex loss
     prediction_type: str
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     ema_model: Optional[EMAModel]
@@ -147,6 +179,7 @@ def train_epoch(
         "loss": 0,
         "loss_predict": 0,
         "loss_velocity": 0,
+        "loss_vertex": 0,
     }
     train_total_num = 0
     for data in train_dataloader:
@@ -154,6 +187,8 @@ def train_epoch(
         losses = random_noise_loss(said_model, data, device, prediction_type)
 
         loss = losses.predict + weight_vel * losses.velocity
+        if losses.vertex is not None:
+            loss += weight_vertex * losses.vertex
 
         accelerator.backward(loss)
         optimizer.step()
@@ -164,6 +199,8 @@ def train_epoch(
         train_total_losses["loss"] += loss.item() * curr_batch_size
         train_total_losses["loss_predict"] += losses.predict.item() * curr_batch_size
         train_total_losses["loss_velocity"] += losses.velocity.item() * curr_batch_size
+        if losses.vertex is not None:
+            train_total_losses["loss_vertex"] += losses.vertex.item() * curr_batch_size
 
         train_total_num += curr_batch_size
 
@@ -171,6 +208,7 @@ def train_epoch(
         total=train_total_losses["loss"] / train_total_num,
         predict=train_total_losses["loss_predict"] / train_total_num,
         velocity=train_total_losses["loss_velocity"] / train_total_num,
+        vertex=train_total_losses["loss_vertex"] / train_total_num,
     )
 
     return train_avg_losses
@@ -181,6 +219,7 @@ def validate_epoch(
     val_dataloader: DataLoader,
     accelerator: Accelerator,
     weight_vel: float,
+    weight_vertex: float,
     prediction_type: str = "epsilon",
     num_repeat: int = 1,
 ) -> LossEpochOutput:
@@ -196,6 +235,8 @@ def validate_epoch(
         Accelerator object
     weight_vel: float
         Weight for the velocity loss
+    weight_vertex: float
+        Weight for the vertex loss
     prediction_type: str
         Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
     num_repeat : int, optional
@@ -214,6 +255,7 @@ def validate_epoch(
         "loss": 0,
         "loss_predict": 0,
         "loss_velocity": 0,
+        "loss_vertex": 0,
     }
     val_total_num = 0
     with torch.no_grad():
@@ -222,7 +264,9 @@ def validate_epoch(
                 curr_batch_size = len(data.waveform)
                 losses = random_noise_loss(said_model, data, device, prediction_type)
 
-                loss = losses.predict + 1 * losses.velocity
+                loss = losses.predict + weight_vel * losses.velocity
+                if losses.vertex is not None:
+                    loss += weight_vertex * losses.vertex
 
                 val_total_losses["loss"] += loss.item() * curr_batch_size
                 val_total_losses["loss_predict"] += (
@@ -231,6 +275,10 @@ def validate_epoch(
                 val_total_losses["loss_velocity"] += (
                     losses.velocity.item() * curr_batch_size
                 )
+                if losses.vertex is not None:
+                    val_total_losses["loss_vertex"] += (
+                        losses.vertex.item() * curr_batch_size
+                    )
 
                 val_total_num += curr_batch_size
 
@@ -238,6 +286,7 @@ def validate_epoch(
         total=val_total_losses["loss"] / val_total_num,
         predict=val_total_losses["loss_predict"] / val_total_num,
         velocity=val_total_losses["loss_velocity"] / val_total_num,
+        vertex=val_total_losses["loss_vertex"] / val_total_num,
     )
 
     return val_avg_losses
@@ -260,6 +309,12 @@ def main() -> None:
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
+    )
+    parser.add_argument(
+        "--blendshape_deltas_path",
+        type=str,
+        default="../VOCA_ARKit/blendshape_deltas.pickle",
+        help="Path of the blendshape deltas",
     )
     parser.add_argument(
         "--output_dir",
@@ -301,6 +356,12 @@ def main() -> None:
         help="Weight for the velocity loss",
     )
     parser.add_argument(
+        "--weight_vertex",
+        type=float,
+        default=0.02,
+        help="Weight for the vertex loss",
+    )
+    parser.add_argument(
         "--ema",
         type=bool,
         default=True,
@@ -325,6 +386,9 @@ def main() -> None:
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
+    blendshape_deltas_path = args.blendshape_deltas_path
+    if blendshape_deltas_path == "":
+        blendshape_deltas_path = None
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
@@ -334,6 +398,7 @@ def main() -> None:
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
     weight_vel = args.weight_vel
+    weight_vertex = args.weight_vertex
     ema = args.ema
     ema_decay = args.ema_decay
     val_period = args.val_period
@@ -354,7 +419,7 @@ def main() -> None:
     train_dataset = VOCARKitTrainDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=None,
+        blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=said_model.sampling_rate,
         window_size=window_size,
         uncond_prob=uncond_prob,
@@ -362,7 +427,7 @@ def main() -> None:
     val_dataset = VOCARKitValDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
-        blendshape_deltas_path=None,
+        blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )
@@ -418,6 +483,7 @@ def main() -> None:
             optimizer=optimizer,
             accelerator=accelerator,
             weight_vel=weight_vel,
+            weight_vertex=weight_vertex,
             prediction_type=prediction_type,
             ema_model=ema_model,
         )
@@ -427,6 +493,7 @@ def main() -> None:
             "Train/Total Loss": train_avg_losses.total,
             "Train/Predict Loss": train_avg_losses.predict,
             "Train/Velocity Loss": train_avg_losses.velocity,
+            "Train/Vertex Loss": train_avg_losses.vertex,
         }
 
         accelerator.wait_for_everyone()
@@ -442,6 +509,7 @@ def main() -> None:
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
                 weight_vel=weight_vel,
+                weight_vertex=weight_vertex,
                 prediction_type=prediction_type,
                 num_repeat=val_repeat,
             )
@@ -449,6 +517,7 @@ def main() -> None:
             logs["Validation/Total Loss"] = val_avg_losses.total
             logs["Validation/Predict Loss"] = val_avg_losses.predict
             logs["Validation/Velocity Loss"] = val_avg_losses.velocity
+            logs["Validation/Vertex Loss"] = val_avg_losses.vertex
 
         # Print logs
         if accelerator.sync_gradients:
