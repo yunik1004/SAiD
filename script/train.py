@@ -78,7 +78,11 @@ def random_noise_loss(
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
     audio_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
-    audio_embedding_cond = audio_embedding * cond.view(-1, 1, 1)
+    cond_mask = audio_embedding * cond.view(-1, 1, 1)
+    uncond_embedding = said_model.null_cond_emb.repeat(curr_batch_size, window_size, 1)
+    audio_embedding_cond = (
+        audio_embedding * cond_mask + uncond_embedding * torch.logical_not(cond_mask)
+    )
 
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
     noisy_latents = noise_dict.noisy_sample
@@ -346,7 +350,7 @@ def main() -> None:
     parser.add_argument(
         "--uncond_prob",
         type=float,
-        default=0.25,
+        default=0.1,
         help="Unconditional probability of waveform (for classifier-free guidance)",
     )
     parser.add_argument(
@@ -451,7 +455,7 @@ def main() -> None:
         collate_fn=VOCARKitValDataset.collate_fn,
     )
 
-    # Initialize the optimzier - freeze audio encoder, VAE
+    # Initialize the optimzier - freeze audio encoder
     for p in said_model.audio_encoder.parameters():
         p.requires_grad = False
 

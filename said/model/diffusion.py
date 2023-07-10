@@ -4,8 +4,7 @@ from abc import ABC
 from dataclasses import dataclass
 import inspect
 from typing import List, Optional, Union
-from diffusers import DDIMScheduler
-from diffusers.schedulers.scheduling_ddim import betas_for_alpha_bar
+from diffusers import DDIMScheduler, SchedulerMixin
 import numpy as np
 import torch
 from torch import nn
@@ -50,6 +49,7 @@ class SAID(ABC, nn.Module):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
+        noise_scheduler: SchedulerMixin = DDIMScheduler,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
@@ -63,6 +63,8 @@ class SAID(ABC, nn.Module):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
+        noise_scheduler: SchedulerMixin
+            Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
         diffusion_steps : int
@@ -89,11 +91,18 @@ class SAID(ABC, nn.Module):
         self.latent_scale = latent_scale
 
         # Noise scheduler
-        self.noise_scheduler = DDIMScheduler(
+        self.noise_scheduler = noise_scheduler(
             num_train_timesteps=diffusion_steps,
             beta_schedule="squaredcos_cap_v2",
             prediction_type=prediction_type,
         )
+
+        """
+        self.null_cond_emb = nn.Parameter(
+            torch.randn(1, 1, self.audio_config.output_hidden_size)
+        )
+        """
+        self.null_cond_emb = torch.randn(1, 1, self.audio_config.output_hidden_size)
 
         """
         # Relieve the clipping
@@ -368,7 +377,10 @@ class SAID(ABC, nn.Module):
                 uncond_waveform_processed, window_size
             )
             """
-            uncond_audio_embedding = torch.zeros_like(audio_embedding)
+            # uncond_audio_embedding = torch.zeros_like(audio_embedding)
+            uncond_audio_embedding = self.null_cond_emb.repeat(
+                batch_size, window_size, 1
+            )
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
         # Prepare extra kwargs for the scheduler step
@@ -446,6 +458,7 @@ class SAID_UNet1D(SAID):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
+        noise_scheduler: SchedulerMixin = DDIMScheduler,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
@@ -459,6 +472,8 @@ class SAID_UNet1D(SAID):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
+        noise_scheduler: SchedulerMixin
+            Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
         diffusion_steps : int

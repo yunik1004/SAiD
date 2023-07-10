@@ -3,6 +3,7 @@
 import argparse
 import math
 import os
+from diffusers import DDIMScheduler
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -108,7 +109,10 @@ def main() -> None:
         torch.manual_seed(seed)
 
     # Load model
-    said_model = SAID_UNet1D(prediction_type=prediction_type)
+    said_model = SAID_UNet1D(
+        noise_scheduler=DDIMScheduler,
+        prediction_type=prediction_type,
+    )
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
     said_model.to(device)
     said_model.eval()
