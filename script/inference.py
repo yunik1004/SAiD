@@ -2,6 +2,7 @@
 """
 import argparse
 import os
+from diffusers import DDIMScheduler
 import torch
 from said.model.diffusion import SAID_UNet1D
 from said.util.audio import fit_audio_unet, load_audio
@@ -130,7 +131,10 @@ def main():
         mask = load_blendshape_coeffs(mask_path).unsqueeze(0).to(device)
 
     # Load model
-    said_model = SAID_UNet1D(prediction_type=prediction_type)
+    said_model = SAID_UNet1D(
+        noise_scheduler=DDIMScheduler,
+        prediction_type=prediction_type,
+    )
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
     said_model.to(device)
     said_model.eval()

@@ -366,7 +366,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         sampling_rate: int,
         window_size: int = 120,
         uncond_prob: float = 0.1,
-        zero_prob: float = 0.003125,
+        zero_prob: float = 0,
         hflip: bool = True,
         delay: bool = True,
         delay_thres: int = 1,
@@ -392,7 +392,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
         zero_prob : float, optional
-            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
+            Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         delay : bool, optional
@@ -503,7 +503,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         blendshape_deltas_path: Optional[str],
         sampling_rate: int,
         uncond_prob: float = 0.1,
-        zero_prob: float = 0.003125,
+        zero_prob: float = 0,
         hflip: bool = True,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
         classes_mirror_pair: List[
@@ -525,7 +525,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
         zero_prob : float, optional
-            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
+            Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         classes : List[str], optional
@@ -810,7 +810,7 @@ class VOCARKitVAEDataset(VOCARKitDataset):
         self,
         blendshape_coeffs_dir: str,
         window_size: int = 120,
-        zero_prob: float = 0.003125,
+        zero_prob: float = 0,
         hflip: bool = True,
         dataset_type: str = "train",
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
@@ -827,7 +827,7 @@ class VOCARKitVAEDataset(VOCARKitDataset):
         window_size : int, optional
             Window size of the blendshape coefficients, by default 120
         zero_prob : float, optional
-            Zero-out probability of waveform and blendshape coefficients, by default 0.003125
+            Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
             Whether do the horizontal flip, by default True
         dataset_type: str, optional
