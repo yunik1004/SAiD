@@ -3,7 +3,7 @@
 from abc import ABC
 from dataclasses import dataclass
 import inspect
-from typing import List, Optional, Union
+from typing import List, Optional, Type, Union
 from diffusers import DDIMScheduler, SchedulerMixin
 import numpy as np
 import torch
@@ -49,7 +49,7 @@ class SAID(ABC, nn.Module):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: SchedulerMixin = DDIMScheduler,
+        noise_scheduler: Type[SchedulerMixin] = DDIMScheduler,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
@@ -63,7 +63,7 @@ class SAID(ABC, nn.Module):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
-        noise_scheduler: SchedulerMixin
+        noise_scheduler: Type[SchedulerMixin]
             Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
@@ -455,7 +455,7 @@ class SAID_UNet1D(SAID):
         self,
         audio_config: Optional[Wav2Vec2Config] = None,
         audio_processor: Optional[Wav2Vec2Processor] = None,
-        noise_scheduler: SchedulerMixin = DDIMScheduler,
+        noise_scheduler: Type[SchedulerMixin] = DDIMScheduler,
         in_channels: int = 32,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
@@ -469,7 +469,7 @@ class SAID_UNet1D(SAID):
             Wav2Vec2Config object, by default None
         audio_processor : Optional[Wav2Vec2Processor], optional
             Wav2Vec2Processor object, by default None
-        noise_scheduler: SchedulerMixin
+        noise_scheduler: Type[SchedulerMixin]
             Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
