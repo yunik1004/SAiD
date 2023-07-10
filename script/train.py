@@ -324,6 +324,12 @@ def main() -> None:
         help="Path of the blendshape residuals",
     )
     parser.add_argument(
+        "--landmarks_path",
+        type=str,
+        default=(default_data_dir / "FLAME_head_landmarks.txt").resolve(),
+        help="Path of the landmarks data",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="../output",
@@ -396,6 +402,9 @@ def main() -> None:
     blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
+    landmarks_path = args.landmarks_path
+    if landmarks_path == "":
+        landmarks_path = None
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
@@ -427,6 +436,7 @@ def main() -> None:
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=blendshape_deltas_path,
+        landmarks_path=landmarks_path,
         sampling_rate=said_model.sampling_rate,
         window_size=window_size,
         uncond_prob=uncond_prob,
@@ -435,6 +445,7 @@ def main() -> None:
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=blendshape_deltas_path,
+        landmarks_path=landmarks_path,
         sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
     )
