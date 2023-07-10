@@ -363,6 +363,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         audio_dir: str,
         blendshape_coeffs_dir: str,
         blendshape_deltas_path: Optional[str],
+        landmarks_path: Optional[str],
         sampling_rate: int,
         window_size: int = 120,
         uncond_prob: float = 0.1,
@@ -385,6 +386,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Directory of the blendshape coefficients
         blendshape_deltas_path : Optional[str]
             Path of the blendshape deltas
+        landmarks_path: Optional[str]
+            Path of the landmarks data
         sampling_rate : int
             Sampling rate of the audio
         window_size : int, optional
@@ -433,6 +436,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             else None
         )
 
+        self.landmarks = parse_list(landmarks_path, int) if landmarks_path else None
+
         self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
 
     def __len__(self) -> int:
@@ -449,6 +454,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             if self.blendshape_deltas
             else None
         )
+        if self.landmarks:
+            blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         num_blendshape = blendshape_coeffs.shape[1]
         blendshape_len = blendshape_coeffs.shape[0]
@@ -501,6 +508,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         audio_dir: str,
         blendshape_coeffs_dir: str,
         blendshape_deltas_path: Optional[str],
+        landmarks_path: Optional[str],
         sampling_rate: int,
         uncond_prob: float = 0.1,
         zero_prob: float = 0,
@@ -509,7 +517,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         classes_mirror_pair: List[
             Tuple[str, str]
         ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
-    ):
+    ) -> None:
         """Constructor of the class
 
         Parameters
@@ -520,6 +528,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             Directory of the blendshape coefficients
         blendshape_deltas_path : Optional[str]
             Path of the blendshape deltas
+        landmarks_path: Optional[str]
+            Path of the landmarks data
         sampling_rate : int
             Sampling rate of the audio
         uncond_prob : float, optional
@@ -559,6 +569,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             else None
         )
 
+        self.landmarks = parse_list(landmarks_path, int) if landmarks_path else None
+
     def __len__(self) -> int:
         return len(self.data_paths)
 
@@ -573,6 +585,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             if self.blendshape_deltas
             else None
         )
+        if self.landmarks:
+            blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         blendshape_len = blendshape_coeffs.shape[0]
         waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
@@ -608,7 +622,20 @@ class VOCARKitTestDataset(VOCARKitDataset):
         blendshape_coeffs_dir: Optional[str],
         blendshape_deltas_path: Optional[str],
         sampling_rate: int,
-    ):
+    ) -> None:
+        """Constructor of the class
+
+        Parameters
+        ----------
+        audio_dir : str
+            Directory of the audio data
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        blendshape_deltas_path : Optional[str]
+            Path of the blendshape deltas
+        sampling_rate : int
+            Sampling rate of the audio
+        """
         self.sampling_rate = sampling_rate
 
         self.data_paths = self.get_data_paths(
@@ -669,6 +696,21 @@ class VOCARKitEvalDataset(VOCARKitDataset):
         sampling_rate: int,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
     ):
+        """Constructor of the class
+
+        Parameters
+        ----------
+        audio_dir : str
+            Directory of the audio data
+        blendshape_coeffs_dir : str
+            Directory of the blendshape coefficients
+        blendshape_deltas_path : Optional[str]
+            Path of the blendshape deltas
+        sampling_rate : int
+            Sampling rate of the audio
+        classes : List[str], optional
+            List of blendshape names, by default default_blendshape_classes
+        """
         self.sampling_rate = sampling_rate
         self.classes = classes
 
