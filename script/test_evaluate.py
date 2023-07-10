@@ -420,12 +420,14 @@ def main() -> None:
         default="../output/20000.pth",
         help="Path of the weights of VAE",
     )
+    """
     parser.add_argument(
-        "--blendshape_deltas_path",
+        "--blendshape_residuals_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_deltas.pickle",
-        help="Path of the blendshape deltas",
+        default="../VOCA_ARKit/blendshape_residuals.pickle",
+        help="Path of the blendshape residuals",
     )
+    """
     parser.add_argument(
         "--sampling_rate",
         type=int,
@@ -474,7 +476,7 @@ def main() -> None:
     coeffs_dir = args.coeffs_dir
     coeffs_real_dir = args.coeffs_real_dir
     vae_weights_path = args.vae_weights_path
-    blendshape_deltas_path = None  # args.blendshape_deltas_path
+    blendshape_deltas_path = None  # args.blendshape_residuals_path
     sampling_rate = args.sampling_rate
     fps = args.fps
     bc_threshold = args.bc_threshold
