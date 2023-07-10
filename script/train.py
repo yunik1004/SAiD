@@ -3,6 +3,7 @@
 import argparse
 from dataclasses import dataclass
 import os
+import pathlib
 from typing import Optional
 from accelerate import Accelerator
 from diffusers.training_utils import EMAModel
@@ -298,6 +299,8 @@ def validate_epoch(
 
 def main() -> None:
     """Main function"""
+    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+
     # Arguments
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
@@ -315,10 +318,10 @@ def main() -> None:
         help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
-        "--blendshape_deltas_path",
+        "--blendshape_residuals_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_deltas.pickle",
-        help="Path of the blendshape deltas",
+        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
+        help="Path of the blendshape residuals",
     )
     parser.add_argument(
         "--output_dir",
@@ -390,7 +393,7 @@ def main() -> None:
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
-    blendshape_deltas_path = args.blendshape_deltas_path
+    blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
 

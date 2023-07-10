@@ -97,12 +97,9 @@ class SAID(ABC, nn.Module):
             prediction_type=prediction_type,
         )
 
-        """
         self.null_cond_emb = nn.Parameter(
             torch.randn(1, 1, self.audio_config.output_hidden_size)
         )
-        """
-        self.null_cond_emb = torch.randn(1, 1, self.audio_config.output_hidden_size)
 
         """
         # Relieve the clipping

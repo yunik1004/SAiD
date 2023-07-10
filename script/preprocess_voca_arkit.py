@@ -2,12 +2,15 @@
 """
 import argparse
 import os
+import pathlib
 from said.util.mesh import save_mesh
 from dataset.dataset_voca import VOCARKitDataset
 
 
 def main():
     """Main function"""
+    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+
     # Arguments
     parser = argparse.ArgumentParser(
         description="Preprocess the VOCA dataset and generate ARKit blendshapes"
@@ -19,10 +22,10 @@ def main():
         help="Directory of the template meshes",
     )
     parser.add_argument(
-        "--blendshape_deltas_path",
+        "--blendshape_residuals_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_deltas.pickle",
-        help="Path of the blendshape deltas",
+        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
+        help="Path of the blendshape residuals",
     )
     parser.add_argument(
         "--blendshapes_out_dir",
@@ -33,7 +36,7 @@ def main():
     args = parser.parse_args()
 
     templates_dir = args.templates_dir
-    blendshape_deltas_path = args.blendshape_deltas_path
+    blendshape_deltas_path = args.blendshape_residuals_path
     out_dir = args.blendshapes_out_dir
 
     templates_head_dir = os.path.join(out_dir, "templates_head")
