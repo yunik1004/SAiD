@@ -440,6 +440,7 @@ def main() -> None:
         sampling_rate=said_model.sampling_rate,
         window_size=window_size,
         uncond_prob=uncond_prob,
+        preload=True,
     )
     val_dataset = VOCARKitValDataset(
         audio_dir=audio_dir,
@@ -448,6 +449,7 @@ def main() -> None:
         landmarks_path=landmarks_path,
         sampling_rate=said_model.sampling_rate,
         uncond_prob=uncond_prob,
+        preload=True,
     )
 
     train_sampler = RandomSampler(

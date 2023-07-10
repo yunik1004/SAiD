@@ -375,6 +375,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         classes_mirror_pair: List[
             Tuple[str, str]
         ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+        preload: bool = True,
     ) -> None:
         """Constructor of the class
 
@@ -406,6 +407,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             List of blendshape names, by default default_blendshape_classes
         classes_mirror_pair : List[Tuple[str, str]], optional
             List of blendshape pairs which are mirror to each other, by default default_blendshape_classes_mirror_pair
+        preload: bool, optional
+            Load the data in the constructor, by default True
         """
         self.sampling_rate = sampling_rate
         self.window_size = window_size
@@ -440,22 +443,56 @@ class VOCARKitTrainDataset(VOCARKitDataset):
 
         self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
 
+        self.preload = preload
+        self.data_preload = []
+        self.blendshape_deltas_preload = {}
+        if self.preload:
+            for data in self.data_paths:
+                waveform = load_audio(data.audio, self.sampling_rate)
+                blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+                self.data_preload.append((waveform, blendshape_coeffs))
+
+                if data.person_id not in self.blendshape_deltas_preload:
+                    blendshape_delta = (
+                        torch.FloatTensor(
+                            np.stack(
+                                list(self.blendshape_deltas[data.person_id].values()),
+                                axis=0,
+                            )
+                        )
+                        if self.blendshape_deltas
+                        else None
+                    )
+                    if self.landmarks and self.blendshape_deltas:
+                        blendshape_delta = blendshape_delta[:, self.landmarks, :]
+
+                    self.blendshape_deltas_preload[data.person_id] = blendshape_delta
+
     def __len__(self) -> int:
         return len(self.data_paths)
 
     def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data.audio, self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
-        blendshape_delta = (
-            torch.FloatTensor(
-                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+
+        if self.preload:
+            data_pre = self.data_preload[index]
+            waveform = data_pre[0]
+            blendshape_coeffs = data_pre[1]
+            blendshape_delta = self.blendshape_deltas_preload[data.person_id]
+        else:
+            waveform = load_audio(data.audio, self.sampling_rate)
+            blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+            blendshape_delta = (
+                torch.FloatTensor(
+                    np.stack(
+                        list(self.blendshape_deltas[data.person_id].values()), axis=0
+                    )
+                )
+                if self.blendshape_deltas
+                else None
             )
-            if self.blendshape_deltas
-            else None
-        )
-        if self.landmarks and self.blendshape_deltas:
-            blendshape_delta = blendshape_delta[:, self.landmarks, :]
+            if self.landmarks and self.blendshape_deltas:
+                blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         num_blendshape = blendshape_coeffs.shape[1]
         blendshape_len = blendshape_coeffs.shape[0]
@@ -517,6 +554,7 @@ class VOCARKitValDataset(VOCARKitDataset):
         classes_mirror_pair: List[
             Tuple[str, str]
         ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+        preload: bool = True,
     ) -> None:
         """Constructor of the class
 
@@ -542,6 +580,8 @@ class VOCARKitValDataset(VOCARKitDataset):
             List of blendshape names, by default default_blendshape_classes
         classes_mirror_pair : List[Tuple[str, str]], optional
             List of blendshape pairs which are mirror to each other, by default default_blendshape_classes_mirror_pair
+        preload: bool, optional
+            Load the data in the constructor, by default True
         """
         self.sampling_rate = sampling_rate
         self.uncond_prob = uncond_prob
@@ -571,22 +611,56 @@ class VOCARKitValDataset(VOCARKitDataset):
 
         self.landmarks = parse_list(landmarks_path, int) if landmarks_path else None
 
+        self.preload = preload
+        self.data_preload = []
+        self.blendshape_deltas_preload = {}
+        if self.preload:
+            for data in self.data_paths:
+                waveform = load_audio(data.audio, self.sampling_rate)
+                blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+                self.data_preload.append((waveform, blendshape_coeffs))
+
+                if data.person_id not in self.blendshape_deltas_preload:
+                    blendshape_delta = (
+                        torch.FloatTensor(
+                            np.stack(
+                                list(self.blendshape_deltas[data.person_id].values()),
+                                axis=0,
+                            )
+                        )
+                        if self.blendshape_deltas
+                        else None
+                    )
+                    if self.landmarks and self.blendshape_deltas:
+                        blendshape_delta = blendshape_delta[:, self.landmarks, :]
+
+                    self.blendshape_deltas_preload[data.person_id] = blendshape_delta
+
     def __len__(self) -> int:
         return len(self.data_paths)
 
     def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data.audio, self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
-        blendshape_delta = (
-            torch.FloatTensor(
-                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+
+        if self.preload:
+            data_pre = self.data_preload[index]
+            waveform = data_pre[0]
+            blendshape_coeffs = data_pre[1]
+            blendshape_delta = self.blendshape_deltas_preload[data.person_id]
+        else:
+            waveform = load_audio(data.audio, self.sampling_rate)
+            blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+            blendshape_delta = (
+                torch.FloatTensor(
+                    np.stack(
+                        list(self.blendshape_deltas[data.person_id].values()), axis=0
+                    )
+                )
+                if self.blendshape_deltas
+                else None
             )
-            if self.blendshape_deltas
-            else None
-        )
-        if self.landmarks and self.blendshape_deltas:
-            blendshape_delta = blendshape_delta[:, self.landmarks, :]
+            if self.landmarks and self.blendshape_deltas:
+                blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         blendshape_len = blendshape_coeffs.shape[0]
         waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps
@@ -622,6 +696,7 @@ class VOCARKitTestDataset(VOCARKitDataset):
         blendshape_coeffs_dir: Optional[str],
         blendshape_deltas_path: Optional[str],
         sampling_rate: int,
+        preload: bool = True,
     ) -> None:
         """Constructor of the class
 
@@ -635,6 +710,8 @@ class VOCARKitTestDataset(VOCARKitDataset):
             Path of the blendshape deltas
         sampling_rate : int
             Sampling rate of the audio
+        preload: bool, optional
+            Load the data in the constructor, by default True
         """
         self.sampling_rate = sampling_rate
 
@@ -648,24 +725,56 @@ class VOCARKitTestDataset(VOCARKitDataset):
             else None
         )
 
+        self.preload = preload
+        self.data_preload = []
+        self.blendshape_deltas_preload = {}
+        if self.preload:
+            for data in self.data_paths:
+                waveform = load_audio(data.audio, self.sampling_rate)
+                blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+                self.data_preload.append((waveform, blendshape_coeffs))
+
+                if data.person_id not in self.blendshape_deltas_preload:
+                    blendshape_delta = (
+                        torch.FloatTensor(
+                            np.stack(
+                                list(self.blendshape_deltas[data.person_id].values()),
+                                axis=0,
+                            )
+                        )
+                        if self.blendshape_deltas
+                        else None
+                    )
+
+                    self.blendshape_deltas_preload[data.person_id] = blendshape_delta
+
     def __len__(self) -> int:
         return len(self.data_paths)
 
     def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data.audio, self.sampling_rate)
-        blendshape_coeffs = (
-            load_blendshape_coeffs(data.blendshape_coeffs)
-            if data.blendshape_coeffs
-            else None
-        )
-        blendshape_delta = (
-            torch.FloatTensor(
-                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+
+        if self.preload:
+            data_pre = self.data_preload[index]
+            waveform = data_pre[0]
+            blendshape_coeffs = data_pre[1]
+            blendshape_delta = self.blendshape_deltas_preload[data.person_id]
+        else:
+            waveform = load_audio(data.audio, self.sampling_rate)
+            blendshape_coeffs = (
+                load_blendshape_coeffs(data.blendshape_coeffs)
+                if data.blendshape_coeffs
+                else None
             )
-            if self.blendshape_deltas
-            else None
-        )
+            blendshape_delta = (
+                torch.FloatTensor(
+                    np.stack(
+                        list(self.blendshape_deltas[data.person_id].values()), axis=0
+                    )
+                )
+                if self.blendshape_deltas
+                else None
+            )
 
         waveform_window = waveform
         if blendshape_coeffs is not None:
@@ -695,6 +804,7 @@ class VOCARKitEvalDataset(VOCARKitDataset):
         blendshape_deltas_path: Optional[str],
         sampling_rate: int,
         classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        preload: bool = True,
     ):
         """Constructor of the class
 
@@ -710,6 +820,8 @@ class VOCARKitEvalDataset(VOCARKitDataset):
             Sampling rate of the audio
         classes : List[str], optional
             List of blendshape names, by default default_blendshape_classes
+        preload: bool, optional
+            Load the data in the constructor, by default True
         """
         self.sampling_rate = sampling_rate
         self.classes = classes
@@ -723,6 +835,29 @@ class VOCARKitEvalDataset(VOCARKitDataset):
             if blendshape_deltas_path
             else None
         )
+
+        self.preload = preload
+        self.data_preload = []
+        self.blendshape_deltas_preload = {}
+        if self.preload:
+            for data in self.data_paths:
+                waveform = load_audio(data.audio, self.sampling_rate)
+                blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+                self.data_preload.append((waveform, blendshape_coeffs))
+
+                if data.person_id not in self.blendshape_deltas_preload:
+                    blendshape_delta = (
+                        torch.FloatTensor(
+                            np.stack(
+                                list(self.blendshape_deltas[data.person_id].values()),
+                                axis=0,
+                            )
+                        )
+                        if self.blendshape_deltas
+                        else None
+                    )
+
+                    self.blendshape_deltas_preload[data.person_id] = blendshape_delta
 
     def __len__(self) -> int:
         return len(self.data_paths)
