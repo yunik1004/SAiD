@@ -454,7 +454,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             if self.blendshape_deltas
             else None
         )
-        if self.landmarks:
+        if self.landmarks and blendshape_delta:
             blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         num_blendshape = blendshape_coeffs.shape[1]
@@ -585,7 +585,7 @@ class VOCARKitValDataset(VOCARKitDataset):
             if self.blendshape_deltas
             else None
         )
-        if self.landmarks:
+        if self.landmarks and blendshape_delta:
             blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
         blendshape_len = blendshape_coeffs.shape[0]
