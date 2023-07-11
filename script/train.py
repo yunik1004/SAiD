@@ -342,10 +342,10 @@ def main() -> None:
         help="Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'",
     )
     parser.add_argument(
-        "--window_size",
+        "--window_size_min",
         type=int,
         default=120,
-        help="Window size of the blendshape coefficients sequence at training",
+        help="Minimum window size of the blendshape coefficients sequence at training",
     )
     parser.add_argument(
         "--batch_size", type=int, default=8, help="Batch size at training"
@@ -408,7 +408,7 @@ def main() -> None:
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
-    window_size = args.window_size
+    window_size_min = args.window_size_min
     batch_size = args.batch_size
     epochs = args.epochs
     learning_rate = args.learning_rate
@@ -438,7 +438,7 @@ def main() -> None:
         blendshape_deltas_path=blendshape_deltas_path,
         landmarks_path=landmarks_path,
         sampling_rate=said_model.sampling_rate,
-        window_size=window_size,
+        window_size_min=window_size_min,
         uncond_prob=uncond_prob,
         preload=True,
     )
@@ -462,7 +462,7 @@ def main() -> None:
         train_dataset,
         batch_size=batch_size,
         sampler=train_sampler,
-        collate_fn=VOCARKitTrainDataset.collate_fn,
+        collate_fn=train_dataset.collate_fn,
     )
     val_dataloader = DataLoader(
         val_dataset,

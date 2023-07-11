@@ -365,7 +365,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         blendshape_deltas_path: Optional[str],
         landmarks_path: Optional[str],
         sampling_rate: int,
-        window_size: int = 120,
+        window_size_min: int = 120,
         uncond_prob: float = 0.1,
         zero_prob: float = 0,
         hflip: bool = True,
@@ -391,8 +391,8 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Path of the landmarks data
         sampling_rate : int
             Sampling rate of the audio
-        window_size : int, optional
-            Window size of the blendshape coefficients, by default 120
+        window_size_min : int, optional
+            Minimum window size of the blendshape coefficients, by default 120
         uncond_prob : float, optional
             Unconditional probability of waveform (for classifier-free guidance), by default 0.1
         zero_prob : float, optional
@@ -411,7 +411,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             Load the data in the constructor, by default True
         """
         self.sampling_rate = sampling_rate
-        self.window_size = window_size
+        self.window_size_min = window_size_min
         self.uncond_prob = uncond_prob
         self.zero_prob = zero_prob
 
@@ -440,8 +440,6 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         )
 
         self.landmarks = parse_list(landmarks_path, int) if landmarks_path else None
-
-        self.waveform_window_len = (self.sampling_rate * self.window_size) // self.fps
 
         self.preload = preload
         self.data_preload = []
@@ -494,46 +492,100 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             if self.landmarks and self.blendshape_deltas:
                 blendshape_delta = blendshape_delta[:, self.landmarks, :]
 
-        num_blendshape = blendshape_coeffs.shape[1]
-        blendshape_len = blendshape_coeffs.shape[0]
-
-        # Random-select the window
-        bdx = random.randint(0, max(0, blendshape_len - self.window_size))
-        wdx = (self.sampling_rate * bdx) // self.fps
-        if self.delay and random.uniform(0, 1) < 0.5:
-            wdelays = list(range(max(wdx - self.delay_thres, 0), wdx)) + list(
-                range(wdx + 1, wdx + self.delay_thres + 1)
-            )
-            wdx = random.choice(wdelays)
-
-        waveform_tmp = waveform[wdx : wdx + self.waveform_window_len]
-        coeffs_tmp = blendshape_coeffs[bdx : bdx + self.window_size, :]
-
-        waveform_window = torch.zeros(self.waveform_window_len)
-        coeffs_window = torch.zeros((self.window_size, num_blendshape))
-
-        waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
-        coeffs_window[: coeffs_tmp.shape[0], :] = coeffs_tmp[:]
-
-        # Augmentation - hflip
-        if self.hflip and random.uniform(0, 1) < 0.5:
-            coeffs_window[:, self.mirror_indices] = coeffs_window[
-                :, self.mirror_indices_flip
-            ]
-
         # Random uncondition for classifier-free guidance
         cond = random.uniform(0, 1) > self.uncond_prob
 
+        # Augmentation - hflip
+        if self.hflip and random.uniform(0, 1) < 0.5:
+            blendshape_coeffs[:, self.mirror_indices] = blendshape_coeffs[
+                :, self.mirror_indices_flip
+            ]
+
         # Random zero-out
         if random.uniform(0, 1) < self.zero_prob:
-            waveform_window = torch.zeros_like(waveform_window)
-            coeffs_window = torch.zeros_like(coeffs_window)
+            waveform = torch.zeros_like(waveform)
+            blendshape_coeffs = torch.zeros_like(blendshape_coeffs)
 
         return DataItem(
-            waveform=waveform_window,
-            blendshape_coeffs=coeffs_window,
+            waveform=waveform,
+            blendshape_coeffs=blendshape_coeffs,
             cond=cond,
             blendshape_delta=blendshape_delta,
+        )
+
+    def collate_fn(self, examples: List[DataItem]) -> DataBatch:
+        """Collate function which is used for dataloader
+
+        Parameters
+        ----------
+        examples : List[DataItem]
+            List of the outputs of __getitem__
+
+        Returns
+        -------
+        DataBatch
+            DataBatch object
+        """
+        conds = torch.BoolTensor([item.cond for item in examples])
+        blendshape_deltas = None
+        if len(examples) > 0 and examples[0].blendshape_delta is not None:
+            blendshape_deltas = torch.stack(
+                [item.blendshape_delta for item in examples]
+            )
+
+        person_ids = None
+        if len(examples) > 0 and examples[0].person_id is not None:
+            person_ids = [item.person_id for item in examples]
+
+        sentence_ids = None
+        if len(examples) > 0 and examples[0].sentence_id is not None:
+            sentence_ids = [item.sentence_id for item in examples]
+
+        waveforms = [item.waveform for item in examples]
+        blendshape_coeffss = [item.blendshape_coeffs for item in examples]
+
+        bc_min_len = min([coeffs.shape[0] for coeffs in blendshape_coeffss])
+        window_size = random.randrange(self.window_size_min, bc_min_len + 1)
+        waveform_window_len = (self.sampling_rate * window_size) // self.fps
+        batch_size = len(waveforms)
+
+        waveforms_windows = []
+        coeffs_windows = []
+        # Random-select the window
+        for idx in range(batch_size):
+            waveform = waveforms[idx]
+            blendshape_coeffs = blendshape_coeffss[idx]
+
+            blendshape_len = blendshape_coeffs.shape[0]
+            num_blendshape = blendshape_coeffs.shape[1]
+
+            bdx = random.randint(0, max(0, blendshape_len - window_size))
+            wdx = (self.sampling_rate * bdx) // self.fps
+            if self.delay and random.uniform(0, 1) < 0.5:
+                wdelays = list(range(max(wdx - self.delay_thres, 0), wdx)) + list(
+                    range(wdx + 1, wdx + self.delay_thres + 1)
+                )
+                wdx = random.choice(wdelays)
+
+            coeffs_window = blendshape_coeffs[bdx : bdx + window_size, :]
+
+            waveform_tmp = waveform[wdx : wdx + waveform_window_len]
+            waveform_window = torch.full((waveform_window_len,), waveform_tmp[-1])
+            waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
+
+            waveforms_windows.append(waveform_window)
+            coeffs_windows.append(coeffs_window)
+
+        coeffs_final = torch.stack(coeffs_windows)
+        waveforms_final = [np.array(waveform) for waveform in waveforms_windows]
+
+        return DataBatch(
+            waveform=waveforms_final,
+            blendshape_coeffs=coeffs_final,
+            cond=conds,
+            blendshape_delta=blendshape_deltas,
+            person_ids=person_ids,
+            sentence_ids=sentence_ids,
         )
 
 
