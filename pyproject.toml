@@ -31,15 +31,20 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
+train = [
     "accelerate==0.16.0",
     "tensorboard",
+]
+render = [
+    "moviepy",
+    "opencv-python",
+    "pyrender",
 ]
 style = [
     "black",
 ]
 dev = [
-    "said[style, test]",
+    "said[render, style, train]",
 ]
 
 [tool.setuptools]

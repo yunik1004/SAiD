@@ -14,6 +14,12 @@ If you are developing this repo or want to run the scripts, run instead:
 pip install -e .[dev]
 ```
 
+If there is an error related to pyrender, install additional packages as follows:
+
+```bash
+apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosmesa6-dev libgl1-mesa-glx
+```
+
 ## Script
 
 The directory [script](script) contains the useful scripts such as preprocessing, training, testing, and evaluation.
