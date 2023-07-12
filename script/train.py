@@ -78,11 +78,12 @@ def random_noise_loss(
     waveform_processed = said_model.process_audio(waveform).to(device)
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
-    audio_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
-    cond_mask = audio_embedding * cond.view(-1, 1, 1)
+    cond_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
     uncond_embedding = said_model.null_cond_emb.repeat(curr_batch_size, window_size, 1)
-    audio_embedding_cond = (
-        audio_embedding * cond_mask + uncond_embedding * torch.logical_not(cond_mask)
+    cond_mask = cond.view(-1, 1, 1)
+
+    audio_embedding = cond_embedding * cond_mask + uncond_embedding * torch.logical_not(
+        cond_mask
     )
 
     noise_dict = said_model.add_noise(coeff_latents, random_timesteps)
@@ -90,7 +91,7 @@ def random_noise_loss(
     noise = noise_dict.noise
     velocity = noise_dict.velocity
 
-    pred = said_model(noisy_latents, random_timesteps, audio_embedding_cond)
+    pred = said_model(noisy_latents, random_timesteps, audio_embedding)
 
     # Set answer corresponding to prediction_type
     answer = None
