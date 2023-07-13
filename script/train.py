@@ -79,7 +79,9 @@ def random_noise_loss(
     random_timesteps = said_model.get_random_timesteps(curr_batch_size).to(device)
 
     cond_embedding = said_model.get_audio_embedding(waveform_processed, window_size)
-    uncond_embedding = said_model.null_cond_emb.repeat(curr_batch_size, window_size, 1)
+    uncond_embedding = said_model.null_cond_emb.repeat(
+        curr_batch_size, cond_embedding.shape[1], 1
+    )
     cond_mask = cond.view(-1, 1, 1)
 
     audio_embedding = cond_embedding * cond_mask + uncond_embedding * torch.logical_not(
