@@ -376,7 +376,7 @@ class SAID(ABC, nn.Module):
             """
             # uncond_audio_embedding = torch.zeros_like(audio_embedding)
             uncond_audio_embedding = self.null_cond_emb.repeat(
-                batch_size, window_size, 1
+                batch_size, audio_embedding.shape[1], 1
             )
             audio_embedding = torch.cat([uncond_audio_embedding, audio_embedding])
 
