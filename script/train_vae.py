@@ -3,11 +3,13 @@
 import argparse
 from dataclasses import dataclass
 import os
+import pathlib
 from accelerate import Accelerator
 import torch
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from said.model.vae import BCVAE
+from said.util.blendshape import load_blendshape_coeffs
 from dataset.dataset_voca import VOCARKitVAEDataset
 
 
@@ -33,7 +35,10 @@ class LossEpochOutput:
 
 
 def elbo_loss(
-    said_vae: BCVAE, data: torch.FloatTensor, device: torch.device
+    said_vae: BCVAE,
+    data: torch.FloatTensor,
+    std: torch.FloatTensor,
+    device: torch.device,
 ) -> LossStepOutput:
     """Compute the ELBO loss
 
@@ -43,6 +48,8 @@ def elbo_loss(
         BCVAE object
     data : torch.FloatTensor
         (Batch_size, sample_seq_len, x_dim), Input data
+    std : torch.FloatTensor
+        (1, x_dim)
     device : torch.device
         GPU device
 
@@ -62,7 +69,13 @@ def elbo_loss(
 
     l1_func = torch.nn.L1Loss(reduction="sum")
 
-    reconst_loss = l1_func(blendshape_coeffs_reconst, blendshape_coeffs) / batch_size
+    reconst_loss = (
+        l1_func(
+            blendshape_coeffs_reconst / std.view(1, 1, -1),
+            blendshape_coeffs / std.view(1, 1, -1),
+        )
+        / batch_size
+    )
     kld_loss = 0.5 * torch.mean(
         torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1, dim=1)
     )
@@ -76,6 +89,7 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
     beta: float,
+    std: torch.FloatTensor,
 ) -> LossEpochOutput:
     """Train the VAE one epoch.
 
@@ -89,8 +103,10 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
-    beta : float, optional
+    beta : float
         Loss weight
+    std : torch.FloatTensor
+        (1, x_dim), Standard deviation of coefficients
 
     Returns
     -------
@@ -98,6 +114,7 @@ def train_epoch(
         Average losses
     """
     device = accelerator.device
+    std = std.to(device)
 
     said_vae.train()
 
@@ -111,7 +128,7 @@ def train_epoch(
         coeffs = data.blendshape_coeffs
         curr_batch_size = coeffs.shape[0]
 
-        losses = elbo_loss(said_vae, coeffs, device)
+        losses = elbo_loss(said_vae, coeffs, std, device)
         reconst_loss = losses.reconst
         reg_loss = losses.regularize
         loss = reconst_loss + beta * reg_loss
@@ -141,6 +158,7 @@ def validate_epoch(
     val_dataloader: DataLoader,
     accelerator: Accelerator,
     beta: float,
+    std: torch.FloatTensor,
     num_repeat: int = 1,
 ) -> LossEpochOutput:
     """Validate the VAE one epoch.
@@ -155,6 +173,8 @@ def validate_epoch(
         Accelerator object
     beta : float
         Loss weight
+    std : torch.FloatTensor
+        (1, x_dim), Standard deviation of coefficients
     num_repeat : int, optional
         Number of repetitions over whole validation dataset, by default 1
 
@@ -164,6 +184,7 @@ def validate_epoch(
         Average losses
     """
     device = accelerator.device
+    std = std.to(device)
 
     said_vae.eval()
 
@@ -177,7 +198,7 @@ def validate_epoch(
                 coeffs = data.blendshape_coeffs
                 curr_batch_size = coeffs.shape[0]
 
-                losses = elbo_loss(said_vae, coeffs, device)
+                losses = elbo_loss(said_vae, coeffs, std, device)
                 reconst_loss = losses.reconst
                 reg_loss = losses.regularize
                 loss = reconst_loss + beta * reg_loss
@@ -199,6 +220,8 @@ def validate_epoch(
 
 def main():
     """Main function"""
+    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+
     # Arguments
     parser = argparse.ArgumentParser(
         description="Train the SAiD model using VOCA-ARKit dataset"
@@ -208,6 +231,12 @@ def main():
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the data",
+    )
+    parser.add_argument(
+        "--coeffs_std_path",
+        type=str,
+        default=(default_data_dir / "coeffs_std.csv").resolve(),
+        help="Path of the coeffs std data",
     )
     parser.add_argument(
         "--output_dir",
@@ -224,7 +253,7 @@ def main():
     parser.add_argument(
         "--learning_rate", type=float, default=1e-3, help="Learning rate"
     )
-    parser.add_argument("--beta", type=float, default=0.1, help="Loss weight")
+    parser.add_argument("--beta", type=float, default=1, help="Loss weight")
     parser.add_argument(
         "--val_period", type=int, default=50, help="Period of validating model"
     )
@@ -240,6 +269,7 @@ def main():
     args = parser.parse_args()
 
     coeffs_dir = args.coeffs_dir
+    coeffs_std_path = args.coeffs_std_path
     output_dir = args.output_dir
     batch_size = args.batch_size
     epochs = args.epochs
@@ -248,6 +278,8 @@ def main():
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
+
+    coeffs_std = load_blendshape_coeffs(coeffs_std_path)
 
     # Initialize accelerator
     accelerator = Accelerator(log_with="tensorboard", project_dir=output_dir)
@@ -311,6 +343,7 @@ def main():
             optimizer=optimizer,
             accelerator=accelerator,
             beta=beta_epoch,
+            std=coeffs_std,
         )
 
         # Log
@@ -328,6 +361,7 @@ def main():
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
                 beta=beta_epoch,
+                std=coeffs_std,
                 num_repeat=val_repeat,
             )
             # Append the log

@@ -20,7 +20,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/5000.pth",
+        default="../output/25000.pth",
         help="Path of the weights of VAE",
     )
     parser.add_argument(
