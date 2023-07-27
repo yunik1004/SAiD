@@ -39,27 +39,27 @@ class BCEncoder(nn.Module):
         super().__init__()
 
         self.conv_layers = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size=3, stride=1),
+            nn.Conv1d(in_channels, 32, kernel_size=3, stride=1),
+            nn.BatchNorm1d(32),
+            nn.LeakyReLU(0.2, True),
+            nn.Conv1d(32, 64, kernel_size=3, stride=1),
             nn.BatchNorm1d(64),
             nn.LeakyReLU(0.2, True),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1),
-            nn.BatchNorm1d(128),
+            nn.Conv1d(64, 64, kernel_size=4, stride=2),
+            nn.BatchNorm1d(64),
             nn.LeakyReLU(0.2, True),
-            nn.Conv1d(128, 128, kernel_size=4, stride=2),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv1d(128, 64, kernel_size=3, stride=1),
+            nn.Conv1d(64, 32, kernel_size=3, stride=1),
             nn.Flatten(),
         )
 
         self.fc_layers = nn.Sequential(
-            nn.Linear(3520, 512),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(inplace=True),
-            nn.Linear(512, 256),
+            nn.Linear(1760, 256),
             nn.BatchNorm1d(256),
             nn.LeakyReLU(inplace=True),
-            nn.Linear(256, z_dim),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(128, z_dim),
         )
 
         self.fc_mu = nn.Linear(z_dim, z_dim)
