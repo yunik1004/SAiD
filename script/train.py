@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from said.model.diffusion import SAID, SAID_UNet1D
 from said.model.wav2vec2 import ModifiedWav2Vec2Model
+from said.util.blendshape import load_blendshape_coeffs
 from dataset.dataset_voca import DataBatch, VOCARKitTrainDataset, VOCARKitValDataset
 
 
@@ -42,6 +43,7 @@ class LossEpochOutput:
 def random_noise_loss(
     said_model: SAID,
     data: DataBatch,
+    std: torch.FloatTensor,
     device: torch.device,
     prediction_type: str = "epsilon",
 ) -> LossStepOutput:
@@ -53,6 +55,8 @@ def random_noise_loss(
         SAiD model object
     data : DataBatch
         Output of the VOCARKitDataset.collate_fn
+    std : torch.FloatTensor
+        (1, x_dim), Standard deviation of coefficients
     device : torch.device
         GPU device
     prediction_type: str
@@ -108,10 +112,13 @@ def random_noise_loss(
     criterion_velocity = nn.L1Loss()
     criterion_vertex = nn.L1Loss()
 
-    loss_pred = criterion_pred(answer, pred)
+    answer_reweight = answer / std.view(1, 1, -1).to(device)
+    pred_reweight = pred / std.view(1, 1, -1).to(device)
 
-    answer_diff = answer[:, 1:, :] - answer[:, :-1, :]
-    pred_diff = pred[:, 1:, :] - pred[:, :-1, :]
+    loss_pred = criterion_pred(answer_reweight, pred_reweight)
+
+    answer_diff = answer_reweight[:, 1:, :] - answer_reweight[:, :-1, :]
+    pred_diff = pred_reweight[:, 1:, :] - pred_reweight[:, :-1, :]
 
     loss_vel = criterion_velocity(answer_diff, pred_diff)
 
@@ -148,6 +155,7 @@ def train_epoch(
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
     accelerator: Accelerator,
+    std: torch.FloatTensor,
     weight_vel: float,
     weight_vertex: float,
     prediction_type: str = "epsilon",
@@ -165,6 +173,8 @@ def train_epoch(
         Optimizer object
     accelerator : Accelerator
         Accelerator object
+    std : torch.FloatTensor
+        (1, x_dim), Standard deviation of coefficients
     weight_vel: float
         Weight for the velocity loss
     weight_vertex: float
@@ -192,7 +202,7 @@ def train_epoch(
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data.waveform)
-        losses = random_noise_loss(said_model, data, device, prediction_type)
+        losses = random_noise_loss(said_model, data, std, device, prediction_type)
 
         loss = losses.predict + weight_vel * losses.velocity
         if losses.vertex is not None:
@@ -226,6 +236,7 @@ def validate_epoch(
     said_model: SAID,
     val_dataloader: DataLoader,
     accelerator: Accelerator,
+    std: torch.FloatTensor,
     weight_vel: float,
     weight_vertex: float,
     prediction_type: str = "epsilon",
@@ -241,6 +252,8 @@ def validate_epoch(
         Dataloader of the VOCARKitValDataset
     accelerator : Accelerator
         Accelerator object
+    std : torch.FloatTensor
+        (1, x_dim), Standard deviation of coefficients
     weight_vel: float
         Weight for the velocity loss
     weight_vertex: float
@@ -270,7 +283,9 @@ def validate_epoch(
         for _ in range(num_repeat):
             for data in val_dataloader:
                 curr_batch_size = len(data.waveform)
-                losses = random_noise_loss(said_model, data, device, prediction_type)
+                losses = random_noise_loss(
+                    said_model, data, std, device, prediction_type
+                )
 
                 loss = losses.predict + weight_vel * losses.velocity
                 if losses.vertex is not None:
@@ -319,6 +334,12 @@ def main() -> None:
         type=str,
         default="../VOCA_ARKit/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
+    )
+    parser.add_argument(
+        "--coeffs_std_path",
+        type=str,
+        default=(default_data_dir / "coeffs_std.csv").resolve(),
+        help="Path of the coeffs std data",
     )
     parser.add_argument(
         "--blendshape_residuals_path",
@@ -402,12 +423,15 @@ def main() -> None:
 
     audio_dir = args.audio_dir
     coeffs_dir = args.coeffs_dir
+    coeffs_std_path = args.coeffs_std_path
     blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
     landmarks_path = args.landmarks_path
     if landmarks_path == "":
         landmarks_path = None
+
+    coeffs_std = load_blendshape_coeffs(coeffs_std_path)
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
@@ -505,6 +529,7 @@ def main() -> None:
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             accelerator=accelerator,
+            std=coeffs_std,
             weight_vel=weight_vel,
             weight_vertex=weight_vertex,
             prediction_type=prediction_type,
@@ -531,6 +556,7 @@ def main() -> None:
                 said_model=said_model,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
+                std=coeffs_std,
                 weight_vel=weight_vel,
                 weight_vertex=weight_vertex,
                 prediction_type=prediction_type,
