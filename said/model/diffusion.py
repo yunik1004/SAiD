@@ -228,7 +228,7 @@ class SAID(ABC, nn.Module):
         """
         timesteps = torch.randint(
             0,
-            self.noise_scheduler.num_train_timesteps,
+            self.noise_scheduler.config.num_train_timesteps,
             (batch_size,),
             dtype=torch.long,
         )

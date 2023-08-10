@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "said"
-version = "0.4.0"
+version = "0.5.0"
 description = "SAiD: Speech-driven Blendshape Facial Animation with Diffusion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -13,7 +13,7 @@ authors = [
 ]
 dependencies = [
     "cvxopt",
-    "diffusers[torch]==0.12.1",
+    "diffusers[torch]==0.19.*",
     "einops",
     "librosa",
     "numpy",
