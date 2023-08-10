@@ -6,6 +6,7 @@ import os
 import pathlib
 from typing import Optional
 from accelerate import Accelerator
+from diffusers.optimization import get_scheduler
 from diffusers.training_utils import EMAModel
 import torch
 from torch import nn
@@ -38,6 +39,7 @@ class LossEpochOutput:
     predict: float = 0  # Averaged prediction loss
     velocity: float = 0  # Averaged velocity loss
     vertex: float = 0  # Averaged vertex loss
+    lr: Optional[float] = None  # Last learning rate
 
 
 def random_noise_loss(
@@ -154,6 +156,7 @@ def train_epoch(
     said_model: SAID,
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
+    lr_scheduler: torch.optim.lr_scheduler,
     accelerator: Accelerator,
     std: torch.FloatTensor,
     weight_vel: float,
@@ -171,6 +174,8 @@ def train_epoch(
         Dataloader of the VOCARKitTrainDataset
     optimizer : torch.optim.Optimizer
         Optimizer object
+    lr_scheduler: torch.optim.lr_scheduler
+        Learning rate scheduler object
     accelerator : Accelerator
         Accelerator object
     std : torch.FloatTensor
@@ -202,17 +207,24 @@ def train_epoch(
     train_total_num = 0
     for data in train_dataloader:
         curr_batch_size = len(data.waveform)
-        losses = random_noise_loss(said_model, data, std, device, prediction_type)
 
-        loss = losses.predict + weight_vel * losses.velocity
-        if losses.vertex is not None:
-            loss += weight_vertex * losses.vertex
+        with accelerator.accumulate(said_model):
+            losses = random_noise_loss(said_model, data, std, device, prediction_type)
 
-        accelerator.backward(loss)
-        optimizer.step()
-        if ema_model:
-            ema_model.step(said_model.parameters())
-        optimizer.zero_grad()
+            loss = losses.predict + weight_vel * losses.velocity
+            if losses.vertex is not None:
+                loss += weight_vertex * losses.vertex
+
+            accelerator.backward(loss)
+
+            if accelerator.sync_gradients:
+                accelerator.clip_grad_norm_(said_model.parameters(), 1.0)
+
+            optimizer.step()
+            if ema_model:
+                ema_model.step(said_model.parameters())
+            lr_scheduler.step()
+            optimizer.zero_grad()
 
         train_total_losses["loss"] += loss.item() * curr_batch_size
         train_total_losses["loss_predict"] += losses.predict.item() * curr_batch_size
@@ -227,6 +239,7 @@ def train_epoch(
         predict=train_total_losses["loss_predict"] / train_total_num,
         velocity=train_total_losses["loss_velocity"] / train_total_num,
         vertex=train_total_losses["loss_vertex"] / train_total_num,
+        lr=lr_scheduler.get_last_lr()[0],
     )
 
     return train_avg_losses
@@ -375,7 +388,7 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=30000, help="The number of epochs"
+        "--epochs", type=int, default=50000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate"
@@ -407,7 +420,7 @@ def main() -> None:
     parser.add_argument(
         "--ema_decay",
         type=float,
-        default=0.99,
+        default=0.995,
         help="Ema decay rate",
     )
     parser.add_argument(
@@ -427,7 +440,7 @@ def main() -> None:
     blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
-    landmarks_path = args.landmarks_path
+    landmarks_path = None  # args.landmarks_path
     if landmarks_path == "":
         landmarks_path = None
 
@@ -508,9 +521,22 @@ def main() -> None:
         weight_decay=1e-4,
     )
 
+    lr_scheduler = get_scheduler(
+        name="constant",
+        optimizer=optimizer,
+        num_warmup_steps=None,
+        num_training_steps=None,
+    )
+
     # Prepare the acceleration using accelerator
-    said_model, optimizer, train_dataloader, val_dataloader = accelerator.prepare(
-        said_model, optimizer, train_dataloader, val_dataloader
+    (
+        said_model,
+        optimizer,
+        lr_scheduler,
+        train_dataloader,
+        val_dataloader,
+    ) = accelerator.prepare(
+        said_model, optimizer, lr_scheduler, train_dataloader, val_dataloader
     )
 
     # Prepare the EMA model
@@ -528,6 +554,7 @@ def main() -> None:
             said_model=said_model,
             train_dataloader=train_dataloader,
             optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
             accelerator=accelerator,
             std=coeffs_std,
             weight_vel=weight_vel,
@@ -542,16 +569,17 @@ def main() -> None:
             "Train/Predict Loss": train_avg_losses.predict,
             "Train/Velocity Loss": train_avg_losses.velocity,
             "Train/Vertex Loss": train_avg_losses.vertex,
+            "Train/Learning Rate": train_avg_losses.lr,
         }
 
         accelerator.wait_for_everyone()
 
-        # EMA
-        if ema and accelerator.is_main_process:
-            ema_model.copy_to(said_model.parameters())
-
         # Validate the model
-        if epoch % val_period == 0:
+        if epoch % val_period == 0 and accelerator.is_main_process:
+            if ema:
+                ema_model.store(said_model.parameters())
+                ema_model.copy_to(said_model.parameters())
+
             val_avg_losses = validate_epoch(
                 said_model=said_model,
                 val_dataloader=val_dataloader,
@@ -568,6 +596,9 @@ def main() -> None:
             logs["Validation/Velocity Loss"] = val_avg_losses.velocity
             logs["Validation/Vertex Loss"] = val_avg_losses.vertex
 
+            if ema:
+                ema_model.restore(said_model.parameters())
+
         # Print logs
         if accelerator.sync_gradients:
             progress_bar.update(1)
@@ -580,10 +611,17 @@ def main() -> None:
 
         # Save the model
         if epoch % save_period == 0 and accelerator.is_main_process:
+            if ema:
+                ema_model.store(said_model.parameters())
+                ema_model.copy_to(said_model.parameters())
+
             accelerator.save(
                 accelerator.unwrap_model(said_model).state_dict(),
                 os.path.join(output_dir, f"{epoch}.pth"),
             )
+
+            if ema:
+                ema_model.restore(said_model.parameters())
 
     accelerator.end_training()
 

@@ -26,7 +26,7 @@ class UNet1DConditionModel(nn.Module):
         cross_attention_dim : int
             The dimension of the cross attention features
         dropout : float
-            Dropout ratte, by default 0.1
+            Dropout rate, by default 0.1
         """
         super().__init__()
         self.in_channels = in_channels
