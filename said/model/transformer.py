@@ -19,7 +19,7 @@ class TimestepEmbedder(nn.Module):
     """
 
     def __init__(self, hidden_size, frequency_embedding_size=256):
-        super(TimestepEmbedder, self).__init__()
+        super().__init__()
         self.mlp = nn.Sequential(
             nn.Linear(frequency_embedding_size, hidden_size, bias=True),
             nn.SiLU(),
@@ -61,7 +61,7 @@ class TimestepEmbedder(nn.Module):
 # Periodic Positional Encoding
 class PeriodicPositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, period=25, max_seq_len=600):
-        super(PeriodicPositionalEncoding, self).__init__()
+        super().__init__()
         self.dropout = nn.Dropout(p=dropout)
         pe = torch.zeros(period, d_model)
         position = torch.arange(0, period, dtype=torch.float).unsqueeze(1)
@@ -113,7 +113,7 @@ class ConditionalDiTBlock(nn.Module):
         layer_norm_eps: float = 1e-5,
         batch_first: bool = True,
     ) -> None:
-        super(ConditionalDiTBlock, self).__init__()
+        super().__init__()
         self.norm_sa = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.self_attn = nn.MultiheadAttention(
             d_model, nhead, dropout=dropout, batch_first=batch_first
@@ -223,7 +223,7 @@ class ConditionalDiTBlock(nn.Module):
 
 class ConditionalDiTFinalLayer(nn.Module):
     def __init__(self, d_model: int, out_channels: int, layer_norm_eps: float = 1e-5):
-        super(ConditionalDiTFinalLayer, self).__init__()
+        super().__init__()
         # self.norm_final = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.linear = nn.Linear(d_model, out_channels, bias=True)
         """
@@ -273,7 +273,7 @@ class ConditionalDiT(nn.Module):
         dropout : float
             Dropout rate, by default 0.1
         """
-        super(ConditionalDiT, self).__init__()
+        super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.cond_in_channels = cond_in_channels

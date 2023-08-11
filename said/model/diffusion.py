@@ -74,7 +74,7 @@ class SAID(ABC, nn.Module):
         prediction_type: str
             Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
         """
-        super(SAID, self).__init__()
+        super().__init__()
 
         # Audio-related
         self.audio_config = (
@@ -480,7 +480,7 @@ class SAID_UNet1D(SAID):
         prediction_type: str
             Prediction type of the scheduler function, "epsilon", "sample", or "v_prediction", by default "epsilon"
         """
-        super(SAID_UNet1D, self).__init__(
+        super().__init__(
             audio_config=audio_config,
             audio_processor=audio_processor,
             in_channels=in_channels,

@@ -37,7 +37,7 @@ class AuxDecoder(nn.Module):
         dropout : float, optional
             Dropout probability, by default 0.1
         """
-        super(AuxDecoder, self).__init__()
+        super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.feature_dim = feature_dim
