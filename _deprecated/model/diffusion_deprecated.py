@@ -33,7 +33,7 @@ class SAID_UNet1D_LDM(SAID_UNet1D):
         latent_scale : float
             Scaling the latent, by default 1
         """
-        super(SAID_UNet1D_LDM, self).__init__(
+        super().__init__(
             audio_config=audio_config,
             audio_processor=audio_processor,
             noise_scheduler=noise_scheduler,
@@ -118,7 +118,7 @@ class SAID_CDiT(SAID):
         latent_scale : float
             Scaling the latent, by default 1
         """
-        super(SAID_CDiT, self).__init__(
+        super().__init__(
             audio_config=audio_config,
             audio_processor=audio_processor,
             noise_scheduler=noise_scheduler,
