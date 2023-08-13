@@ -440,6 +440,7 @@ def main() -> None:
     blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
+    landmarks_path = args.landmarks_path
     if landmarks_path == "":
         landmarks_path = None
 
