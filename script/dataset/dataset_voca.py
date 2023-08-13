@@ -10,6 +10,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
+from torch.nn import functional as F
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import trimesh
@@ -549,6 +550,9 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         waveform_window_len = (self.sampling_rate * window_size) // self.fps
         batch_size = len(waveforms)
 
+        half_window_size = window_size // 2
+        half_waveform_window_len = waveform_window_len // 2
+
         waveforms_windows = []
         coeffs_windows = []
         # Random-select the window
@@ -559,6 +563,31 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             blendshape_len = blendshape_coeffs.shape[0]
             num_blendshape = blendshape_coeffs.shape[1]
 
+            bdx = random.randint(
+                -half_window_size, max(0, blendshape_len - half_window_size - 1)
+            )
+            wdx = (self.sampling_rate * bdx) // self.fps
+            if self.delay and random.uniform(0, 1) < 0.5:
+                wdx = random.randint(wdx - self.delay_thres, wdx + self.delay_thres)
+
+            bdx_update = bdx + half_window_size
+            coeffs_window = F.pad(
+                blendshape_coeffs.unsqueeze(0),
+                (0, 0, half_window_size, window_size),
+                "replicate",
+            ).squeeze(0)[bdx_update : bdx_update + window_size, :]
+
+            wdx_update = max(0, wdx + half_waveform_window_len + self.delay_thres)
+            waveform_window = F.pad(
+                waveform.unsqueeze(0),
+                (
+                    half_waveform_window_len + self.delay_thres,
+                    waveform_window_len + self.delay_thres,
+                ),
+                "replicate",
+            ).squeeze(0)[wdx_update : wdx_update + waveform_window_len]
+
+            """
             bdx = random.randint(0, max(0, blendshape_len - window_size))
             wdx = (self.sampling_rate * bdx) // self.fps
             if self.delay and random.uniform(0, 1) < 0.5:
@@ -572,6 +601,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
             waveform_tmp = waveform[wdx : wdx + waveform_window_len]
             waveform_window = torch.full((waveform_window_len,), waveform_tmp[-1])
             waveform_window[: waveform_tmp.shape[0]] = waveform_tmp[:]
+            """
 
             waveforms_windows.append(waveform_window)
             coeffs_windows.append(coeffs_window)

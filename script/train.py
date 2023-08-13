@@ -363,7 +363,7 @@ def main() -> None:
     parser.add_argument(
         "--landmarks_path",
         type=str,
-        default=(default_data_dir / "FLAME_head_landmarks.txt").resolve(),
+        default="",  # (default_data_dir / "FLAME_head_landmarks.txt").resolve(),
         help="Path of the landmarks data",
     )
     parser.add_argument(
@@ -388,10 +388,10 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=50000, help="The number of epochs"
+        "--epochs", type=int, default=20000, help="The number of epochs"
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-4, help="Learning rate"
+        "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
     parser.add_argument(
         "--uncond_prob",
@@ -408,7 +408,7 @@ def main() -> None:
     parser.add_argument(
         "--weight_vertex",
         type=float,
-        default=0.02,
+        default=0.05,
         help="Weight for the vertex loss",
     )
     parser.add_argument(
@@ -440,7 +440,6 @@ def main() -> None:
     blendshape_deltas_path = args.blendshape_residuals_path
     if blendshape_deltas_path == "":
         blendshape_deltas_path = None
-    landmarks_path = None  # args.landmarks_path
     if landmarks_path == "":
         landmarks_path = None
 
@@ -521,11 +520,13 @@ def main() -> None:
         weight_decay=1e-4,
     )
 
+    num_training_steps = len(train_dataloader) * epochs
+
     lr_scheduler = get_scheduler(
-        name="constant",
+        name="cosine",
         optimizer=optimizer,
-        num_warmup_steps=None,
-        num_training_steps=None,
+        num_warmup_steps=0.1 * num_training_steps,
+        num_training_steps=num_training_steps,
     )
 
     # Prepare the acceleration using accelerator
