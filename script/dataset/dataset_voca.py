@@ -813,7 +813,11 @@ class VOCARKitTestDataset(VOCARKitDataset):
         if self.preload:
             for data in self.data_paths:
                 waveform = load_audio(data.audio, self.sampling_rate)
-                blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+                blendshape_coeffs = (
+                    load_blendshape_coeffs(data.blendshape_coeffs)
+                    if data.blendshape_coeffs
+                    else None
+                )
                 self.data_preload.append((waveform, blendshape_coeffs))
 
                 if data.person_id not in self.blendshape_deltas_preload:
