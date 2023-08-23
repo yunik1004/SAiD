@@ -71,7 +71,6 @@ def random_noise_loss(
     """
     waveform = data.waveform
     blendshape_coeffs = data.blendshape_coeffs.to(device)
-    blendshape_delta = data.blendshape_delta.to(device)
     cond = data.cond.to(device)
 
     coeff_latents = said_model.encode_samples(
@@ -125,7 +124,8 @@ def random_noise_loss(
     loss_vel = criterion_velocity(answer_diff, pred_diff)
 
     loss_vertex = None
-    if blendshape_delta is not None:
+    if data.blendshape_delta is not None:
+        blendshape_delta = data.blendshape_delta.to(device)
         b, k, v, i = blendshape_delta.shape
         _, t, _ = answer.shape
 
@@ -357,7 +357,7 @@ def main() -> None:
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
-        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
+        default="",  # (default_data_dir / "blendshape_residuals.pickle").resolve(),
         help="Path of the blendshape residuals",
     )
     parser.add_argument(
@@ -388,7 +388,7 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=50000, help="The number of epochs"
+        "--epochs", type=int, default=30000, help="The number of epochs"
     )
     parser.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate"
@@ -420,7 +420,7 @@ def main() -> None:
     parser.add_argument(
         "--ema_decay",
         type=float,
-        default=0.995,
+        default=0.99,
         help="Ema decay rate",
     )
     parser.add_argument(

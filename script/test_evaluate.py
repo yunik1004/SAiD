@@ -3,6 +3,7 @@
 import argparse
 from collections import defaultdict
 from dataclasses import dataclass
+import pathlib
 import statistics
 from typing import List, Union
 import numpy as np
@@ -392,6 +393,8 @@ def evaluate(
 
 def main() -> None:
     """Main function"""
+    default_model_dir = pathlib.Path(__file__).parent.parent / "model"
+
     # Arguments
     parser = argparse.ArgumentParser(
         description="Evaluate the output based on the VOCA-ARKit test dataset"
@@ -417,7 +420,7 @@ def main() -> None:
     parser.add_argument(
         "--vae_weights_path",
         type=str,
-        default="../output/20000.pth",
+        default=(default_model_dir / "vae.pth").resolve(),
         help="Path of the weights of VAE",
     )
     """
