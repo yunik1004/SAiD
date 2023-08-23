@@ -1,6 +1,7 @@
 """Inference reconstructed blendshape coefficients using VAE
 """
 import argparse
+import pathlib
 import torch
 from said.model.vae import BCVAE
 from said.util.blendshape import (
@@ -13,6 +14,8 @@ from dataset.dataset_voca import VOCARKitDataset
 
 def main():
     """Main function"""
+    default_model_dir = pathlib.Path(__file__).parent.parent / "model"
+
     # Arguments
     parser = argparse.ArgumentParser(
         description="Reconstruct the blendshape coefficients using VAE"
@@ -20,7 +23,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/25000.pth",
+        default=(default_model_dir / "vae.pth").resolve(),
         help="Path of the weights of VAE",
     )
     parser.add_argument(
