@@ -524,7 +524,7 @@ def main() -> None:
     num_training_steps = len(train_dataloader) * epochs
 
     lr_scheduler = get_scheduler(
-        name="cosine",
+        name="constant_with_warmup",
         optimizer=optimizer,
         num_warmup_steps=0.1 * num_training_steps,
         num_training_steps=num_training_steps,
