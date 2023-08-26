@@ -51,6 +51,9 @@ def main() -> None:
         "--guidance_scale", type=float, default=2.0, help="Guidance scale"
     )
     parser.add_argument(
+        "--guidance_rescale", type=float, default=0.0, help="Guidance scale"
+    )
+    parser.add_argument(
         "--eta", type=float, default=0.0, help="Eta for DDIMScheduler, between [0, 1]"
     )
     parser.add_argument(
@@ -95,6 +98,7 @@ def main() -> None:
     num_steps = args.num_steps
     strength = args.strength
     guidance_scale = args.guidance_scale
+    guidance_rescale = args.guidance_rescale
     eta = args.eta
     fps = args.fps
     divisor_unet = args.divisor_unet
@@ -168,6 +172,7 @@ def main() -> None:
                     num_inference_steps=num_steps,
                     strength=strength,
                     guidance_scale=guidance_scale,
+                    guidance_rescale=guidance_rescale,
                     eta=eta,
                     show_process=False,
                 )
