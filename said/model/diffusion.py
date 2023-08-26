@@ -5,6 +5,9 @@ from dataclasses import dataclass
 import inspect
 from typing import List, Optional, Type, Union
 from diffusers import DDIMScheduler, SchedulerMixin
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+    rescale_noise_cfg,
+)
 import numpy as np
 import torch
 from torch import nn
@@ -297,6 +300,7 @@ class SAID(ABC, nn.Module):
         num_inference_steps: int = 100,
         strength: float = 1.0,
         guidance_scale: float = 2.5,
+        guidance_rescale: float = 0.0,
         eta: float = 0.0,
         fps: int = 60,
         save_intermediate: bool = False,
@@ -318,6 +322,8 @@ class SAID(ABC, nn.Module):
             How much to paint. Must be between 0 and 1, by default 1.0
         guidance_scale : float, optional
             Guidance scale in classifier-free guidance, by default 2.5
+        guidance_rescale : float, optional
+            Guidance rescale to control rescale strength, by default 0.0
         eta : float, optional
             Eta in DDIM, by default 0.0
         fps : int, optional
@@ -413,6 +419,11 @@ class SAID(ABC, nn.Module):
                 noise_pred = noise_pred_audio + guidance_scale * (
                     noise_pred_audio - noise_pred_uncond
                 )
+
+                if guidance_rescale > 0.0:
+                    noise_pred = rescale_noise_cfg(
+                        noise_pred, noise_pred_audio, guidance_rescale
+                    )
 
             latents = self.noise_scheduler.step(
                 noise_pred, t, latents, **extra_step_kwargs
