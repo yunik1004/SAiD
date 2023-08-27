@@ -4,12 +4,17 @@ import argparse
 from dataclasses import dataclass
 import os
 import pathlib
+from typing import Optional
 from accelerate import Accelerator
+from diffusers.optimization import get_scheduler
+from diffusers.training_utils import EMAModel
 import torch
+from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from said.model.vae import BCVAE
 from said.util.blendshape import load_blendshape_coeffs
+from said.util.scheduler import frange_cycle_linear
 from dataset.dataset_voca import VOCARKitVAEDataset
 
 
@@ -21,6 +26,7 @@ class LossStepOutput:
 
     reconst: torch.FloatTensor  # (1,), Reconstruction loss
     regularize: torch.FloatTensor  # (1,), Regularization loss
+    velocity: torch.FloatTensor  # (1,), Velocity loss
 
 
 @dataclass
@@ -32,6 +38,8 @@ class LossEpochOutput:
     total: float  # Averaged total loss
     reconst: float  # Averaged reconstruction loss
     regularize: float  # Averaged regularization loss
+    velocity: float  # Averaged velocity loss
+    lr: Optional[float] = None  # Last learning rate
 
 
 def elbo_loss(
@@ -67,29 +75,40 @@ def elbo_loss(
     log_var = output.log_var
     blendshape_coeffs_reconst = output.coeffs_reconst
 
-    l1_func = torch.nn.L1Loss(reduction="sum")
+    criterion_reconst = nn.MSELoss(reduction="sum")
+    criterion_velocity = nn.MSELoss(reduction="sum")
 
-    reconst_loss = (
-        l1_func(
-            blendshape_coeffs_reconst / std.view(1, 1, -1),
-            blendshape_coeffs / std.view(1, 1, -1),
-        )
-        / batch_size
-    )
-    kld_loss = 0.5 * torch.mean(
+    answer_reweight = blendshape_coeffs / std.view(1, 1, -1)
+    pred_reweight = blendshape_coeffs_reconst / std.view(1, 1, -1)
+
+    loss_reconst = 0.5 * criterion_reconst(answer_reweight, pred_reweight) / batch_size
+
+    loss_kld = 0.5 * torch.mean(
         torch.sum(torch.pow(mean, 2) + torch.exp(log_var) - log_var - 1, dim=1)
     )
 
-    return LossStepOutput(reconst=reconst_loss, regularize=kld_loss)
+    answer_diff = answer_reweight[:, 1:, :] - answer_reweight[:, :-1, :]
+    pred_diff = pred_reweight[:, 1:, :] - pred_reweight[:, :-1, :]
+
+    loss_vel = 0.5 * criterion_velocity(pred_diff, answer_diff) / batch_size
+
+    return LossStepOutput(
+        reconst=loss_reconst,
+        regularize=loss_kld,
+        velocity=loss_vel,
+    )
 
 
 def train_epoch(
     said_vae: BCVAE,
     train_dataloader: DataLoader,
     optimizer: torch.optim.Optimizer,
+    lr_scheduler: torch.optim.lr_scheduler,
     accelerator: Accelerator,
     beta: float,
     std: torch.FloatTensor,
+    weight_vel: float,
+    ema_vae: Optional[EMAModel] = None,
 ) -> LossEpochOutput:
     """Train the VAE one epoch.
 
@@ -101,12 +120,18 @@ def train_epoch(
         Dataloader of the VOCARKitVAEDataset
     optimizer : torch.optim.Optimizer
         Optimizer object
+    lr_scheduler: torch.optim.lr_scheduler
+        Learning rate scheduler object
     accelerator : Accelerator
         Accelerator object
     beta : float
         Loss weight
     std : torch.FloatTensor
         (1, x_dim), Standard deviation of coefficients
+    weight_vel: float
+        Weight for the velocity loss
+    ema_vae: Optional[EMAModel]
+        EMA model of said_vae, by default None
 
     Returns
     -------
@@ -120,36 +145,49 @@ def train_epoch(
 
     train_total_reconst_loss = 0
     train_total_reg_loss = 0
+    train_total_vel_loss = 0
     train_total_loss = 0
     train_total_num = 0
     for data in train_dataloader:
-        optimizer.zero_grad()
-
         coeffs = data.blendshape_coeffs
         curr_batch_size = coeffs.shape[0]
 
-        losses = elbo_loss(said_vae, coeffs, std, device)
-        reconst_loss = losses.reconst
-        reg_loss = losses.regularize
-        loss = reconst_loss + beta * reg_loss
+        with accelerator.accumulate(said_vae):
+            losses = elbo_loss(said_vae, coeffs, std, device)
+            reconst_loss = losses.reconst
+            reg_loss = losses.regularize
+            velocity_loss = losses.velocity
+            loss = reconst_loss + beta * reg_loss + weight_vel * velocity_loss
 
-        accelerator.backward(loss)
-        optimizer.step()
+            accelerator.backward(loss)
+
+            if accelerator.sync_gradients:
+                accelerator.clip_grad_norm_(said_vae.parameters(), 1.0)
+
+            optimizer.step()
+            if ema_vae:
+                ema_vae.step(said_vae.parameters())
+            lr_scheduler.step()
+            optimizer.zero_grad()
 
         train_total_num += curr_batch_size
 
         train_total_reconst_loss += reconst_loss.item() * curr_batch_size
         train_total_reg_loss += reg_loss.item() * curr_batch_size
+        train_total_vel_loss += velocity_loss.item() * curr_batch_size
         train_total_loss += loss.item() * curr_batch_size
 
     train_avg_reconst_loss = train_total_reconst_loss / train_total_num
     train_avg_reg_loss = train_total_reg_loss / train_total_num
+    train_avg_vel_loss = train_total_vel_loss / train_total_num
     train_avg_loss = train_total_loss / train_total_num
 
     return LossEpochOutput(
         total=train_avg_loss,
         reconst=train_avg_reconst_loss,
         regularize=train_avg_reg_loss,
+        velocity=train_avg_vel_loss,
+        lr=lr_scheduler.get_last_lr()[0],
     )
 
 
@@ -159,6 +197,7 @@ def validate_epoch(
     accelerator: Accelerator,
     beta: float,
     std: torch.FloatTensor,
+    weight_vel: float,
     num_repeat: int = 1,
 ) -> LossEpochOutput:
     """Validate the VAE one epoch.
@@ -175,6 +214,8 @@ def validate_epoch(
         Loss weight
     std : torch.FloatTensor
         (1, x_dim), Standard deviation of coefficients
+    weight_vel: float
+        Weight for the velocity loss
     num_repeat : int, optional
         Number of repetitions over whole validation dataset, by default 1
 
@@ -190,6 +231,7 @@ def validate_epoch(
 
     val_total_reconst_loss = 0
     val_total_reg_loss = 0
+    val_total_vel_loss = 0
     val_total_loss = 0
     val_total_num = 0
     with torch.no_grad():
@@ -201,20 +243,26 @@ def validate_epoch(
                 losses = elbo_loss(said_vae, coeffs, std, device)
                 reconst_loss = losses.reconst
                 reg_loss = losses.regularize
-                loss = reconst_loss + beta * reg_loss
+                vel_loss = losses.velocity
+                loss = reconst_loss + beta * reg_loss + weight_vel * vel_loss
 
                 val_total_num += curr_batch_size
 
                 val_total_reconst_loss += reconst_loss.item() * curr_batch_size
                 val_total_reg_loss += reg_loss.item() * curr_batch_size
+                val_total_vel_loss += vel_loss.item() * curr_batch_size
                 val_total_loss += loss.item() * curr_batch_size
 
     val_avg_reconst_loss = val_total_reconst_loss / val_total_num
     val_avg_reg_loss = val_total_reg_loss / val_total_num
+    val_avg_vel_loss = val_total_vel_loss / val_total_num
     val_avg_loss = val_total_loss / val_total_num
 
     return LossEpochOutput(
-        total=val_avg_loss, reconst=val_avg_reconst_loss, regularize=val_avg_reg_loss
+        total=val_avg_loss,
+        reconst=val_avg_reconst_loss,
+        regularize=val_avg_reg_loss,
+        velocity=val_avg_vel_loss,
     )
 
 
@@ -251,11 +299,29 @@ def main():
         "--epochs", type=int, default=100000, help="The number of epochs"
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-3, help="Learning rate"
+        "--learning_rate", type=float, default=1e-4, help="Learning rate"
     )
-    parser.add_argument("--beta", type=float, default=1, help="Loss weight")
+    parser.add_argument("--beta", type=float, default=1, help="Beta for beta-VAE")
     parser.add_argument(
-        "--val_period", type=int, default=50, help="Period of validating model"
+        "--weight_vel",
+        type=float,
+        default=1.0,
+        help="Weight for the velocity loss",
+    )
+    parser.add_argument(
+        "--ema",
+        type=bool,
+        default=True,
+        help="Use Exponential Moving Average of models weights",
+    )
+    parser.add_argument(
+        "--ema_decay",
+        type=float,
+        default=0.99,
+        help="Ema decay rate",
+    )
+    parser.add_argument(
+        "--val_period", type=int, default=500, help="Period of validating model"
     )
     parser.add_argument(
         "--val_repeat",
@@ -275,6 +341,9 @@ def main():
     epochs = args.epochs
     learning_rate = args.learning_rate
     beta = args.beta
+    weight_vel = args.weight_vel
+    ema = args.ema
+    ema_decay = args.ema_decay
     val_period = args.val_period
     val_repeat = args.val_repeat
     save_period = args.save_period
@@ -319,12 +388,32 @@ def main():
     )
 
     # Initialize the optimizer
-    optimizer = torch.optim.Adam(params=said_vae.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(params=said_vae.parameters(), lr=learning_rate)
+
+    num_training_steps = len(train_dataloader) * epochs
+
+    lr_scheduler = get_scheduler(
+        name="constant_with_warmup",
+        optimizer=optimizer,
+        num_warmup_steps=0.1 * num_training_steps,
+        num_training_steps=num_training_steps,
+    )
+
+    beta_schedules = frange_cycle_linear(n_iter=epochs, stop=beta, n_cycle=10)
 
     # Prepare the acceleration using accelerator
-    said_vae, optimizer, train_dataloader, val_dataloader = accelerator.prepare(
-        said_vae, optimizer, train_dataloader, val_dataloader
+    (
+        said_vae,
+        optimizer,
+        lr_scheduler,
+        train_dataloader,
+        val_dataloader,
+    ) = accelerator.prepare(
+        said_vae, optimizer, lr_scheduler, train_dataloader, val_dataloader
     )
+
+    # Prepare the EMA model
+    ema_vae = EMAModel(said_vae.parameters(), decay=ema_decay) if ema else None
 
     # Set the progress bar
     progress_bar = tqdm(
@@ -334,16 +423,19 @@ def main():
 
     for epoch in range(1, epochs + 1):
         # KL weight
-        beta_epoch = beta
+        beta_epoch = beta_schedules[epoch - 1]
 
         # Train the model
         train_losses = train_epoch(
             said_vae=said_vae,
             train_dataloader=train_dataloader,
             optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
             accelerator=accelerator,
             beta=beta_epoch,
             std=coeffs_std,
+            weight_vel=weight_vel,
+            ema_vae=ema_vae,
         )
 
         # Log
@@ -351,23 +443,36 @@ def main():
             "Train/Total": train_losses.total,
             "Train/Reconst": train_losses.reconst,
             "Train/Regular": train_losses.regularize,
+            "Train/Velocity": train_losses.velocity,
             "Train/Beta": beta_epoch,
+            "Train/Learning Rate": train_losses.lr,
         }
+
+        accelerator.wait_for_everyone()
 
         # Validate the model
         if epoch % val_period == 0:
+            if ema:
+                ema_vae.store(said_vae.parameters())
+                ema_vae.copy_to(said_vae.parameters())
+
             val_losses = validate_epoch(
                 said_vae=said_vae,
                 val_dataloader=val_dataloader,
                 accelerator=accelerator,
                 beta=beta_epoch,
                 std=coeffs_std,
+                weight_vel=weight_vel,
                 num_repeat=val_repeat,
             )
             # Append the log
             logs["Val/Total"] = val_losses.total
             logs["Val/Reconst"] = val_losses.reconst
             logs["Val/Regular"] = val_losses.regularize
+            logs["Val/Velocity"] = val_losses.velocity
+
+            if ema:
+                ema_vae.restore(said_vae.parameters())
 
         # Print logs
         if accelerator.sync_gradients:
@@ -381,10 +486,17 @@ def main():
 
         # Save the model
         if epoch % save_period == 0 and accelerator.is_main_process:
+            if ema:
+                ema_vae.store(said_vae.parameters())
+                ema_vae.copy_to(said_vae.parameters())
+
             accelerator.save(
                 accelerator.unwrap_model(said_vae).state_dict(),
                 os.path.join(output_dir, f"{epoch}.pth"),
             )
+
+            if ema:
+                ema_vae.restore(said_vae.parameters())
 
     accelerator.end_training()
 

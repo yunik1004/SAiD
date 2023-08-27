@@ -1135,11 +1135,25 @@ class VOCARKitVAEDataset(VOCARKitDataset):
         num_blendshape = blendshape_coeffs.shape[1]
         blendshape_len = blendshape_coeffs.shape[0]
 
+        half_window_size = self.window_size // 2
+
         # Random-select the window
+        bdx = random.randint(
+            -half_window_size, max(0, blendshape_len - half_window_size - 1)
+        )
+        bdx_update = bdx + half_window_size
+        coeffs_window = F.pad(
+            blendshape_coeffs.unsqueeze(0),
+            (0, 0, half_window_size, self.window_size),
+            "replicate",
+        ).squeeze(0)[bdx_update : bdx_update + self.window_size, :]
+
+        """
         bdx = random.randint(0, max(0, blendshape_len - self.window_size))
         coeffs_tmp = blendshape_coeffs[bdx : bdx + self.window_size, :]
         coeffs_window = torch.zeros((self.window_size, num_blendshape))
         coeffs_window[: coeffs_tmp.shape[0], :] = coeffs_tmp[:]
+        """
 
         # Augmentation - hflip
         if self.hflip and random.uniform(0, 1) < 0.5:
