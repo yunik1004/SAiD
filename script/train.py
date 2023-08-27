@@ -116,12 +116,12 @@ def random_noise_loss(
     answer_reweight = answer / std.view(1, 1, -1).to(device)
     pred_reweight = pred / std.view(1, 1, -1).to(device)
 
-    loss_pred = criterion_pred(answer_reweight, pred_reweight)
+    loss_pred = criterion_pred(pred_reweight, answer_reweight)
 
     answer_diff = answer_reweight[:, 1:, :] - answer_reweight[:, :-1, :]
     pred_diff = pred_reweight[:, 1:, :] - pred_reweight[:, :-1, :]
 
-    loss_vel = criterion_velocity(answer_diff, pred_diff)
+    loss_vel = criterion_velocity(pred_diff, answer_diff)
 
     loss_vertex = None
     if data.blendshape_delta is not None:
@@ -143,7 +143,7 @@ def random_noise_loss(
         # be_answer = torch.einsum("bkvi,btk->btvi", blendshape_delta_normalized, answer)
         # be_pred = torch.einsum("bkvi,btk->btvi", blendshape_delta_normalized, pred)
 
-        loss_vertex = criterion_vertex(be_answer, be_pred)
+        loss_vertex = criterion_vertex(be_pred, be_answer)
 
     return LossStepOutput(
         predict=loss_pred,
