@@ -3,6 +3,7 @@ Render the visual outputs
 Reference 1: https://github.com/TimoBolkart/voca/blob/master/utils/rendering.py
 Reference 2: https://github.com/Doubiiu/CodeTalker/blob/main/main/render.py
 """
+from multiprocessing import Pool
 from typing import List
 import cv2
 import numpy as np
@@ -156,5 +157,81 @@ def render_blendshape_coefficients(
         mesh = create_mesh(vertices, faces)
         rendered_img = render_mesh(mesh, center)
         rendered_imgs.append(rendered_img)
+
+    return rendered_imgs
+
+
+def render_blendshape_coefficients_singleprocess(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    center: np.ndarray,
+) -> np.ndarray:
+    """Render the mesh, child process of the render_blendshape_coefficients_multiprocess.
+
+    Parameters
+    ----------
+    vertices: np.ndarray
+        (|V|, 3), Vertex object
+    faces: np.ndarray
+        (|F|, 3), Vertex object
+    center: np.ndarray
+        (3,), Center of the mesh
+
+    Returns
+    -------
+    np.ndarray
+        Rendered image
+    """
+    mesh = create_mesh(vertices, faces)
+    rendered_img = render_mesh(mesh, center)
+    return rendered_img
+
+
+def render_blendshape_coefficients_multiprocess(
+    neutral_mesh: trimesh.Trimesh,
+    blendshapes_matrix: np.ndarray,
+    blendshape_coeffs: np.ndarray,
+    num_process: int,
+) -> List[np.ndarray]:
+    """Render the mesh, multiprocess version
+
+    Parameters
+    ----------
+    neutral_mesh: trimesh.Trimesh
+        Mesh of the neutral object
+    blendshapes_matrix: np.ndarray
+        (3|V|, num_blendshapes), [b1 | b2 | ... | b_N] blendshape mesh's vertices vectors
+    blendshape_coeffs: np.ndarray
+        (T_b, num_classes), Blendshape coefficients
+    num_process: int
+        The number of processes
+
+    mesh : trimesh.Trimesh
+        Mesh object
+    z_offset: float
+        Z offset of the camera, by default 0
+
+    Returns
+    -------
+    List[np.ndarray]
+        Rendered images
+    """
+    neutral_vector = neutral_mesh.vertices.reshape((-1, 1))
+    faces = neutral_mesh.faces
+    blendshapes_matrix_delta = blendshapes_matrix - neutral_vector
+
+    motion_vector_sequence = (
+        blendshape_coeffs @ blendshapes_matrix_delta.T + neutral_vector.T
+    )
+    seq_len = motion_vector_sequence.shape[0]
+    num_vertices = motion_vector_sequence.shape[1] // 3
+
+    motion_vertex_sequence = motion_vector_sequence.reshape(seq_len, num_vertices, 3)
+
+    center = np.mean(neutral_mesh.vertices, axis=0)
+
+    args = [(motion_vertex_sequence[sdx], faces, center) for sdx in range(seq_len)]
+    with Pool(processes=num_process) as p:
+        rendered_imgs = p.starmap(render_blendshape_coefficients_singleprocess, args)
 
     return rendered_imgs

@@ -107,9 +107,13 @@ def main() -> None:
     )
 
     # Render video
+    audio_clip = mpy.AudioFileClip(audio_path)
     clip = mpy.ImageSequenceClip(rendered_imgs, fps=fps)
-    clip = clip.set_audio(mpy.AudioFileClip(audio_path))
+    clip = clip.set_audio(audio_clip)
     clip.write_videofile(output_path, fps=fps)
+
+    audio_clip.close()
+    clip.close()
 
     # Save rendered images
     if save_images:
