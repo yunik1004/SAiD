@@ -303,6 +303,12 @@ def main():
     )
     parser.add_argument("--beta", type=float, default=1, help="Beta for beta-VAE")
     parser.add_argument(
+        "--beta_cycle",
+        type=int,
+        default=10,
+        help="The number of cycles in beta schedule",
+    )
+    parser.add_argument(
         "--weight_vel",
         type=float,
         default=1.0,
@@ -341,6 +347,7 @@ def main():
     epochs = args.epochs
     learning_rate = args.learning_rate
     beta = args.beta
+    beta_cycle = args.beta_cycle
     weight_vel = args.weight_vel
     ema = args.ema
     ema_decay = args.ema_decay
@@ -399,7 +406,7 @@ def main():
         num_training_steps=num_training_steps,
     )
 
-    beta_schedules = frange_cycle_linear(n_iter=epochs, stop=beta, n_cycle=10)
+    beta_schedules = frange_cycle_linear(n_iter=epochs, stop=beta, n_cycle=beta_cycle)
 
     # Prepare the acceleration using accelerator
     (
