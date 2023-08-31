@@ -54,6 +54,7 @@ class SAID(ABC, nn.Module):
         audio_processor: Optional[Wav2Vec2Processor] = None,
         noise_scheduler: Type[SchedulerMixin] = DDIMScheduler,
         in_channels: int = 32,
+        feature_dim: int = -1,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
         prediction_type: str = "epsilon",
@@ -70,6 +71,8 @@ class SAID(ABC, nn.Module):
             Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
+        feature_dim : int
+            Dimension of the latent feature, by default -1
         diffusion_steps : int
             The number of diffusion steps, by default 1000
         latent_scale : float
@@ -100,9 +103,17 @@ class SAID(ABC, nn.Module):
             prediction_type=prediction_type,
         )
 
-        self.null_cond_emb = nn.Parameter(
-            torch.randn(1, 1, self.audio_config.output_hidden_size)
-        )
+        # Feature embedding
+        self.feature_dim = feature_dim
+        if self.feature_dim > 0:
+            self.audio_proj_layer = nn.Linear(
+                self.audio_config.output_hidden_size, self.feature_dim
+            )
+            self.null_cond_emb = nn.Parameter(torch.randn(1, 1, self.feature_dim))
+        else:
+            self.null_cond_emb = nn.Parameter(
+                torch.randn(1, 1, self.audio_config.output_hidden_size)
+            )
 
         """
         # Relieve the clipping
@@ -214,6 +225,8 @@ class SAID(ABC, nn.Module):
             If num_frames is not None, embed_seq_len = num_frames.
         """
         features = self.audio_encoder(waveform, num_frames=num_frames).last_hidden_state
+        if self.feature_dim > 0:
+            features = self.audio_proj_layer(features)
         return features
 
     def get_random_timesteps(self, batch_size: int) -> torch.LongTensor:
@@ -468,6 +481,7 @@ class SAID_UNet1D(SAID):
         audio_processor: Optional[Wav2Vec2Processor] = None,
         noise_scheduler: Type[SchedulerMixin] = DDIMScheduler,
         in_channels: int = 32,
+        feature_dim: int = -1,
         diffusion_steps: int = 1000,
         latent_scale: float = 1,
         prediction_type: str = "epsilon",
@@ -484,6 +498,8 @@ class SAID_UNet1D(SAID):
             Noise scheduler, by default DDIMScheduler
         in_channels : int
             Dimension of the input, by default 32
+        feature_dim : int
+            Dimension of the latent feature, by default -1
         diffusion_steps : int
             The number of diffusion steps, by default 1000
         latent_scale : float
@@ -495,6 +511,7 @@ class SAID_UNet1D(SAID):
             audio_config=audio_config,
             audio_processor=audio_processor,
             in_channels=in_channels,
+            feature_dim=feature_dim,
             diffusion_steps=diffusion_steps,
             latent_scale=latent_scale,
             prediction_type=prediction_type,
@@ -504,5 +521,7 @@ class SAID_UNet1D(SAID):
         self.denoiser = UNet1DConditionModel(
             in_channels=in_channels,
             out_channels=in_channels,
-            cross_attention_dim=self.audio_config.hidden_size,
+            cross_attention_dim=self.feature_dim
+            if self.feature_dim > 0
+            else self.audio_config.hidden_size,
         )

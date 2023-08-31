@@ -400,6 +400,12 @@ def main() -> None:
         help="Unconditional probability of waveform (for classifier-free guidance)",
     )
     parser.add_argument(
+        "--unet_feature_dim",
+        type=int,
+        default=-1,
+        help="Dimension of the latent feature of the UNet",
+    )
+    parser.add_argument(
         "--weight_vel",
         type=float,
         default=1.0,
@@ -453,6 +459,7 @@ def main() -> None:
     epochs = args.epochs
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
+    unet_feature_dim = args.unet_feature_dim
     weight_vel = args.weight_vel
     weight_vertex = args.weight_vertex
     ema = args.ema
@@ -466,7 +473,10 @@ def main() -> None:
     if accelerator.is_main_process:
         accelerator.init_trackers("SAiD")
 
-    said_model = SAID_UNet1D()
+    said_model = SAID_UNet1D(
+        feature_dim=unet_feature_dim,
+        prediction_type=prediction_type,
+    )
     said_model.audio_encoder = ModifiedWav2Vec2Model.from_pretrained(
         "facebook/wav2vec2-base-960h"
     )
@@ -514,11 +524,11 @@ def main() -> None:
     # Initialize the optimzier - freeze audio encoder
     for p in said_model.audio_encoder.parameters():
         p.requires_grad = False
+    # said_model.audio_encoder.freeze_feature_encoder()
 
     optimizer = torch.optim.AdamW(
         params=filter(lambda p: p.requires_grad, said_model.parameters()),
         lr=learning_rate,
-        weight_decay=1e-4,
     )
 
     num_training_steps = len(train_dataloader) * epochs
