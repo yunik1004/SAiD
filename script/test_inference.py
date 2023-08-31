@@ -69,6 +69,12 @@ def main() -> None:
         help="Length of the blendshape coefficients sequence should be divided by this number",
     )
     parser.add_argument(
+        "--unet_feature_dim",
+        type=int,
+        default=-1,
+        help="Dimension of the latent feature of the UNet",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda:0",
@@ -102,6 +108,7 @@ def main() -> None:
     eta = args.eta
     fps = args.fps
     divisor_unet = args.divisor_unet
+    unet_feature_dim = args.unet_feature_dim
     device = args.device
 
     num_repeats = args.num_repeats
@@ -115,6 +122,7 @@ def main() -> None:
     # Load model
     said_model = SAID_UNet1D(
         noise_scheduler=DDIMScheduler,
+        feature_dim=unet_feature_dim,
         prediction_type=prediction_type,
     )
     said_model.load_state_dict(torch.load(weights_path, map_location=device))
