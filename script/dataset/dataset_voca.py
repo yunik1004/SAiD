@@ -59,8 +59,8 @@ class ExpressionBases:
 
 
 @dataclass
-class VOCARKitDataPath:
-    """Dataclass for the VOCARKit data path"""
+class BlendVOCADataPath:
+    """Dataclass for the BlendVOCA data path"""
 
     person_id: str
     sentence_id: int
@@ -68,8 +68,8 @@ class VOCARKitDataPath:
     blendshape_coeffs: Optional[str]
 
 
-class VOCARKitDataset(ABC, Dataset):
-    """Abstract class of VOCA-ARKit dataset"""
+class BlendVOCADataset(ABC, Dataset):
+    """Abstract class of BlendVOCA dataset"""
 
     person_ids_train = [
         "FaceTalk_170725_00137_TA",
@@ -177,7 +177,7 @@ class VOCARKitDataset(ABC, Dataset):
         audio_dir: str,
         blendshape_coeffs_dir: Optional[str],
         person_ids: List[str],
-    ) -> List[VOCARKitDataPath]:
+    ) -> List[BlendVOCADataPath]:
         """Return the list of the data paths
 
         Parameters
@@ -191,8 +191,8 @@ class VOCARKitDataset(ABC, Dataset):
 
         Returns
         -------
-        List[VOCARKitDataPath]
-            List of the VOCARKitDataPath objects
+        List[BlendVOCADataPath]
+            List of the BlendVOCADataPath objects
         """
         data_paths = []
 
@@ -219,7 +219,7 @@ class VOCARKitDataset(ABC, Dataset):
                     for filename in filename_list:
                         coeffs_path = os.path.join(coeffs_id_dir, filename)
                         if os.path.exists(coeffs_path):
-                            data = VOCARKitDataPath(
+                            data = BlendVOCADataPath(
                                 person_id=pid,
                                 sentence_id=sid,
                                 audio=audio_path,
@@ -227,7 +227,7 @@ class VOCARKitDataset(ABC, Dataset):
                             )
                             data_paths.append(data)
                 else:
-                    data = VOCARKitDataPath(
+                    data = BlendVOCADataPath(
                         person_id=pid,
                         sentence_id=sid,
                         audio=audio_path,
@@ -319,13 +319,13 @@ class VOCARKitDataset(ABC, Dataset):
 
         if person_ids is None:
             person_ids = (
-                VOCARKitDataset.person_ids_train
-                + VOCARKitDataset.person_ids_val
-                + VOCARKitDataset.person_ids_test
+                BlendVOCADataset.person_ids_train
+                + BlendVOCADataset.person_ids_val
+                + BlendVOCADataset.person_ids_test
             )
 
         if blendshape_classes is None:
-            blendshape_classes = VOCARKitDataset.default_blendshape_classes
+            blendshape_classes = BlendVOCADataset.default_blendshape_classes
 
         blendshape_deltas = load_blendshape_deltas(blendshape_deltas_path)
 
@@ -356,7 +356,7 @@ class VOCARKitDataset(ABC, Dataset):
         return expressions
 
 
-class VOCARKitTrainDataset(VOCARKitDataset):
+class BlendVOCATrainDataset(BlendVOCADataset):
     """Train dataset for VOCA-ARKit"""
 
     def __init__(
@@ -372,10 +372,10 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         hflip: bool = True,
         delay: bool = True,
         delay_thres: int = 1,
-        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         classes_mirror_pair: List[
             Tuple[str, str]
-        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+        ] = BlendVOCADataset.default_blendshape_classes_mirror_pair,
         preload: bool = True,
     ) -> None:
         """Constructor of the class
@@ -619,7 +619,7 @@ class VOCARKitTrainDataset(VOCARKitDataset):
         )
 
 
-class VOCARKitValDataset(VOCARKitDataset):
+class BlendVOCAValDataset(BlendVOCADataset):
     """Validation dataset for VOCA-ARKit"""
 
     def __init__(
@@ -632,10 +632,10 @@ class VOCARKitValDataset(VOCARKitDataset):
         uncond_prob: float = 0.1,
         zero_prob: float = 0,
         hflip: bool = True,
-        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         classes_mirror_pair: List[
             Tuple[str, str]
-        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+        ] = BlendVOCADataset.default_blendshape_classes_mirror_pair,
         preload: bool = True,
     ) -> None:
         """Constructor of the class
@@ -769,8 +769,8 @@ class VOCARKitValDataset(VOCARKitDataset):
         )
 
 
-class VOCARKitTestDataset(VOCARKitDataset):
-    """Test dataset for VOCA-ARKit"""
+class BlendVOCATestDataset(BlendVOCADataset):
+    """Test dataset for BlendVOCA"""
 
     def __init__(
         self,
@@ -880,8 +880,8 @@ class VOCARKitTestDataset(VOCARKitDataset):
         )
 
 
-class VOCARKitEvalDataset(VOCARKitDataset):
-    """Evaluation dataset for VOCA-ARKit"""
+class BlendVOCAEvalDataset(BlendVOCADataset):
+    """Evaluation dataset for BlendVOCA"""
 
     def __init__(
         self,
@@ -889,7 +889,7 @@ class VOCARKitEvalDataset(VOCARKitDataset):
         blendshape_coeffs_dir: str,
         blendshape_deltas_path: Optional[str],
         sampling_rate: int,
-        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         preload: bool = True,
     ):
         """Constructor of the class
@@ -978,7 +978,7 @@ class VOCARKitEvalDataset(VOCARKitDataset):
         )
 
 
-class VOCARKitPseudoGTOptDataset:
+class BlendVOCAPseudoGTOptDataset:
     """Dataset for generating pseudo-GT blendshape coefficients"""
 
     def __init__(
@@ -988,7 +988,7 @@ class VOCARKitPseudoGTOptDataset:
         mesh_seqs_dir: str,
         blendshapes_names: List[str],
     ) -> None:
-        """Constructor of the VOCARKitPseudoGTOptDataset
+        """Constructor of the BlendVOCAPseudoGTOptDataset
 
         Parameters
         ----------
@@ -1066,8 +1066,8 @@ class VOCARKitPseudoGTOptDataset:
         return mesh_seq_list
 
 
-class VOCARKitVAEDataset(VOCARKitDataset):
-    """Abstract class of VOCA-ARKit dataset for VAE"""
+class BlendVOCAVAEDataset(BlendVOCADataset):
+    """Abstract class of BlendVOCA dataset for VAE"""
 
     def __init__(
         self,
@@ -1076,10 +1076,10 @@ class VOCARKitVAEDataset(VOCARKitDataset):
         zero_prob: float = 0,
         hflip: bool = True,
         dataset_type: str = "train",
-        classes: List[str] = VOCARKitDataset.default_blendshape_classes,
+        classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         classes_mirror_pair: List[
             Tuple[str, str]
-        ] = VOCARKitDataset.default_blendshape_classes_mirror_pair,
+        ] = BlendVOCADataset.default_blendshape_classes_mirror_pair,
     ) -> None:
         """Constructor of the class
 
@@ -1174,7 +1174,7 @@ class VOCARKitVAEDataset(VOCARKitDataset):
         self,
         blendshape_coeffs_dir: str,
         person_ids: List[str],
-    ) -> List[VOCARKitDataPath]:
+    ) -> List[BlendVOCADataPath]:
         """Return the list of the data paths
 
         Parameters
@@ -1186,8 +1186,8 @@ class VOCARKitVAEDataset(VOCARKitDataset):
 
         Returns
         -------
-        List[VOCARKitDataPath]
-            List of the VOCARKitDataPath objects
+        List[BlendVOCADataPath]
+            List of the BlendVOCADataPath objects
         """
         data_paths = []
 
@@ -1205,7 +1205,7 @@ class VOCARKitVAEDataset(VOCARKitDataset):
                 for filename in filename_list:
                     coeffs_path = os.path.join(coeffs_id_dir, filename)
                     if os.path.exists(coeffs_path):
-                        data = VOCARKitDataPath(
+                        data = BlendVOCADataPath(
                             person_id=pid,
                             sentence_id=sid,
                             audio=None,

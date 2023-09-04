@@ -10,14 +10,14 @@ from tqdm import tqdm
 from said.model.diffusion import SAID_UNet1D
 from said.util.audio import fit_audio_unet
 from said.util.blendshape import save_blendshape_coeffs
-from dataset.dataset_voca import VOCARKitDataset, VOCARKitTestDataset
+from dataset.dataset_voca import BlendVOCADataset, BlendVOCATestDataset
 
 
 def main() -> None:
     """Main function"""
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Generate the inference outputs using VOCA-ARKit test dataset"
+        description="Generate the inference outputs using BlendVOCA test dataset"
     )
     parser.add_argument(
         "--weights_path",
@@ -28,7 +28,7 @@ def main() -> None:
     parser.add_argument(
         "--audio_dir",
         type=str,
-        default="../VOCA_ARKit/audio",
+        default="../BlendVOCA/audio",
         help="Directory of the audio data",
     )
     parser.add_argument(
@@ -130,7 +130,7 @@ def main() -> None:
     said_model.eval()
 
     # Load data
-    test_dataset = VOCARKitTestDataset(
+    test_dataset = BlendVOCATestDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=None,
         blendshape_deltas_path=None,
@@ -141,7 +141,7 @@ def main() -> None:
         test_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=VOCARKitTestDataset.collate_fn,
+        collate_fn=BlendVOCATestDataset.collate_fn,
     )
 
     with torch.no_grad():
@@ -195,7 +195,7 @@ def main() -> None:
 
                     save_blendshape_coeffs(
                         coeffs=result,
-                        classes=VOCARKitDataset.default_blendshape_classes,
+                        classes=BlendVOCADataset.default_blendshape_classes,
                         output_path=output_path,
                     )
 

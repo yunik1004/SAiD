@@ -15,7 +15,7 @@ from tqdm import tqdm
 from said.model.vae import BCVAE
 from said.util.blendshape import load_blendshape_coeffs
 from said.util.scheduler import frange_cycle_linear
-from dataset.dataset_voca import VOCARKitVAEDataset
+from dataset.dataset_voca import BlendVOCAVAEDataset
 
 
 @dataclass
@@ -117,7 +117,7 @@ def train_epoch(
     said_vae : BCVAE
         BCVAE object
     train_dataloader : DataLoader
-        Dataloader of the VOCARKitVAEDataset
+        Dataloader of the BlendVOCAVAEDataset
     optimizer : torch.optim.Optimizer
         Optimizer object
     lr_scheduler: torch.optim.lr_scheduler
@@ -207,7 +207,7 @@ def validate_epoch(
     said_vae : BCVAE
         BCVAE object
     val_dataloader : DataLoader
-        Dataloader of the VOCARKitVAEDataset
+        Dataloader of the BlendVOCAVAEDataset
     accelerator : Accelerator
         Accelerator object
     beta : float
@@ -272,12 +272,12 @@ def main():
 
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Train the SAiD model using VOCA-ARKit dataset"
+        description="Train the SAiD model using BlendVOCA dataset"
     )
     parser.add_argument(
         "--coeffs_dir",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs",
+        default="../BlendVOCA/blendshape_coeffs",
         help="Directory of the data",
     )
     parser.add_argument(
@@ -366,11 +366,11 @@ def main():
     said_vae = BCVAE()
 
     # Load data
-    train_dataset = VOCARKitVAEDataset(
+    train_dataset = BlendVOCAVAEDataset(
         blendshape_coeffs_dir=coeffs_dir,
         dataset_type="train",
     )
-    val_dataset = VOCARKitVAEDataset(
+    val_dataset = BlendVOCAVAEDataset(
         blendshape_coeffs_dir=coeffs_dir,
         dataset_type="val",
     )
@@ -385,13 +385,13 @@ def main():
         train_dataset,
         batch_size=batch_size,
         sampler=train_sampler,
-        collate_fn=VOCARKitVAEDataset.collate_fn,
+        collate_fn=BlendVOCAVAEDataset.collate_fn,
     )
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=VOCARKitVAEDataset.collate_fn,
+        collate_fn=BlendVOCAVAEDataset.collate_fn,
     )
 
     # Initialize the optimizer

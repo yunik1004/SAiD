@@ -11,7 +11,7 @@ from said.util.blendshape import (
     save_blendshape_coeffs,
     save_blendshape_coeffs_image,
 )
-from dataset.dataset_voca import VOCARKitDataset
+from dataset.dataset_voca import BlendVOCADataset
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     parser.add_argument(
         "--audio_path",
         type=str,
-        default="../VOCA_ARKit/audio/FaceTalk_170731_00024_TA/sentence01.wav",
+        default="../BlendVOCA/audio/FaceTalk_170731_00024_TA/sentence01.wav",
         help="Path of the audio file",
     )
     parser.add_argument(
@@ -182,7 +182,7 @@ def main():
 
     save_blendshape_coeffs(
         coeffs=result,
-        classes=VOCARKitDataset.default_blendshape_classes,
+        classes=BlendVOCADataset.default_blendshape_classes,
         output_path=output_path,
     )
 
@@ -201,7 +201,7 @@ def main():
 
             save_blendshape_coeffs(
                 coeffs=interm_coeffs,
-                classes=VOCARKitDataset.default_blendshape_classes,
+                classes=BlendVOCADataset.default_blendshape_classes,
                 output_path=os.path.join(intermediate_dir, f"{timestep}.csv"),
             )
 
