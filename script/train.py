@@ -15,7 +15,7 @@ from tqdm import tqdm
 from said.model.diffusion import SAID, SAID_UNet1D
 from said.model.wav2vec2 import ModifiedWav2Vec2Model
 from said.util.blendshape import load_blendshape_coeffs
-from dataset.dataset_voca import DataBatch, VOCARKitTrainDataset, VOCARKitValDataset
+from dataset.dataset_voca import DataBatch, BlendVOCATrainDataset, BlendVOCAValDataset
 
 
 @dataclass
@@ -56,7 +56,7 @@ def random_noise_loss(
     said_model : SAID
         SAiD model object
     data : DataBatch
-        Output of the VOCARKitDataset.collate_fn
+        Output of the BlendVOCADataset.collate_fn
     std : torch.FloatTensor
         (1, x_dim), Standard deviation of coefficients
     device : torch.device
@@ -171,7 +171,7 @@ def train_epoch(
     said_model : SAID
         SAiD model object
     train_dataloader : DataLoader
-        Dataloader of the VOCARKitTrainDataset
+        Dataloader of the BlendVOCATrainDataset
     optimizer : torch.optim.Optimizer
         Optimizer object
     lr_scheduler: torch.optim.lr_scheduler
@@ -262,7 +262,7 @@ def validate_epoch(
     said_model : SAID
         SAiD model object
     val_dataloader : DataLoader
-        Dataloader of the VOCARKitValDataset
+        Dataloader of the BlendVOCAValDataset
     accelerator : Accelerator
         Accelerator object
     std : torch.FloatTensor
@@ -334,18 +334,18 @@ def main() -> None:
 
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Train the SAiD model using VOCA-ARKit dataset"
+        description="Train the SAiD model using BlendVOCA dataset"
     )
     parser.add_argument(
         "--audio_dir",
         type=str,
-        default="../VOCA_ARKit/audio",
+        default="../BlendVOCA/audio",
         help="Directory of the audio data",
     )
     parser.add_argument(
         "--coeffs_dir",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs",
+        default="../BlendVOCA/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
@@ -482,7 +482,7 @@ def main() -> None:
     )
 
     # Load data
-    train_dataset = VOCARKitTrainDataset(
+    train_dataset = BlendVOCATrainDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=blendshape_deltas_path,
@@ -492,7 +492,7 @@ def main() -> None:
         uncond_prob=uncond_prob,
         preload=True,
     )
-    val_dataset = VOCARKitValDataset(
+    val_dataset = BlendVOCAValDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=blendshape_deltas_path,
@@ -518,7 +518,7 @@ def main() -> None:
         val_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=VOCARKitValDataset.collate_fn,
+        collate_fn=BlendVOCAValDataset.collate_fn,
     )
 
     # Initialize the optimzier - freeze audio encoder

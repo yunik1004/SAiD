@@ -4,7 +4,7 @@ import argparse
 import os
 import pathlib
 from said.util.mesh import save_mesh
-from dataset.dataset_voca import VOCARKitDataset
+from dataset.dataset_voca import BlendVOCADataset
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
     parser.add_argument(
         "--templates_dir",
         type=str,
-        default="../VOCA_ARKit/templates",
+        default="../BlendVOCA/templates",
         help="Directory of the template meshes",
     )
     parser.add_argument(
@@ -47,7 +47,7 @@ def main():
     os.makedirs(blendshapes_head_dir)
 
     # Preprocess the blendshapes
-    bls = VOCARKitDataset.preprocess_blendshapes(templates_dir, blendshape_deltas_path)
+    bls = BlendVOCADataset.preprocess_blendshapes(templates_dir, blendshape_deltas_path)
 
     # Save the blendshapes
     for pid, bases in bls.items():
