@@ -13,7 +13,7 @@ from tqdm import tqdm
 from said.util.mesh import load_mesh
 from said.util.parser import parse_list
 from said.util.blendshape import load_blendshape_coeffs
-from dataset.dataset_voca import VOCARKitEvalDataset
+from dataset.dataset_voca import BlendVOCAEvalDataset
 from rendering.render_visual import render_blendshape_coefficients_multiprocess
 
 
@@ -26,25 +26,25 @@ def main() -> None:
     parser.add_argument(
         "--neutral_dir",
         type=str,
-        default="../VOCA_ARKit/templates_head",
+        default="../BlendVOCA/templates_head",
         help="Directory of the neutral mesh data",
     )
     parser.add_argument(
         "--audio_dir",
         type=str,
-        default="../VOCA_ARKit/audio",
+        default="../BlendVOCA/audio",
         help="Directory of the audio data",
     )
     parser.add_argument(
         "--coeffs_dir",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs",
+        default="../BlendVOCA/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
         "--blendshapes_dir",
         type=str,
-        default="../VOCA_ARKit/blendshapes_head",
+        default="../BlendVOCA/blendshapes_head",
         help="Directory of the blendshape meshes",
     )
     parser.add_argument(
@@ -85,7 +85,7 @@ def main() -> None:
     blendshape_name_list = parse_list(blendshape_list_path, str)
 
     # Load data
-    eval_dataset = VOCARKitEvalDataset(
+    eval_dataset = BlendVOCAEvalDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=None,
