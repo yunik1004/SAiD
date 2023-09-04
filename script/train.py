@@ -388,10 +388,10 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=30000, help="The number of epochs"
+        "--epochs", type=int, default=50000, help="The number of epochs"
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-4, help="Learning rate"
+        "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
     parser.add_argument(
         "--uncond_prob",
@@ -426,7 +426,7 @@ def main() -> None:
     parser.add_argument(
         "--ema_decay",
         type=float,
-        default=0.99,
+        default=0.9999,
         help="Ema decay rate",
     )
     parser.add_argument(
