@@ -24,25 +24,25 @@ def main() -> None:
     parser.add_argument(
         "--neutral_path",
         type=str,
-        default="../VOCA_ARKit/templates_head/FaceTalk_170731_00024_TA.obj",
+        default="../BlendVOCA/templates_head/FaceTalk_170731_00024_TA.obj",
         help="Path of the neutral mesh",
     )
     parser.add_argument(
         "--blendshapes_dir",
         type=str,
-        default="../VOCA_ARKit/blendshapes_head/FaceTalk_170731_00024_TA",
+        default="../BlendVOCA/blendshapes_head/FaceTalk_170731_00024_TA",
         help="Directory of the blendshape meshes",
     )
     parser.add_argument(
         "--audio_path",
         type=str,
-        default="../VOCA_ARKit/audio/FaceTalk_170731_00024_TA/sentence01.wav",
+        default="../BlendVOCA/audio/FaceTalk_170731_00024_TA/sentence01.wav",
         help="Path of the audio file",
     )
     parser.add_argument(
         "--blendshape_coeffs_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
+        default="../BlendVOCA/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
         help="Path of the blendshape coefficient sequence",
     )
     parser.add_argument(

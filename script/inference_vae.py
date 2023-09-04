@@ -9,7 +9,7 @@ from said.util.blendshape import (
     save_blendshape_coeffs,
     save_blendshape_coeffs_image,
 )
-from dataset.dataset_voca import VOCARKitDataset
+from dataset.dataset_voca import BlendVOCADataset
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     parser.add_argument(
         "--blendshape_coeffs_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
+        default="../BlendVOCA/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
         help="Path of the input blendshape coefficients file (csv format)",
     )
     parser.add_argument(
@@ -88,7 +88,7 @@ def main():
 
     save_blendshape_coeffs(
         coeffs=result,
-        classes=VOCARKitDataset.default_blendshape_classes,
+        classes=BlendVOCADataset.default_blendshape_classes,
         output_path=output_path,
     )
 

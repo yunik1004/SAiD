@@ -14,7 +14,7 @@ from said.metric.frechet_distance import frechet_distance, get_statistic
 from said.metric.multimodality import multimodality
 from said.metric.wind import get_statistic_gmm, wind
 from said.model.vae import BCVAE
-from dataset.dataset_voca import VOCARKitEvalDataset
+from dataset.dataset_voca import BlendVOCAEvalDataset
 
 
 @dataclass
@@ -309,7 +309,7 @@ def evaluate(
     Parameters
     ----------
     eval_dataloader: DataLoader
-        Dataloader of the VOCARKitEvalDataset
+        Dataloader of the BlendVOCAEvalDataset
     real_dataloader: DataLoader
         Dataloader of the real dataset
     sampling_rate: int
@@ -397,24 +397,24 @@ def main() -> None:
 
     # Arguments
     parser = argparse.ArgumentParser(
-        description="Evaluate the output based on the VOCA-ARKit test dataset"
+        description="Evaluate the output based on the BlendVOCA test dataset"
     )
     parser.add_argument(
         "--audio_dir",
         type=str,
-        default="../VOCA_ARKit/audio",
+        default="../BlendVOCA/audio",
         help="Directory of the audio data",
     )
     parser.add_argument(
         "--coeffs_dir",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs",
+        default="../BlendVOCA/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
         "--coeffs_real_dir",
         type=str,
-        default="../VOCA_ARKit/blendshape_coeffs",
+        default="../BlendVOCA/blendshape_coeffs",
         help="Directory of the blendshape coefficients data",
     )
     parser.add_argument(
@@ -427,7 +427,7 @@ def main() -> None:
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
-        default="../VOCA_ARKit/blendshape_residuals.pickle",
+        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
         help="Path of the blendshape residuals",
     )
     """
@@ -495,14 +495,14 @@ def main() -> None:
     said_vae.eval()
 
     # Load data
-    eval_dataset = VOCARKitEvalDataset(
+    eval_dataset = BlendVOCAEvalDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_dir,
         blendshape_deltas_path=blendshape_deltas_path,
         sampling_rate=sampling_rate,
     )
 
-    real_dataset = VOCARKitEvalDataset(
+    real_dataset = BlendVOCAEvalDataset(
         audio_dir=audio_dir,
         blendshape_coeffs_dir=coeffs_real_dir,
         blendshape_deltas_path=blendshape_deltas_path,
@@ -513,14 +513,14 @@ def main() -> None:
         eval_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=VOCARKitEvalDataset.collate_fn,
+        collate_fn=BlendVOCAEvalDataset.collate_fn,
     )
 
     real_dataloader = DataLoader(
         real_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=VOCARKitEvalDataset.collate_fn,
+        collate_fn=BlendVOCAEvalDataset.collate_fn,
     )
 
     # Evaluate the data

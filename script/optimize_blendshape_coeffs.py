@@ -8,7 +8,7 @@ from tqdm import tqdm
 from said.util.blendshape import save_blendshape_coeffs
 from said.util.parser import parse_list
 from said.optimize.blendshape_coeffs import OptimizationProblemFull
-from dataset.dataset_voca import VOCARKitDataset, VOCARKitPseudoGTOptDataset
+from dataset.dataset_voca import BlendVOCADataset, BlendVOCAPseudoGTOptDataset
 
 
 def main():
@@ -21,19 +21,19 @@ def main():
     parser.add_argument(
         "--neutrals_dir",
         type=str,
-        default="../VOCA_ARKit/templates_head",
+        default="../BlendVOCA/templates_head",
         help="Directory of the neutral meshes",
     )
     parser.add_argument(
         "--blendshapes_dir",
         type=str,
-        default="../VOCA_ARKit/blendshapes_head",
+        default="../BlendVOCA/blendshapes_head",
         help="Directory of the blendshape meshes",
     )
     parser.add_argument(
         "--mesh_seqs_dir",
         type=str,
-        default="../VOCA_ARKit/unposedcleaneddata",
+        default="../BlendVOCA/unposedcleaneddata",
         help="Directory of the mesh sequences",
     )
     parser.add_argument(
@@ -100,16 +100,16 @@ def main():
     # Parse head indices
     head_idx_list = None if head_idx_path == "" else parse_list(head_idx_path, int)
 
-    dataset = VOCARKitPseudoGTOptDataset(
+    dataset = BlendVOCAPseudoGTOptDataset(
         neutrals_dir, blendshapes_dir, mesh_seqs_dir, blendshape_name_list
     )
 
     person_id_list = (
-        VOCARKitDataset.person_ids_train
-        + VOCARKitDataset.person_ids_val
-        + VOCARKitDataset.person_ids_test
+        BlendVOCADataset.person_ids_train
+        + BlendVOCADataset.person_ids_val
+        + BlendVOCADataset.person_ids_test
     )
-    seq_id_list = VOCARKitDataset.sentence_ids
+    seq_id_list = BlendVOCADataset.sentence_ids
 
     for person_id in tqdm(person_id_list):
         bl_out = dataset.get_blendshapes(person_id)
