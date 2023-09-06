@@ -369,7 +369,7 @@ class BlendVOCATrainDataset(BlendVOCADataset):
         window_size_min: int = 120,
         uncond_prob: float = 0.1,
         zero_prob: float = 0,
-        hflip: bool = True,
+        hflip: bool = False,
         delay: bool = True,
         delay_thres: int = 1,
         classes: List[str] = BlendVOCADataset.default_blendshape_classes,
@@ -399,7 +399,7 @@ class BlendVOCATrainDataset(BlendVOCADataset):
         zero_prob : float, optional
             Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
-            Whether do the horizontal flip, by default True
+            Whether do the horizontal flip, by default False
         delay : bool, optional
             Whether do the delaying, by default True
         delay_thres: int, optional
@@ -631,7 +631,7 @@ class BlendVOCAValDataset(BlendVOCADataset):
         sampling_rate: int,
         uncond_prob: float = 0.1,
         zero_prob: float = 0,
-        hflip: bool = True,
+        hflip: bool = False,
         classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         classes_mirror_pair: List[
             Tuple[str, str]
@@ -657,7 +657,7 @@ class BlendVOCAValDataset(BlendVOCADataset):
         zero_prob : float, optional
             Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
-            Whether do the horizontal flip, by default True
+            Whether do the horizontal flip, by default False
         classes : List[str], optional
             List of blendshape names, by default default_blendshape_classes
         classes_mirror_pair : List[Tuple[str, str]], optional
@@ -1074,7 +1074,7 @@ class BlendVOCAVAEDataset(BlendVOCADataset):
         blendshape_coeffs_dir: str,
         window_size: int = 120,
         zero_prob: float = 0,
-        hflip: bool = True,
+        hflip: bool = False,
         dataset_type: str = "train",
         classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         classes_mirror_pair: List[
@@ -1092,7 +1092,7 @@ class BlendVOCAVAEDataset(BlendVOCADataset):
         zero_prob : float, optional
             Zero-out probability of waveform and blendshape coefficients, by default 0
         hflip : bool, optional
-            Whether do the horizontal flip, by default True
+            Whether do the horizontal flip, by default False
         dataset_type: str, optional
             Type of the dataset, whether "train", "val", and "test", by default "train"
         classes : List[str], optional
