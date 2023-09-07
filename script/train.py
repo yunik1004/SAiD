@@ -116,8 +116,8 @@ def random_noise_loss(
     answer_reweight = answer
     pred_reweight = pred
     if std is not None:
-        answer_reweight /= std.view(1, 1, -1).to(device)
-        pred_reweight /= std.view(1, 1, -1).to(device)
+        answer_reweight /= std.view(1, 1, -1)
+        pred_reweight /= std.view(1, 1, -1)
 
     loss_pred = criterion_pred(pred_reweight, answer_reweight)
 
@@ -198,6 +198,8 @@ def train_epoch(
         Average losses
     """
     device = accelerator.device
+    if std is not None:
+        std = std.to(device)
 
     said_model.train()
 
@@ -285,6 +287,8 @@ def validate_epoch(
         Average losses
     """
     device = accelerator.device
+    if std is not None:
+        std = std.to(device)
 
     said_model.eval()
 

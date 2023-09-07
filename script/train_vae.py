@@ -142,7 +142,8 @@ def train_epoch(
         Average losses
     """
     device = accelerator.device
-    std = std.to(device)
+    if std is not None:
+        std = std.to(device)
 
     said_vae.train()
 
@@ -228,7 +229,8 @@ def validate_epoch(
         Average losses
     """
     device = accelerator.device
-    std = std.to(device)
+    if std is not None:
+        std = std.to(device)
 
     said_vae.eval()
 
@@ -286,7 +288,7 @@ def main():
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default=(default_data_dir / "coeffs_std.csv").resolve(),  # "",
+        default="",  # (default_data_dir / "coeffs_std.csv").resolve(),  # "",
         help="Path of the coeffs std data",
     )
     parser.add_argument(
