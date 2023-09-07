@@ -288,7 +288,7 @@ def main():
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default="",  # (default_data_dir / "coeffs_std.csv").resolve(),  # "",
+        default=(default_data_dir / "coeffs_std.csv").resolve(),  # "",
         help="Path of the coeffs std data",
     )
     parser.add_argument(
