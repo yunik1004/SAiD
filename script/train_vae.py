@@ -45,7 +45,7 @@ class LossEpochOutput:
 def elbo_loss(
     said_vae: BCVAE,
     data: torch.FloatTensor,
-    std: torch.FloatTensor,
+    std: Optional[torch.FloatTensor],
     device: torch.device,
 ) -> LossStepOutput:
     """Compute the ELBO loss
@@ -56,7 +56,7 @@ def elbo_loss(
         BCVAE object
     data : torch.FloatTensor
         (Batch_size, sample_seq_len, x_dim), Input data
-    std : torch.FloatTensor
+    std : Optional[torch.FloatTensor]
         (1, x_dim)
     device : torch.device
         GPU device
@@ -78,8 +78,11 @@ def elbo_loss(
     criterion_reconst = nn.MSELoss(reduction="sum")
     criterion_velocity = nn.MSELoss(reduction="sum")
 
-    answer_reweight = blendshape_coeffs / std.view(1, 1, -1)
-    pred_reweight = blendshape_coeffs_reconst / std.view(1, 1, -1)
+    answer_reweight = blendshape_coeffs
+    pred_reweight = blendshape_coeffs_reconst
+    if std is not None:
+        answer_reweight /= std.view(1, 1, -1)
+        pred_reweight /= std.view(1, 1, -1)
 
     loss_reconst = 0.5 * criterion_reconst(answer_reweight, pred_reweight) / batch_size
 
@@ -106,7 +109,7 @@ def train_epoch(
     lr_scheduler: torch.optim.lr_scheduler,
     accelerator: Accelerator,
     beta: float,
-    std: torch.FloatTensor,
+    std: Optional[torch.FloatTensor],
     weight_vel: float,
     ema_vae: Optional[EMAModel] = None,
 ) -> LossEpochOutput:
@@ -126,7 +129,7 @@ def train_epoch(
         Accelerator object
     beta : float
         Loss weight
-    std : torch.FloatTensor
+    std : Optional[torch.FloatTensor]
         (1, x_dim), Standard deviation of coefficients
     weight_vel: float
         Weight for the velocity loss
@@ -196,7 +199,7 @@ def validate_epoch(
     val_dataloader: DataLoader,
     accelerator: Accelerator,
     beta: float,
-    std: torch.FloatTensor,
+    std: Optional[torch.FloatTensor],
     weight_vel: float,
     num_repeat: int = 1,
 ) -> LossEpochOutput:
@@ -212,7 +215,7 @@ def validate_epoch(
         Accelerator object
     beta : float
         Loss weight
-    std : torch.FloatTensor
+    std : Optional[torch.FloatTensor]
         (1, x_dim), Standard deviation of coefficients
     weight_vel: float
         Weight for the velocity loss
@@ -283,7 +286,7 @@ def main():
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default=(default_data_dir / "coeffs_std.csv").resolve(),
+        default=(default_data_dir / "coeffs_std.csv").resolve(),  # "",
         help="Path of the coeffs std data",
     )
     parser.add_argument(
@@ -355,7 +358,9 @@ def main():
     val_repeat = args.val_repeat
     save_period = args.save_period
 
-    coeffs_std = load_blendshape_coeffs(coeffs_std_path)
+    coeffs_std = (
+        None if coeffs_std_path == "" else load_blendshape_coeffs(coeffs_std_path)
+    )
 
     # Initialize accelerator
     accelerator = Accelerator(log_with="tensorboard", project_dir=output_dir)
