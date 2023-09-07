@@ -45,7 +45,7 @@ class LossEpochOutput:
 def random_noise_loss(
     said_model: SAID,
     data: DataBatch,
-    std: torch.FloatTensor,
+    std: Optional[torch.FloatTensor],
     device: torch.device,
     prediction_type: str = "epsilon",
 ) -> LossStepOutput:
@@ -57,7 +57,7 @@ def random_noise_loss(
         SAiD model object
     data : DataBatch
         Output of the BlendVOCADataset.collate_fn
-    std : torch.FloatTensor
+    std : Optional[torch.FloatTensor]
         (1, x_dim), Standard deviation of coefficients
     device : torch.device
         GPU device
@@ -113,8 +113,11 @@ def random_noise_loss(
     criterion_velocity = nn.L1Loss()
     criterion_vertex = nn.L1Loss()
 
-    answer_reweight = answer / std.view(1, 1, -1).to(device)
-    pred_reweight = pred / std.view(1, 1, -1).to(device)
+    answer_reweight = answer
+    pred_reweight = pred
+    if std is not None:
+        answer_reweight /= std.view(1, 1, -1).to(device)
+        pred_reweight /= std.view(1, 1, -1).to(device)
 
     loss_pred = criterion_pred(pred_reweight, answer_reweight)
 
@@ -158,7 +161,7 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     lr_scheduler: torch.optim.lr_scheduler,
     accelerator: Accelerator,
-    std: torch.FloatTensor,
+    std: Optional[torch.FloatTensor],
     weight_vel: float,
     weight_vertex: float,
     prediction_type: str = "epsilon",
@@ -178,7 +181,7 @@ def train_epoch(
         Learning rate scheduler object
     accelerator : Accelerator
         Accelerator object
-    std : torch.FloatTensor
+    std : Optional[torch.FloatTensor]
         (1, x_dim), Standard deviation of coefficients
     weight_vel: float
         Weight for the velocity loss
@@ -351,7 +354,7 @@ def main() -> None:
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default=(default_data_dir / "coeffs_std.csv").resolve(),
+        default=(default_data_dir / "coeffs_std.csv").resolve(),  # "",
         help="Path of the coeffs std data",
     )
     parser.add_argument(
@@ -450,7 +453,9 @@ def main() -> None:
     if landmarks_path == "":
         landmarks_path = None
 
-    coeffs_std = load_blendshape_coeffs(coeffs_std_path)
+    coeffs_std = (
+        None if coeffs_std_path == "" else load_blendshape_coeffs(coeffs_std_path)
+    )
 
     output_dir = args.output_dir
     prediction_type = args.prediction_type
