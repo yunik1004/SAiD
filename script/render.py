@@ -12,7 +12,7 @@ import numpy as np
 from said.util.mesh import load_mesh
 from said.util.parser import parse_list
 from said.util.blendshape import load_blendshape_coeffs
-from rendering.render_visual import render_blendshape_coefficients
+from rendering.render_visual import RendererObject, render_blendshape_coefficients
 
 
 def main() -> None:
@@ -89,6 +89,9 @@ def main() -> None:
 
     blendshape_name_list = parse_list(blendshape_list_path, str)
 
+    # Create renderer
+    renderer = RendererObject()
+
     neutral_mesh = load_mesh(neutral_path)
     blendshape_vectors = []
     for bl_name in blendshape_name_list:
@@ -101,6 +104,7 @@ def main() -> None:
 
     # Render images
     rendered_imgs = render_blendshape_coefficients(
+        renderer=renderer,
         neutral_mesh=neutral_mesh,
         blendshapes_matrix=blendshapes_matrix,
         blendshape_coeffs=blendshape_coeffs,
