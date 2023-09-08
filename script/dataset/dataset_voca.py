@@ -177,6 +177,7 @@ class BlendVOCADataset(ABC, Dataset):
         audio_dir: str,
         blendshape_coeffs_dir: Optional[str],
         person_ids: List[str],
+        repeat_regex: str = "(-.+)?",
     ) -> List[BlendVOCADataPath]:
         """Return the list of the data paths
 
@@ -188,6 +189,8 @@ class BlendVOCADataset(ABC, Dataset):
             Directory of the blendshape coefficients
         person_ids : List[str]
             List of the person ids
+        repeat_regex: str, optional
+            Regex for checking the repeated files, by default "(-.+)?"
 
         Returns
         -------
@@ -212,7 +215,7 @@ class BlendVOCADataset(ABC, Dataset):
                     continue
 
                 if coeffs_id_dir and os.path.exists(coeffs_id_dir):
-                    coeffs_pattern = re.compile(f"^{filename_base}(-.+)?\.csv$")
+                    coeffs_pattern = re.compile(f"^{filename_base}{repeat_regex}\.csv$")
                     filename_list = [
                         s for s in os.listdir(coeffs_id_dir) if coeffs_pattern.match(s)
                     ]
@@ -891,6 +894,7 @@ class BlendVOCAEvalDataset(BlendVOCADataset):
         sampling_rate: int,
         classes: List[str] = BlendVOCADataset.default_blendshape_classes,
         preload: bool = True,
+        repeat_regex: str = "(-.+)?",
     ):
         """Constructor of the class
 
@@ -908,12 +912,17 @@ class BlendVOCAEvalDataset(BlendVOCADataset):
             List of blendshape names, by default default_blendshape_classes
         preload: bool, optional
             Load the data in the constructor, by default True
+        repeat_regex: str, optional
+            Regex for checking the repeated files, by default "(-.+)?"
         """
         self.sampling_rate = sampling_rate
         self.classes = classes
 
         self.data_paths = self.get_data_paths(
-            audio_dir, blendshape_coeffs_dir, self.person_ids_test
+            audio_dir,
+            blendshape_coeffs_dir,
+            self.person_ids_test,
+            repeat_regex,
         )
 
         self.blendshape_deltas = (
