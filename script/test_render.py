@@ -60,6 +60,12 @@ def main() -> None:
         help="FPS of the blendshape coefficients sequence",
     )
     parser.add_argument(
+        "--repeat_regex",
+        type=str,
+        default="(-.+)?",
+        help="Regex for checking the repeated files",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="../out_render",
@@ -73,6 +79,7 @@ def main() -> None:
     blendshapes_dir = args.blendshapes_dir
     blendshape_list_path = args.blendshape_list_path
     fps = args.fps
+    repeat_regex = args.repeat_regex
     output_dir = args.output_dir
 
     blendshape_name_list = parse_list(blendshape_list_path, str)
@@ -87,6 +94,7 @@ def main() -> None:
         blendshape_deltas_path=None,
         sampling_rate=-1,
         preload=False,
+        repeat_regex=repeat_regex,
     )
 
     neutral_meshes = {}
