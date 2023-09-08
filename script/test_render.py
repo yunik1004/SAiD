@@ -14,7 +14,7 @@ from said.util.mesh import load_mesh
 from said.util.parser import parse_list
 from said.util.blendshape import load_blendshape_coeffs
 from dataset.dataset_voca import BlendVOCAEvalDataset
-from rendering.render_visual import render_blendshape_coefficients_multiprocess
+from rendering.render_visual import RendererObject, render_blendshape_coefficients
 
 
 def main() -> None:
@@ -60,12 +60,6 @@ def main() -> None:
         help="FPS of the blendshape coefficients sequence",
     )
     parser.add_argument(
-        "--num_process",
-        type=int,
-        default=8,
-        help="The number of processes",
-    )
-    parser.add_argument(
         "--output_dir",
         type=str,
         default="../out_render",
@@ -79,10 +73,12 @@ def main() -> None:
     blendshapes_dir = args.blendshapes_dir
     blendshape_list_path = args.blendshape_list_path
     fps = args.fps
-    num_process = args.num_process
     output_dir = args.output_dir
 
     blendshape_name_list = parse_list(blendshape_list_path, str)
+
+    # Create renderer
+    renderer = RendererObject()
 
     # Load data
     eval_dataset = BlendVOCAEvalDataset(
@@ -119,11 +115,11 @@ def main() -> None:
         blendshape_coeffs = load_blendshape_coeffs(blendshape_coeffs_path).numpy()
 
         # Render images
-        rendered_imgs = render_blendshape_coefficients_multiprocess(
+        rendered_imgs = render_blendshape_coefficients(
+            renderer=renderer,
             neutral_mesh=neutral_meshes[pid],
             blendshapes_matrix=blendshapes_matrices[pid],
             blendshape_coeffs=blendshape_coeffs,
-            num_process=num_process,
         )
 
         # Render video
