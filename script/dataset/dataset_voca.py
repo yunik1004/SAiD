@@ -959,15 +959,24 @@ class BlendVOCAEvalDataset(BlendVOCADataset):
 
     def __getitem__(self, index: int) -> DataItem:
         data = self.data_paths[index]
-        waveform = load_audio(data.audio, self.sampling_rate)
-        blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
-        blendshape_delta = (
-            torch.FloatTensor(
-                np.stack(list(self.blendshape_deltas[data.person_id].values()), axis=0)
+
+        if self.preload:
+            data_pre = self.data_preload[index]
+            waveform = data_pre[0]
+            blendshape_coeffs = data_pre[1]
+            blendshape_delta = self.blendshape_deltas_preload[data.person_id]
+        else:
+            waveform = load_audio(data.audio, self.sampling_rate)
+            blendshape_coeffs = load_blendshape_coeffs(data.blendshape_coeffs)
+            blendshape_delta = (
+                torch.FloatTensor(
+                    np.stack(
+                        list(self.blendshape_deltas[data.person_id].values()), axis=0
+                    )
+                )
+                if self.blendshape_deltas
+                else None
             )
-            if self.blendshape_deltas
-            else None
-        )
 
         blendshape_len = blendshape_coeffs.shape[0]
         waveform_window_len = (self.sampling_rate * blendshape_len) // self.fps

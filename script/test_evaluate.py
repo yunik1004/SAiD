@@ -32,6 +32,7 @@ class EvalMetrics:
     """
 
     beat_consistency_score: float
+    vertex_error: float
     frechet_distance: float
     multimodality: float
     wind: StatisticMetric
@@ -186,6 +187,55 @@ def evaluate_beat_consistency_score(
         fps=fps,
         threshold=bc_threshold,
     )
+
+
+def evaluate_vertex_error(
+    eval_dataloader: DataLoader,
+    real_dataloader: DataLoader,
+) -> float:
+    """Evaluate the vertex error
+
+    Parameters
+    ----------
+    eval_dataloader: DataLoader
+        Dataloader of the eval dataset
+    real_dataloader: DataLoader
+        Dataloader of the real dataset. It is required to remove eval data which is not in real dataset.
+
+    Returns
+    -------
+    float
+        Vertex error
+    """
+    blendshape_delta_dict = {
+        data.person_ids[0]: data.blendshape_delta[0] for data in real_dataloader
+    }
+    real_coeffs_dict = {
+        (data.person_ids[0], data.sentence_ids[0]): data.blendshape_coeffs[0]
+        for data in real_dataloader
+    }
+
+    vertex_errors = []
+    for data in eval_dataloader:
+        real_coeffs = real_coeffs_dict.get((data.person_ids[0], data.sentence_ids[0]))
+        if real_coeffs is None:
+            continue
+        eval_coeffs = data.blendshape_coeffs[0]
+        blendshape_delta = blendshape_delta_dict[data.person_ids[0]]
+
+        time_len = min(real_coeffs.shape[0], eval_coeffs.shape[0])
+
+        cdiff = torch.einsum(
+            "tc, cvi -> tvi",
+            real_coeffs[:time_len] - eval_coeffs[:time_len],
+            blendshape_delta,
+        )
+        vdiff = torch.sqrt(torch.sum(torch.square(cdiff), dim=(1, 2)))
+        max_vdiff = torch.max(vdiff).item()
+
+        vertex_errors.append(max_vdiff)
+
+    return statistics.mean(vertex_errors)
 
 
 def evalute_frechet_distance(
@@ -343,6 +393,12 @@ def evaluate(
         bc_threshold=bc_threshold,
     )
 
+    # Compute vertex error
+    ve = evaluate_vertex_error(
+        eval_dataloader=eval_dataloader,
+        real_dataloader=real_dataloader,
+    )
+
     # Generate latents
     eval_latents_info = generate_latents_info(
         vae,
@@ -385,6 +441,7 @@ def evaluate(
 
     return EvalMetrics(
         beat_consistency_score=bc,
+        vertex_error=ve,
         frechet_distance=fd,
         multimodality=multimodality,
         wind=wind,
@@ -394,6 +451,7 @@ def evaluate(
 def main() -> None:
     """Main function"""
     default_model_dir = pathlib.Path(__file__).parent.parent / "model"
+    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -423,14 +481,12 @@ def main() -> None:
         default=(default_model_dir / "vae.pth").resolve(),
         help="Path of the weights of VAE",
     )
-    """
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
         default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
         help="Path of the blendshape residuals",
     )
-    """
     parser.add_argument(
         "--sampling_rate",
         type=int,
@@ -479,7 +535,7 @@ def main() -> None:
     coeffs_dir = args.coeffs_dir
     coeffs_real_dir = args.coeffs_real_dir
     vae_weights_path = args.vae_weights_path
-    blendshape_deltas_path = None  # args.blendshape_residuals_path
+    blendshape_deltas_path = args.blendshape_residuals_path
     sampling_rate = args.sampling_rate
     fps = args.fps
     bc_threshold = args.bc_threshold
