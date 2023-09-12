@@ -35,12 +35,12 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, emb, context=None):
+    def forward(self, x, emb, context=None, timestep_ratio=None):
         for layer in self:
             if isinstance(layer, TimestepBlock):
                 x = layer(x, emb)
             elif isinstance(layer, SpatialTransformer):
-                x = layer(x, context)
+                x = layer(x, context, timestep_ratio)
             else:
                 x = layer(x)
         return x
@@ -419,6 +419,7 @@ class UNetModel(nn.Module):
         context_dim=None,  # custom transformer support
         n_embed=None,  # custom support for prediction of discrete ids into codebook of first stage vq model
         legacy=True,
+        timestep_max=999,
     ):
         super().__init__()
         if use_spatial_transformer:
@@ -459,6 +460,7 @@ class UNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
         self.predict_codebook_ids = n_embed is not None
+        self.timestep_max = timestep_max
 
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
@@ -690,18 +692,20 @@ class UNetModel(nn.Module):
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
         emb = self.time_embed(t_emb)
 
+        timestep_ratio = timesteps / self.timestep_max  # None
+
         if self.num_classes is not None:
             assert y.shape == (x.shape[0],)
             emb = emb + self.label_emb(y)
 
         h = x.type(self.dtype)
         for module in self.input_blocks:
-            h = module(h, emb, context)
+            h = module(h, emb, context, timestep_ratio)
             hs.append(h)
-        h = self.middle_block(h, emb, context)
+        h = self.middle_block(h, emb, context, timestep_ratio)
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
+            h = module(h, emb, context, timestep_ratio)
         h = h.type(x.dtype)
         if self.predict_codebook_ids:
             return self.id_predictor(h)
