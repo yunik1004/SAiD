@@ -398,6 +398,12 @@ def main() -> None:
         "--epochs", type=int, default=50000, help="The number of epochs"
     )
     parser.add_argument(
+        "--num_warmup_steps", type=int, default=5000, help="The number of warmup steps"
+    )
+    parser.add_argument(
+        "--num_workers", type=int, default=0, help="The number of workers"
+    )
+    parser.add_argument(
         "--learning_rate", type=float, default=1e-5, help="Learning rate"
     )
     parser.add_argument(
@@ -466,6 +472,8 @@ def main() -> None:
     window_size_min = args.window_size_min
     batch_size = args.batch_size
     epochs = args.epochs
+    num_warmup_steps = args.num_warmup_steps
+    num_workers = args.num_workers
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
     unet_feature_dim = args.unet_feature_dim
@@ -522,12 +530,14 @@ def main() -> None:
         batch_size=batch_size,
         sampler=train_sampler,
         collate_fn=train_dataset.collate_fn,
+        num_workers=num_workers,
     )
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
         collate_fn=BlendVOCAValDataset.collate_fn,
+        num_workers=num_workers,
     )
 
     # Initialize the optimzier - freeze audio encoder
@@ -545,7 +555,7 @@ def main() -> None:
     lr_scheduler = get_scheduler(
         name="constant_with_warmup",
         optimizer=optimizer,
-        num_warmup_steps=0.1 * num_training_steps,
+        num_warmup_steps=num_warmup_steps,
         num_training_steps=num_training_steps,
     )
 
