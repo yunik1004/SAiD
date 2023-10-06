@@ -395,10 +395,10 @@ def main() -> None:
         "--batch_size", type=int, default=8, help="Batch size at training"
     )
     parser.add_argument(
-        "--epochs", type=int, default=50000, help="The number of epochs"
+        "--epochs", type=int, default=100000, help="The number of epochs"
     )
     parser.add_argument(
-        "--num_warmup_steps", type=int, default=5000, help="The number of warmup steps"
+        "--num_warmup_epochs", type=int, default=5000, help="The number of warmup epochs"
     )
     parser.add_argument(
         "--num_workers", type=int, default=0, help="The number of workers"
@@ -472,7 +472,7 @@ def main() -> None:
     window_size_min = args.window_size_min
     batch_size = args.batch_size
     epochs = args.epochs
-    num_warmup_steps = args.num_warmup_steps
+    num_warmup_epochs = args.num_warmup_epochs
     num_workers = args.num_workers
     learning_rate = args.learning_rate
     uncond_prob = args.uncond_prob
@@ -551,6 +551,7 @@ def main() -> None:
     )
 
     num_training_steps = len(train_dataloader) * epochs
+    num_warmup_steps = len(train_dataloader) * num_warmup_epochs
 
     lr_scheduler = get_scheduler(
         name="constant_with_warmup",
