@@ -2,115 +2,25 @@
 
 ## Data Preprocessing
 
-### [preprocess_voca_arkit.py](preprocess_voca_arkit.py)
+- `preprocess_blendvoca.py`: Preprocess the VOCA dataset.
+- `optimize_blendshape_coeffs.py`: Generate the pseudo-GT blendshape coefficients by solving the optimization problem.
 
-It preprocesses the VOCA dataset to generate ARKit blendshapes.
+## VAE Training/Inference
 
-```sh
-optional arguments:
-  --templates_dir TEMPLATES_DIR
-                        Directory of the template meshes
-  --blendshape_deltas_path BLENDSHAPE_DELTAS_PATH
-                        Path of the blendshape deltas
-  --blendshapes_out_dir BLENDSHAPES_OUT_DIR
-                        Directory of output blendshapes
-```
+- `train_vae.py`: Train the VAE model using BlendVOCA dataset.
+- `inference_vae.py`: Generate the inference result using VAE.
 
-### [optimize_blendshape_coeffs.py](optimize_blendshape_coeffs.py)
+## SAiD Training/Inference
 
-It generates the pseudo-GT blendshape coefficients by solving the optimization problem.
-
-```sh
-optional arguments:
-  --neutrals_dir NEUTRALS_DIR
-                        Directory of the neutral meshes
-  --blendshapes_dir BLENDSHAPES_DIR
-                        Directory of the blendshape meshes
-  --mesh_seqs_dir MESH_SEQS_DIR
-                        Directory of the mesh sequences
-  --blendshapes_coeffs_out_dir BLENDSHAPES_COEFFS_OUT_DIR
-                        Directory of the output coefficients
-```
-
-## Model Training
-
-### [train.py](train.py)
-
-It trains the SAiD model using VOCA-ARKit dataset.
-
-```sh
-optional arguments:
-  --audio_dir AUDIO_DIR
-                        Directory of the audio data
-  --coeffs_dir COEFFS_DIR
-                        Directory of the blendshape coefficients data
-  --output_dir OUTPUT_DIR
-                        Directory of the outputs
-```
+- `train.py`: Train the SAiD model using BlendVOCA dataset.
+- `inference.py`: Generate the inference result using the SAiD model.
 
 ## Evaluation
 
-### [test_inference.py](test_inference.py)
+- `test_inference.py`: Generate the inference outputs using BlendVOCA test dataset.
+- `test_evaluate.py`: Evaluate the output based on the BlendVOCA test dataset.
 
-It generates the inference outputs using VOCA-ARKit test dataset.
+## Rendering
 
-```sh
-optional arguments:
-  --weights_path WEIGHTS_PATH
-                        Path of the weights of SAiD model
-  --audio_dir AUDIO_DIR
-                        Directory of the audio data
-  --output_dir OUTPUT_DIR
-                        Directory of the outputs
-  --num_steps NUM_STEPS
-                        Number of inference steps
-  --strength STRENGTH   How much to paint
-  --guidance_scale GUIDANCE_SCALE
-                        Guidance scale
-  --eta ETA             Eta for DDIMScheduler, between [0, 1]
-  --device DEVICE       GPU/CPU device
-  --num_repeats NUM_REPEATS
-                        Number of repetitions in inference for each audio
-  --seed SEED           Random seed. Set the negative value if you don't want to control the randomness
-```
-
-### [test_evaluate.py](test_evaluate.py)
-
-It evaluates the output based on the VOCA-ARKit test dataset
-
-```sh
-optional arguments:
-  --audio_dir AUDIO_DIR
-                        Directory of the audio data
-  --coeffs_dir COEFFS_DIR
-                        Directory of the blendshape coefficients data
-  --output_dir OUTPUT_DIR
-                        Directory of the outputs
-```
-
-## Inference
-
-### [inference.py](inference.py)
-
-It generates the inference result using the SAiD model
-
-```sh
-optional arguments:
-  --weights_path WEIGHTS_PATH
-                        Path of the weights of SAiD model
-  --audio_path AUDIO_PATH
-                        Path of the audio file
-  --output_path OUTPUT_PATH
-                        Path of the output blendshape coefficients file (csv format)
-  --num_steps NUM_STEPS
-                        Number of inference steps
-  --strength STRENGTH   How much to paint
-  --guidance_scale GUIDANCE_SCALE
-                        Guidance scale
-  --eta ETA             Eta for DDIMScheduler, between [0, 1]
-  --device DEVICE       GPU/CPU device
-  --init_sample_path INIT_SAMPLE_PATH
-                        Path of the initial sample file (csv format)
-  --mask_path MASK_PATH
-                        Path of the mask file (csv format)
-```
+- `render.py`: Render the blendshape coefficients into the video.
+- `test_render.py`, `test_render.sh`: Render the BlendVOCA test data into the video.
