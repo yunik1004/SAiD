@@ -47,6 +47,7 @@ Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Defor
 ### Dataset Directory Setting
 
 We recommend constructing the `BlendVOCA` directory as follows for the simple execution of scripts.
+
 ```bash
 ├─ audio-driven-speech-animation-with-diffusion
 │  ├─ ...
@@ -74,20 +75,22 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 
 - `audio`: Download the audio from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
 - `blendshape_coeffs`
-    - Unzip `data/blendshape_coeffs.zip` from the source.
-    - Or, you can place the constructed coefficients from the previous section.
+  - Unzip `data/blendshape_coeffs.zip` from the source.
+  - Or, you can place the constructed coefficients from the previous section.
 - `blendshapes_head`: 
 - `templates_head`: 
 
 ### Training VAE, SAiD
 
 - Train VAE
+
     ```bash
     python script/train_vae.py \
             --output_dir "<output_logs_dir>"
     ```
 
 - Train SAiD
+
     ```bash
     python script/train.py \
             --output_dir "<output_logs_dir>"
@@ -96,6 +99,7 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 ### Evaluation
 
 1. Generate SAiD outputs on the test speech data
+
     ```bash
     python script/test_inference.py \
             --weights_path "<SAiD_weights>.pth" \
@@ -105,6 +109,7 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 2. Remove `FaceTalk_170809_00138_TA/sentence32-xx.csv` files from the output directory. Ground-truth data does not contain the motion data of `FaceTalk_170809_00138_TA/sentence32`.
 
 3. Evaluate SAiD outputs: FD, WInD, and Multimodality.
+
     ```bash
     python script/test_evaluate.py \
             --coeffs_dir "<input_coeffs_dir>" \
@@ -112,11 +117,13 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
     ```
 
 4. We have to generate the videos to compute the AV offset/confidence. To avoid the memory leak issue of the pyrender module, we use the shell script. After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
+
     ```bash
     # Fix 1: COEFFS_DIR="<input_coeffs_dir>"
     # Fix 2: OUTPUT_DIR="<output_video_dir>"
     python script/test_render.sh
     ```
+
 5. Use [SyncNet](https://github.com/joonson/syncnet_python) to compute the AV offset/confidence.
 
 ## Inference Results
@@ -126,5 +133,6 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 ## Reference
 
 If you use this code as part of any research, please cite the following paper.
-```
+
+```text
 ```
