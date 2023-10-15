@@ -31,8 +31,8 @@ class EvalMetrics:
     Dataclass for the evaluation metrics
     """
 
-    beat_consistency_score: float
-    vertex_error: float
+    # beat_consistency_score: float
+    # vertex_error: float
     frechet_distance: float
     multimodality: float
     wind: StatisticMetric
@@ -384,6 +384,8 @@ def evaluate(
     EvalMetrics
         Evaluation metrics
     """
+
+    """
     # Compute beat consistency score
     bc = evaluate_beat_consistency_score(
         eval_dataloader=eval_dataloader,
@@ -398,6 +400,7 @@ def evaluate(
         eval_dataloader=eval_dataloader,
         real_dataloader=real_dataloader,
     )
+    """
 
     # Generate latents
     eval_latents_info = generate_latents_info(
@@ -440,8 +443,8 @@ def evaluate(
     )
 
     return EvalMetrics(
-        beat_consistency_score=bc,
-        vertex_error=ve,
+        # beat_consistency_score=bc,
+        # vertex_error=ve,
         frechet_distance=fd,
         multimodality=multimodality,
         wind=wind,
