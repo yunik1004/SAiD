@@ -64,12 +64,23 @@ python script/preprocess_blendvoca.py \
 
 If you want to generate blendshapes by yourself, do the folowing instructions.
 
-1. Unzip `data/ARKit_references.zip`.
+1. Unzip `data/ARKit_reference_blendshapes.zip`.
 2. Download the template meshes from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
 3. Crop template meshes using `data/FLAME_head_idx.txt`. You can crop more indices and then restore them after finishing the construction process.
 4. Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Deformation-Transfer-for-Triangle-Meshes) to construct the blendshape meshes.
    - Use `data/ARKit_landmarks.txt` and `data/FLAME_head_landmarks.txt` as marker vertices.
    - Find the correspondance map between neutral meshes, and use it to transfer the deformation of arbitrary meshes.
+5. Create `blendshape_residuals.pickle`, which contains the blendshape residuals in the following Python dictionary format. Refer to `data/blendshape_residuals.pickle`.
+
+    ```text
+    {
+        'FaceTalk_170725_00137_TA': {
+            'jawForward': <np.ndarray object with shape (V, 3)>,
+            ...
+        },
+        ...
+    }
+    ```
 
 ### Generate Blendshape Coefficients
 
@@ -106,6 +117,13 @@ And then, run the following command:
 ```bash
 python script/optimize_blendshape_coeffs.py \
         --blendshapes_coeffs_out_dir "<output_coeffs_dir>"
+```
+
+After generating blendshape coefficients, create `coeffs_std.csv`, which contains the standard deviation of each coefficients. Refer to `data/coeffs_std.csv`.
+
+```text
+jawForward,...
+<std_jawForward>,...
 ```
 
 ## Training / Evaluation on BlendVOCA
@@ -150,7 +168,8 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 
     ```bash
     python script/train_vae.py \
-            --output_dir "<output_logs_dir>"
+            --output_dir "<output_logs_dir>" \
+            [--coeffs_std_path "<coeffs_std>.txt"]
     ```
 
 - Train SAiD
