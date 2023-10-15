@@ -40,7 +40,73 @@ python script/inference.py \
 
 ## BlendVOCA
 
-Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Deformation-Transfer-for-Triangle-Meshes) to construct the blendshape meshes.
+### Construct Blendshape Facial Model
+
+Due to the license issue of VOCASET, we cannot distribute BlendVOCA directly.
+Instead, you can preprocess `data/blendshape_residuals.pickle` after constructing `BlendVOCA` directory as follows for the simple execution of the script.
+
+```bash
+├─ audio-driven-speech-animation-with-diffusion
+│  ├─ ...
+│  └─ script
+└─ BlendVOCA
+   └─ templates
+      ├─ ...
+      └─ FaceTalk_170915_00223_TA.ply
+```
+
+- `templates`: Download the template meshes from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+
+```bash
+python script/preprocess_blendvoca.py \
+        --blendshapes_out_dir "<output_blendshapes_dir>"
+```
+
+If you want to generate blendshapes by yourself, do the folowing instructions.
+
+1. Unzip `data/ARKit_references.zip`.
+2. Download the template meshes from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+3. Crop template meshes using `data/FLAME_head_idx.txt`. You can crop more indices and then restore them after finishing the construction process.
+4. Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Deformation-Transfer-for-Triangle-Meshes) to construct the blendshape meshes.
+   - Use `data/ARKit_landmarks.txt` and `data/FLAME_head_landmarks.txt` as marker vertices.
+   - Find the correspondance map between neutral meshes, and use it to transfer the deformation of arbitrary meshes.
+
+### Generate Blendshape Coefficients
+
+You can simply unzip `data/blendshape_coeffcients.zip`.
+
+If you want to generate coefficients by yourself, we recommend constructing the `BlendVOCA` directory as follows for the simple execution of the script.
+
+```bash
+├─ audio-driven-speech-animation-with-diffusion
+│  ├─ ...
+│  └─ script
+└─ BlendVOCA
+   ├─ blendshapes_head
+   │  ├─ ...
+   │  └─ FaceTalk_170915_00223_TA
+   │     ├─ ...
+   │     └─ noseSneerRight.obj
+   ├─ templates_head
+   │  ├─ ...
+   │  └─ FaceTalk_170915_00223_TA.obj
+   └─ unposedcleaneddata
+      ├─ ...
+      └─ FaceTalk_170915_00223_TA
+         ├─ ...
+         └─ sentence40
+```
+
+- `blendshapes_head`: Place the constructed blendshape meshes (head).
+- `templates_head`: Place the template meshes (head).
+- `unposedcleaneddata`: Download the mesh sequences from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+
+And then, run the following command:
+
+```bash
+python script/optimize_blendshape_coeffs.py \
+        --blendshapes_coeffs_out_dir "<output_coeffs_dir>"
+```
 
 ## Training / Evaluation on BlendVOCA
 
@@ -51,7 +117,7 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 ```bash
 ├─ audio-driven-speech-animation-with-diffusion
 │  ├─ ...
-│  └─ scripts
+│  └─ script
 └─ BlendVOCA
    ├─ audio
    │  ├─ ...
@@ -74,11 +140,9 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 ```
 
 - `audio`: Download the audio from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
-- `blendshape_coeffs`
-  - Unzip `data/blendshape_coeffs.zip` from the source.
-  - Or, you can place the constructed coefficients from the previous section.
-- `blendshapes_head`: 
-- `templates_head`: 
+- `blendshape_coeffs`: Place the constructed blendshape coefficients.
+- `blendshapes_head`: Place the constructed blendshape meshes (head).
+- `templates_head`: Place the template meshes (head).
 
 ### Training VAE, SAiD
 
@@ -113,7 +177,8 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
     ```bash
     python script/test_evaluate.py \
             --coeffs_dir "<input_coeffs_dir>" \
-            [--vae_weights_path "<VAE_weights>.pth"]
+            [--vae_weights_path "<VAE_weights>.pth"] \
+            [--blendshape_residuals_path "<blendshape_residuals>.pickle"]
     ```
 
 4. We have to generate the videos to compute the AV offset/confidence. To avoid the memory leak issue of the pyrender module, we use the shell script. After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:

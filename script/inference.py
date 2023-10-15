@@ -57,6 +57,12 @@ def main():
         help="Prediction type of the scheduler function, 'epsilon', 'sample', or 'v_prediction'",
     )
     parser.add_argument(
+        "--save_image",
+        type=bool,
+        default=False,
+        help="Save the output blendshape coefficients as an image",
+    )
+    parser.add_argument(
         "--save_intermediate",
         type=bool,
         default=False,
@@ -126,6 +132,7 @@ def main():
     divisor_unet = args.divisor_unet
     unet_feature_dim = args.unet_feature_dim
     device = args.device
+    save_image = args.save_image
     save_intermediate = args.save_intermediate
     show_process = True
 
@@ -187,7 +194,8 @@ def main():
     )
 
     # Save coeffs as an image
-    save_blendshape_coeffs_image(result, output_image_path)
+    if save_image:
+        save_blendshape_coeffs_image(result, output_image_path)
 
     # Save intermediates
     if save_intermediate:

@@ -45,6 +45,12 @@ def main():
         help="Path of the image of the output blendshape coefficients",
     )
     parser.add_argument(
+        "--save_image",
+        type=bool,
+        default=False,
+        help="Save the output blendshape coefficients as an image",
+    )
+    parser.add_argument(
         "--use_noise",
         type=bool,
         default=True,
@@ -62,6 +68,7 @@ def main():
     blendshape_coeffs_path = args.blendshape_coeffs_path
     output_path = args.output_path
     output_image_path = args.output_image_path
+    save_image = args.save_image
     use_noise = args.use_noise
     device = args.device
 
@@ -92,7 +99,8 @@ def main():
         output_path=output_path,
     )
 
-    save_blendshape_coeffs_image(result, output_image_path)
+    if save_image:
+        save_blendshape_coeffs_image(result, output_image_path)
 
 
 if __name__ == "__main__":
