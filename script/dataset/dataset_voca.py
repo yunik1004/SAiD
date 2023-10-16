@@ -316,7 +316,7 @@ class BlendVOCADataset(ABC, Dataset):
         """
         if blendshape_indices is None:
             blendshape_indices_path = (
-                pathlib.Path(__file__).parent.parent / "data" / "FLAME_head_idx.txt"
+                pathlib.Path(__file__).parent.parent.parent / "data" / "FLAME_head_idx.txt"
             )
             blendshape_indices = parse_list(blendshape_indices_path, int)
 
