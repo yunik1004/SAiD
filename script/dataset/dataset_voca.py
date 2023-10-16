@@ -1072,9 +1072,10 @@ class BlendVOCAPseudoGTOptDataset:
         if not os.path.isdir(mesh_seq_dir):
             return []
 
-        mesh_seq_paths = sorted(
-            glob.glob(os.path.join(mesh_seq_dir, "**/*.obj"), recursive=True)
-        )
+        files_obj = glob.glob(os.path.join(mesh_seq_dir, "**/*.obj"), recursive=True)
+        files_ply = glob.glob(os.path.join(mesh_seq_dir, "**/*.ply"), recursive=True)
+
+        mesh_seq_paths = sorted(files_obj + files_ply)
 
         mesh_seq_list = []
         for seq_path in mesh_seq_paths:

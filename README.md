@@ -55,7 +55,7 @@ Instead, you can preprocess `data/blendshape_residuals.pickle` after constructin
       └─ FaceTalk_170915_00223_TA.ply
 ```
 
-- `templates`: Download the template meshes from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+- `templates`: Download the template meshes from [VOCASET](https://voca.is.tue.mpg.de/download.php).
 
 ```bash
 python script/preprocess_blendvoca.py \
@@ -65,7 +65,7 @@ python script/preprocess_blendvoca.py \
 If you want to generate blendshapes by yourself, do the folowing instructions.
 
 1. Unzip `data/ARKit_reference_blendshapes.zip`.
-2. Download the template meshes from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+2. Download the template meshes from [VOCASET](https://voca.is.tue.mpg.de/download.php).
 3. Crop template meshes using `data/FLAME_head_idx.txt`. You can crop more indices and then restore them after finishing the construction process.
 4. Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Deformation-Transfer-for-Triangle-Meshes) to construct the blendshape meshes.
    - Use `data/ARKit_landmarks.txt` and `data/FLAME_head_landmarks.txt` as marker vertices.
@@ -110,7 +110,7 @@ If you want to generate coefficients by yourself, we recommend constructing the 
 
 - `blendshapes_head`: Place the constructed blendshape meshes (head).
 - `templates_head`: Place the template meshes (head).
-- `unposedcleaneddata`: Download the mesh sequences (unposed cleaned data) from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+- `unposedcleaneddata`: Download the mesh sequences (unposed cleaned data) from [VOCASET](https://voca.is.tue.mpg.de/download.php).
 
 And then, run the following command:
 
@@ -157,7 +157,7 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
       └─ FaceTalk_170915_00223_TA.obj
 ```
 
-- `audio`: Download the audio from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+- `audio`: Download the audio from [VOCASET](https://voca.is.tue.mpg.de/download.php).
 - `blendshape_coeffs`: Place the constructed blendshape coefficients.
 - `blendshapes_head`: Place the constructed blendshape meshes (head).
 - `templates_head`: Place the template meshes (head).
