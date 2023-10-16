@@ -110,7 +110,7 @@ If you want to generate coefficients by yourself, we recommend constructing the 
 
 - `blendshapes_head`: Place the constructed blendshape meshes (head).
 - `templates_head`: Place the template meshes (head).
-- `unposedcleaneddata`: Download the mesh sequences from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
+- `unposedcleaneddata`: Download the mesh sequences (unposed cleaned data) from the [VOCASET](https://voca.is.tue.mpg.de/download.php).
 
 And then, run the following command:
 

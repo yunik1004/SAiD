@@ -14,7 +14,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 5, 1),
+    "version": (0, 5, 2),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -32,56 +32,56 @@ class LipsyncProperty(bpy.types.PropertyGroup):
     """Store the properties"""
 
     audio_path_mesh_sequence: bpy.props.StringProperty(
-        name="Audio Path",
+        name="Audio",
         default="",
         description="Path of the audio file",
         subtype="FILE_PATH",
     )
 
     mesh_sequence_dir: bpy.props.StringProperty(
-        name="Mesh Sequence Dir",
+        name="Mesh Sequence",
         default="",
         description="Directory of the mesh sequence",
         subtype="DIR_PATH",
     )
 
     neutral_path: bpy.props.StringProperty(
-        name="Neutral Path",
+        name="Template Mesh",
         default="",
-        description="Path of the neutral mesh",
+        description="Path of the template mesh",
         subtype="FILE_PATH",
     )
 
     blendshape_dir: bpy.props.StringProperty(
-        name="Blendshape Path",
+        name="Blendshape Meshes",
         default="",
-        description="Directory of the blendshapes",
+        description="Directory of the blendshape meshes",
         subtype="DIR_PATH",
     )
 
     audio_path_blendshape: bpy.props.StringProperty(
-        name="Audio Path",
+        name="Speech",
         default="",
         description="Path of the audio file",
         subtype="FILE_PATH",
     )
 
     blendshape_weights_path: bpy.props.StringProperty(
-        name="Blendshape Weights",
+        name="Blendshape Coefficient Sequence",
         default="",
-        description="Path of the blendshape weights (CSV)",
+        description="Path of the blendshape coefficient sequence (CSV)",
         subtype="FILE_PATH",
     )
 
     fps_mesh: bpy.props.IntProperty(
         name="FPS",
-        default=-1,
+        default=60,
         description="Automatically set fps when -1",
     )
 
     fps_blendshape: bpy.props.IntProperty(
         name="FPS",
-        default=-1,
+        default=60,
         description="Automatically set fps when -1",
     )
 
@@ -145,7 +145,7 @@ class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
 
         # Button
         row = box_mesh.row()
-        row.operator("lipsync.generate_mesh_anime_operator", text="Generate Anime")
+        row.operator("lipsync.generate_mesh_anime_operator", text="Import Facial Motion")
 
 
 class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
@@ -175,7 +175,7 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row.prop(context.scene.lipsync_property, "blendshape_dir")
 
         row = box_blendshape.row()
-        row.operator("lipsync.import_blendshape_operator", text="Import Blendshape")
+        row.operator("lipsync.import_blendshape_operator", text="Import Blendshape Facial Model")
 
         # Box for generating anime
         box_anime = self.layout.box()
@@ -205,7 +205,7 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row = box_anime.row()
         row.operator(
             "lipsync.generate_blendshape_anime_operator",
-            text="Generate Anime",
+            text="Import Facial Motion",
         )
 
         # Box for saving anime
@@ -222,7 +222,7 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row = box_save.row()
         row.operator(
             "lipsync.save_blendshape_anime_operator",
-            text="Save Anime",
+            text="Save Facial Motion",
         )
 
         box_visualize = self.layout.box()
@@ -307,7 +307,7 @@ def load_speaker(
 
 
 class LipsyncGenerateMeshAnimeOperator(bpy.types.Operator):
-    """Operator for the 'Generate Anime' button in Meshsequence panel"""
+    """Operator for the 'Import Facial Motion' button in Meshsequence panel"""
 
     bl_idname = "lipsync.generate_mesh_anime_operator"
     bl_label = "lipsync.generate_mesh_anime_operator"
