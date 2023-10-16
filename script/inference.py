@@ -23,7 +23,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="../output/25000.pth",
+        default="../BlendVOCA/SAiD.pth",
         help="Path of the weights of SAiD model",
     )
     parser.add_argument(
