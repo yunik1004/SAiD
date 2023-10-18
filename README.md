@@ -28,6 +28,7 @@ apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosm
 - `model`: It contains the weights of VAE, which is used for the evaluation.
 - `blender-addon`: It contains the blender addon that can visualize the blendshape coefficients.
 - `script`: It contains Python scripts for preprocessing, training, inference, and evaluation.
+- `doc`: It contains the resources for the documentation, such as sample videos.
 
 ## Inference
 
@@ -221,14 +222,14 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 || GT | SAiD | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](sample/GT/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
-|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](sample/GT/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](sample/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](sample/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4) |
+|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4) |
 
 ### Visualization of SAiD on different meshes
 
 ||VOCASET| [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
 |---|:---:|:---:|:---:|
-| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
+| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
 
 ## Reference
 
