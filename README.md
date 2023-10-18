@@ -229,7 +229,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
 |---|:---:|:---:|:---:|
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | |
+| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | |
 | FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | |
 
 ## Reference
