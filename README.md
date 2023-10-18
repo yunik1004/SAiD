@@ -217,9 +217,17 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ## Inference Results
 
-||GT|SAiD|
-|---|:---:|:---:|
-| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/gt/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+### Comparison
+
+|| GT | SAiD | end2end_AU_speech | VOCA | MeshTalk | FaceFormer | CodeTalker |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](sample/gt/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+
+### Visualization of SAiD on different meshes
+
+||VOCASET| VRM | MetaHuman |
+|---|:---:|:---:|:---:|
+| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
 
 ## Reference
 
