@@ -36,7 +36,9 @@ apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosm
 python script/inference.py \
         --weights_path "<SAiD_weights>.pth" \
         --audio_path "<input_audio>.wav" \
-        --output_path "<output_coeffs>.csv"
+        --output_path "<output_coeffs>.csv" \
+        [--init_sample_path "<input_init_sample>.csv"] \  # Required for editing
+        [--mask_path "<input_mask>.csv"]  # Required for editing
 ```
 
 ## BlendVOCA
@@ -227,10 +229,10 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
-||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
-|---|:---:|:---:|:---:|
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4) |
-| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4) |
+||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
+|---|:---:|:---:|:---:|:--:|
+| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4) |
+| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4) |
 
 ## Reference
 
