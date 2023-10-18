@@ -219,8 +219,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ||GT|SAiD|
 |---|:---:|:---:|
-|En_1| <video src="sample/said_en1_new.mp4" width=300 controls playsinline> | <video src="sample/said_en1_new.mp4" width=300 controls playsinline> |
-|En_1| ![said_en1_new](sample/said_en1_new.mp4) | ![said_en1_new](sample/said_en1_new.mp4) |
+| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/gt/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
 
 ## Reference
 
