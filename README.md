@@ -77,7 +77,7 @@ Refer to `data/blendshape_residuals.pickle`.
 
     ```text
     {
-        'FaceTalk_170725_00137_TA': {
+        'FaceTalk_170731_00024_TA': {
             'jawForward': <np.ndarray object with shape (V, 3)>,
             ...
         },
@@ -222,14 +222,15 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 || GT | SAiD | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](doc/video/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+|FaceTalk_170731_00024_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4) |
 |FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4) |
 
-### Visualization of SAiD on different meshes
+### Visualization of SAiD outputs on different blendshape facial models
 
-||VOCASET| [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
+||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
 |---|:---:|:---:|:---:|
-| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](doc/video/SAiD/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
+| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | |
+| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | |
 
 ## Reference
 
