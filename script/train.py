@@ -398,7 +398,10 @@ def main() -> None:
         "--epochs", type=int, default=100000, help="The number of epochs"
     )
     parser.add_argument(
-        "--num_warmup_epochs", type=int, default=5000, help="The number of warmup epochs"
+        "--num_warmup_epochs",
+        type=int,
+        default=5000,
+        help="The number of warmup epochs",
     )
     parser.add_argument(
         "--num_workers", type=int, default=0, help="The number of workers"
