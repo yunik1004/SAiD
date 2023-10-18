@@ -145,7 +145,10 @@ class Lipsync_PT_MeshsequencePanel(bpy.types.Panel):
 
         # Button
         row = box_mesh.row()
-        row.operator("lipsync.generate_mesh_anime_operator", text="Import Facial Motion")
+        row.operator(
+            "lipsync.generate_mesh_anime_operator",
+            text="Import Facial Motion",
+        )
 
 
 class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
@@ -175,7 +178,10 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
         row.prop(context.scene.lipsync_property, "blendshape_dir")
 
         row = box_blendshape.row()
-        row.operator("lipsync.import_blendshape_operator", text="Import Blendshape Facial Model")
+        row.operator(
+            "lipsync.import_blendshape_operator",
+            text="Import Blendshape Facial Model",
+        )
 
         # Box for generating anime
         box_anime = self.layout.box()

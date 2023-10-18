@@ -66,11 +66,13 @@ If you want to generate blendshapes by yourself, do the folowing instructions.
 
 1. Unzip `data/ARKit_reference_blendshapes.zip`.
 2. Download the template meshes from [VOCASET](https://voca.is.tue.mpg.de/download.php).
-3. Crop template meshes using `data/FLAME_head_idx.txt`. You can crop more indices and then restore them after finishing the construction process.
+3. Crop template meshes using `data/FLAME_head_idx.txt`.
+You can crop more indices and then restore them after finishing the construction process.
 4. Use [Deformation-Transfer-for-Triangle-Meshes](https://github.com/guyafeng/Deformation-Transfer-for-Triangle-Meshes) to construct the blendshape meshes.
    - Use `data/ARKit_landmarks.txt` and `data/FLAME_head_landmarks.txt` as marker vertices.
    - Find the correspondance map between neutral meshes, and use it to transfer the deformation of arbitrary meshes.
-5. Create `blendshape_residuals.pickle`, which contains the blendshape residuals in the following Python dictionary format. Refer to `data/blendshape_residuals.pickle`.
+5. Create `blendshape_residuals.pickle`, which contains the blendshape residuals in the following Python dictionary format.
+Refer to `data/blendshape_residuals.pickle`.
 
     ```text
     {
@@ -189,7 +191,8 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
             --output_dir "<output_coeffs_dir>"
     ```
 
-2. Remove `FaceTalk_170809_00138_TA/sentence32-xx.csv` files from the output directory. Ground-truth data does not contain the motion data of `FaceTalk_170809_00138_TA/sentence32`.
+2. Remove `FaceTalk_170809_00138_TA/sentence32-xx.csv` files from the output directory.
+Ground-truth data does not contain the motion data of `FaceTalk_170809_00138_TA/sentence32`.
 
 3. Evaluate SAiD outputs: FD, WInD, and Multimodality.
 
@@ -200,7 +203,9 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
             [--blendshape_residuals_path "<blendshape_residuals>.pickle"]
     ```
 
-4. We have to generate the videos to compute the AV offset/confidence. To avoid the memory leak issue of the pyrender module, we use the shell script. After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
+4. We have to generate the videos to compute the AV offset/confidence.
+To avoid the memory leak issue of the pyrender module, we use the shell script.
+After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
     ```bash
     # Fix 1: COEFFS_DIR="<input_coeffs_dir>"
@@ -212,7 +217,9 @@ We recommend constructing the `BlendVOCA` directory as follows for the simple ex
 
 ## Inference Results
 
-- TODO
+||GT|SAiD|
+|---|:---:|:---:|
+|En_1| <video src="sample/said_en1_new.mp4" width=300 controls playsinline> | <video src="sample/said_en1_new.mp4" width=300 controls playsinline> |
 
 ## Reference
 
