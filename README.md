@@ -220,6 +220,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 ||GT|SAiD|
 |---|:---:|:---:|
 |En_1| <video src="sample/said_en1_new.mp4" width=300 controls playsinline> | <video src="sample/said_en1_new.mp4" width=300 controls playsinline> |
+|En_1| ![said_en1_new](sample/said_en1_new.mp4) | ![said_en1_new](sample/said_en1_new.mp4) |
 
 ## Reference
 
