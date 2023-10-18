@@ -219,15 +219,16 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ### Comparison
 
-|| GT | SAiD | end2end_AU_speech | VOCA | MeshTalk | FaceFormer | CodeTalker |
+|| GT | SAiD | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](sample/gt/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+|FaceTalk_170725_00137_TA/<br>sentence01.wav| ![](sample/GT/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/VOCA/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/MeshTalk/FaceTalk_170725_00137_TA-sentence01.mp4) | ![](sample/FaceFormer/FaceTalk_170725_00137_TA-sentence01-0.mp4) | ![](sample/CodeTalker/FaceTalk_170725_00137_TA-sentence01-0.mp4) |
+|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](sample/GT/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4) | ![](sample/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](sample/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](sample/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](sample/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4) |
 
 ### Visualization of SAiD on different meshes
 
-||VOCASET| VRM | MetaHuman |
+||VOCASET| [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) |
 |---|:---:|:---:|:---:|
-| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/said/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
+| FaceTalk_170725_00137_TA/<br>sentence01.wav | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-0-vocaset.mp4) | ![](sample/SAiD/FaceTalk_170725_00137_TA-sentence01-1-vrm.mp4) | |
 
 ## Reference
 
