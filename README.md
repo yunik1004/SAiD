@@ -236,6 +236,8 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
+- Since the MetaHuman does not support the `mouthClose` blendshape, we use the editing algorithm to ensure the corresponding blendshape coefficients of the outputs are all zero.
+
 ||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
 |---|:---:|:---:|:---:|:--:|
 | FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4){width=200} |
