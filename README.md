@@ -224,21 +224,15 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 || GT | SAiD | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4) | ![](doc/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4) |
-|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4) | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4) | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4) | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4) |
+|FaceTalk_170731_00024_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} |
+|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} |
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
 ||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
 |---|:---:|:---:|:---:|:--:|
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4) |
-| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4) |
-
-![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4 | width=200)
-
-![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200}
-
-![]()<video src="doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4" controls="true" allowfullscreen="true" width="200">
+| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4){width=200} |
+| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4){width=200} |
 
 ## Reference
 
