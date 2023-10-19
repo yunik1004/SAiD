@@ -234,11 +234,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 | FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4) |
 | FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4) |
 
-<figure>
-    <video controls="true" allowfullscreen="true" width="200">
-        <source src="doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4" type="video/mp4"></source>
-    </video>
-</figure>
+![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4 | width=100)
 
 ## Reference
 
