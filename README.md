@@ -234,7 +234,11 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 | FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4) |
 | FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4) | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4) |
 
-![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4 | width=100)
+![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4 | width=200)
+
+![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200}
+
+![]()<video src="doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4" controls="true" allowfullscreen="true" width="200">
 
 ## Reference
 
