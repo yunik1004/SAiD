@@ -236,13 +236,17 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ### Diversity on SAiD outputs
 
-We visualize the differences in vertex positions of SAiD outputs over the mean.
-We use `viridis` colormap with a range of [0, 0.001].
+We visualize the vertex position differences in SAiD outputs over the mean output.
+We use [viridis](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) colormap with a range of [0, 0.001].
 
 || Output 1 | Output 2 | Output 3 | Output 4 | Output 5 |
 |---|:---:|:---:|:---:|:---:|:---:|
 |FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-4.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-4.mp4){width=200}|
+
+### Editibility of SAiD
+
+TODO
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
