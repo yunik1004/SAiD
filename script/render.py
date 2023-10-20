@@ -52,6 +52,24 @@ def main() -> None:
         help="List of the blendshapes",
     )
     parser.add_argument(
+        "--show_difference",
+        type=bool,
+        default=False,
+        help="Show the vertex differences from the target blendshape coefficients as a heatmap",
+    )
+    parser.add_argument(
+        "--target_diff_blendshape_coeffs_path",
+        type=str,
+        default="../BlendVOCA/blendshape_coeffs/FaceTalk_170731_00024_TA/sentence01.csv",
+        help="Path of the target blendshape coefficient sequence to compute the vertex differences. Its length should be same as the source's.",
+    )
+    parser.add_argument(
+        "--max_diff",
+        type=float,
+        default=0.001,
+        help="Maximum threshold to visualize the vertex differences",
+    )
+    parser.add_argument(
         "--fps",
         type=int,
         default=60,
@@ -82,6 +100,9 @@ def main() -> None:
     audio_path = args.audio_path
     blendshape_coeffs_path = args.blendshape_coeffs_path
     blendshape_list_path = args.blendshape_list_path
+    show_difference = args.show_difference
+    target_diff_blendshape_coeffs_path = args.target_diff_blendshape_coeffs_path
+    max_diff = args.max_diff
     fps = args.fps
     output_path = args.output_path
     save_images = args.save_images
@@ -101,6 +122,11 @@ def main() -> None:
 
     blendshapes_matrix = np.concatenate(blendshape_vectors, axis=1)
     blendshape_coeffs = load_blendshape_coeffs(blendshape_coeffs_path).numpy()
+    target_blendshape_coeffs = (
+        load_blendshape_coeffs(target_diff_blendshape_coeffs_path).numpy()
+        if show_difference
+        else None
+    )
 
     # Render images
     rendered_imgs = render_blendshape_coefficients(
@@ -108,6 +134,8 @@ def main() -> None:
         neutral_mesh=neutral_mesh,
         blendshapes_matrix=blendshapes_matrix,
         blendshape_coeffs=blendshape_coeffs,
+        target_blendshape_coeffs=target_blendshape_coeffs,
+        max_diff=max_diff,
     )
 
     # Render video
