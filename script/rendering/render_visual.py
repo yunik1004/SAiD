@@ -4,8 +4,9 @@ Reference 1: https://github.com/TimoBolkart/voca/blob/master/utils/rendering.py
 Reference 2: https://github.com/Doubiiu/CodeTalker/blob/main/main/render.py
 """
 from queue import Queue
-from typing import List
+from typing import List, Optional
 import cv2
+from matplotlib.pyplot import get_cmap
 import numpy as np
 from tqdm import trange
 import trimesh
@@ -91,6 +92,7 @@ class RendererObject:
         mesh: trimesh.Trimesh,
         t_center: np.ndarray,
         rot: np.ndarray = np.zeros(3),
+        render_vertex_color: bool = False,
     ) -> np.ndarray:
         """
         mesh : trimesh.Trimesh
@@ -99,6 +101,8 @@ class RendererObject:
             (3,), Position of the center
         rot: np.ndarray
             (3,), Rotation angle, by default np.zeros(3)
+        render_vertex_color: bool
+            Whether rendering vertex colors, by default False
 
         Returns
         -------
@@ -109,9 +113,11 @@ class RendererObject:
             cv2.Rodrigues(rot)[0].dot((mesh.vertices - t_center).T).T + t_center
         )
         mesh_copy = create_mesh(new_vertices, mesh.faces)
+        mesh_copy.visual.vertex_colors = mesh.visual.vertex_colors
 
+        render_material = None if render_vertex_color else self.primitive_material
         render_mesh = pyrender.Mesh.from_trimesh(
-            mesh_copy, material=self.primitive_material, smooth=True
+            mesh_copy, material=render_material, smooth=True
         )
         node_mesh = self.scene.add(render_mesh, pose=np.eye(4))
 
@@ -134,6 +140,9 @@ def render_blendshape_coefficients(
     neutral_mesh: trimesh.Trimesh,
     blendshapes_matrix: np.ndarray,
     blendshape_coeffs: np.ndarray,
+    target_blendshape_coeffs: Optional[np.ndarray] = None,
+    color_map: str = "viridis",
+    max_diff: float = 0.001,
 ) -> List[np.ndarray]:
     """Render the mesh from the blendshape coefficient sequence
 
@@ -145,6 +154,8 @@ def render_blendshape_coefficients(
         (3|V|, num_blendshapes), [b1 | b2 | ... | b_N] blendshape mesh's vertices vectors
     blendshape_coeffs: np.ndarray
         (T_b, num_classes), Blendshape coefficients
+    target_blendshape_coeffs: Optional[np.ndarray]
+        (T_b, num_classes), Target blendshape coefficients to compute the vertex differences, by default None
 
     Returns
     -------
@@ -165,10 +176,30 @@ def render_blendshape_coefficients(
 
     center = np.mean(neutral_mesh.vertices, axis=0)
 
+    visualize_difference = target_blendshape_coeffs is not None
+
+    if visualize_difference:
+        difference = (
+            (target_blendshape_coeffs - blendshape_coeffs) @ blendshapes_matrix_delta.T
+        ).reshape(seq_len, num_vertices, 3)
+        difference_mag = np.sqrt(np.sum(difference**2, axis=2))
+
+        cmap = get_cmap(color_map)
+        diff_mag_flatten = np.clip(difference_mag.reshape(-1), 0, max_diff) / max_diff
+        vertex_colors = cmap(diff_mag_flatten).reshape(seq_len, num_vertices, 4)
+
+        """
+        vertex_colors = trimesh.visual.interpolate(
+            difference_mag.reshape(-1), color_map=color_map
+        ).reshape(seq_len, num_vertices, 4)
+        """
+
     rendered_imgs = []
-    for vseq in motion_vertex_sequence:
+    for sdx, vseq in enumerate(motion_vertex_sequence):
         mesh = create_mesh(vseq, faces)
-        img = renderer.render(mesh, center)
+        if visualize_difference:
+            mesh.visual.vertex_colors = vertex_colors[sdx]
+        img = renderer.render(mesh, center, render_vertex_color=visualize_difference)
         rendered_imgs.append(img)
 
     return rendered_imgs
