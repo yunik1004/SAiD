@@ -14,7 +14,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 5, 2),
+    "version": (0, 5, 3),
     "blender": (3, 4, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
@@ -231,6 +231,8 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
             text="Save Facial Motion",
         )
 
+        """
+        # Deprecated
         box_visualize = self.layout.box()
 
         row = box_visualize.row()
@@ -247,6 +249,7 @@ class Lipsync_PT_BlendshapePanel(bpy.types.Panel):
             "lipsync.visualize_difference_operator",
             text="Visualize Difference",
         )
+        """
 
 
 def load_obj(context: bpy.types.Context, path: str) -> Optional[bpy.types.Object]:
