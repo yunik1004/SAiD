@@ -241,7 +241,7 @@ We use `viridis` colormap with a range of [0, 0.001].
 
 || Output 1 | Output 2 | Output 3 | Output 4 | Output 5 |
 |---|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|
+|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-4.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|
 
 ### Visualization of SAiD outputs on different blendshape facial models
