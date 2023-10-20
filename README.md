@@ -220,23 +220,33 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ## Inference Results
 
-### Comparison with Baseline Methods
+### Comparison with baseline methods
 
 || GT | SAiD (Ours) | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 |FaceTalk_170731_00024_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} |
 |FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} |
 
-### Ablation Studies
+### Ablation studies
 
 || SAiD (Base) | train w/ squared error | train w/o velocity loss | train w/o alignment bias | finetune pre-trained Wav2Vec 2.0 |
 |---|:---:|:---:|:---:|:---:|:---:|
 |FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|
 
+### Diversity on SAiD outputs
+
+We visualize the differences in vertex positions of SAiD outputs over the mean.
+We use `viridis` colormap with a range of [0, 0.001].
+
+|| Output 1 | Output 2 | Output 3 | Output 4 | Output 5 |
+|---|:---:|:---:|:---:|:---:|:---:|
+|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|
+|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|![](){width=200}|
+
 ### Visualization of SAiD outputs on different blendshape facial models
 
-- Since the MetaHuman does not support the `mouthClose` blendshape, we use the editing algorithm to ensure the corresponding blendshape coefficients of the outputs are all zero.
+Since the MetaHuman does not support the `mouthClose` blendshape, we use the editing algorithm to ensure the corresponding blendshape coefficients of the outputs are all zero.
 
 ||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
 |---|:---:|:---:|:---:|:--:|
