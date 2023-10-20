@@ -220,7 +220,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ## Inference Results
 
-### Comparison
+### Comparison with Baseline Methods
 
 || GT | SAiD (Ours) | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -229,7 +229,7 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 
 ### Ablation Studies
 
-|| Baseline | train w/ squared error | train w/o velocity loss | train w/o alignment bias | finetune pre-trained Wav2Vec 2.0 |
+|| SAiD (Base) | train w/ squared error | train w/o velocity loss | train w/o alignment bias | finetune pre-trained Wav2Vec 2.0 |
 |---|:---:|:---:|:---:|:---:|:---:|
 |FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|
