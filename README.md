@@ -244,9 +244,19 @@ We use [viridis](https://cran.r-project.org/web/packages/viridis/vignettes/intro
 |FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-4.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-4.mp4){width=200}|
 
-### Editibility of SAiD
+### Editability of SAiD
 
-TODO
+We visualize the editing results of SAiD with two different cases:
+
+1. motion in-betweening
+2. motion generation with blendshape-specific constraints by masking coefficients corresponding to certain blendshapes.
+
+Hatched boxes indicate the masked areas that should be invariant during the editing.
+
+|| In-betweening | Blendshape-specific constraints |
+|---|:---:|:---:|
+|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png){width=200}![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png){width=200}![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.mp4){width=200}|
+|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png){width=200}![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png){width=200}![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png){width=200}|
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
@@ -254,8 +264,8 @@ Since the MetaHuman does not support the `mouthClose` blendshape, we use the edi
 
 ||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
 |---|:---:|:---:|:---:|:--:|
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4){width=200} |
-| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4){width=200} |
+| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4){width=200} |
+| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4){width=200} |
 
 ## Reference
 
