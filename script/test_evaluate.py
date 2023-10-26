@@ -453,8 +453,8 @@ def evaluate(
 
 def main() -> None:
     """Main function"""
-    default_model_dir = pathlib.Path(__file__).parent.parent / "model"
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_model_dir = pathlib.Path(__file__).resolve().parent.parent / "model"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -481,13 +481,13 @@ def main() -> None:
     parser.add_argument(
         "--vae_weights_path",
         type=str,
-        default=(default_model_dir / "vae.pth").resolve(),
+        default=default_model_dir / "vae.pth",
         help="Path of the weights of VAE",
     )
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
-        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
+        default=default_data_dir / "blendshape_residuals.pickle",
         help="Path of the blendshape residuals",
     )
     parser.add_argument(

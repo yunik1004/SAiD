@@ -337,7 +337,7 @@ def validate_epoch(
 
 def main() -> None:
     """Main function"""
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -358,19 +358,19 @@ def main() -> None:
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default="",  # (default_data_dir / "coeffs_std.csv").resolve(),
+        default="",  # default_data_dir / "coeffs_std.csv",
         help="Path of the coeffs std data",
     )
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
-        default="",  # (default_data_dir / "blendshape_residuals.pickle").resolve(),
+        default="",  # default_data_dir / "blendshape_residuals.pickle",
         help="Path of the blendshape residuals",
     )
     parser.add_argument(
         "--landmarks_path",
         type=str,
-        default="",  # (default_data_dir / "FLAME_head_landmarks.txt").resolve(),
+        default="",  # default_data_dir / "FLAME_head_landmarks.txt",
         help="Path of the landmarks data",
     )
     parser.add_argument(
