@@ -13,7 +13,7 @@ from dataset.dataset_voca import BlendVOCADataset, BlendVOCAPseudoGTOptDataset
 
 def main():
     """Main function"""
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     parser = argparse.ArgumentParser(
         description="Generate the Pseudo-GT blendshape coefficients by solving the optimization problem"
@@ -39,13 +39,13 @@ def main():
     parser.add_argument(
         "--blendshape_list_path",
         type=str,
-        default=(default_data_dir / "ARKit_blendshapes.txt").resolve(),
+        default=default_data_dir / "ARKit_blendshapes.txt",
         help="List of the blendshapes",
     )
     parser.add_argument(
         "--head_idx_path",
         type=str,
-        default=(default_data_dir / "FLAME_head_idx.txt").resolve(),
+        default=default_data_dir / "FLAME_head_idx.txt",
         help="List of the head indices. Empty string will disable this option.",
     )
     parser.add_argument(

@@ -19,7 +19,7 @@ from rendering.render_visual import RendererObject, render_blendshape_coefficien
 
 def main() -> None:
     """Main function"""
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(description="Render the animation of the dataset")
@@ -50,7 +50,7 @@ def main() -> None:
     parser.add_argument(
         "--blendshape_list_path",
         type=str,
-        default=(default_data_dir / "ARKit_blendshapes.txt").resolve(),
+        default=default_data_dir / "ARKit_blendshapes.txt",
         help="List of the blendshapes",
     )
     parser.add_argument(

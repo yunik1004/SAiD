@@ -273,7 +273,7 @@ def validate_epoch(
 
 def main():
     """Main function"""
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -288,7 +288,7 @@ def main():
     parser.add_argument(
         "--coeffs_std_path",
         type=str,
-        default=(default_data_dir / "coeffs_std.csv").resolve(),  # "",
+        default=default_data_dir / "coeffs_std.csv",  # "",
         help="Path of the coeffs std data",
     )
     parser.add_argument(

@@ -14,7 +14,7 @@ from dataset.dataset_voca import BlendVOCADataset
 
 def main():
     """Main function"""
-    default_model_dir = pathlib.Path(__file__).parent.parent / "model"
+    default_model_dir = pathlib.Path(__file__).resolve().parent.parent / "model"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -23,7 +23,7 @@ def main():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default=(default_model_dir / "vae.pth").resolve(),
+        default=default_model_dir / "vae.pth",
         help="Path of the weights of VAE",
     )
     parser.add_argument(

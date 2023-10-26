@@ -9,7 +9,7 @@ from dataset.dataset_voca import BlendVOCADataset
 
 def main():
     """Main function"""
-    default_data_dir = pathlib.Path(__file__).parent.parent / "data"
+    default_data_dir = pathlib.Path(__file__).resolve().parent.parent / "data"
 
     # Arguments
     parser = argparse.ArgumentParser(
@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "--blendshape_residuals_path",
         type=str,
-        default=(default_data_dir / "blendshape_residuals.pickle").resolve(),
+        default=default_data_dir / "blendshape_residuals.pickle",
         help="Path of the blendshape residuals",
     )
     parser.add_argument(
