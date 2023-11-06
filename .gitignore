@@ -200,3 +200,6 @@ _deps
 
 # VSCode
 .vscode/
+
+# mac
+.DS_Store
