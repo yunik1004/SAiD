@@ -248,8 +248,8 @@ We use [viridis](https://cran.r-project.org/web/packages/viridis/vignettes/intro
 
 We visualize the editing results of SAiD with two different cases:
 
-1. motion in-betweening
-2. motion generation with blendshape-specific constraints by masking coefficients corresponding to certain blendshapes.
+1. Motion in-betweening
+2. Motion generation with blendshape-specific constraints by masking coefficients corresponding to certain blendshapes.
 
 Hatched boxes indicate the masked areas that should be invariant during the editing.
 
