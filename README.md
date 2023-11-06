@@ -32,6 +32,8 @@ apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosm
 
 ## Inference
 
+You can download the pretrained weights of SAiD from [Hugging Face Repo](https://huggingface.co/yunik1004/SAiD).
+
 ```bash
 python script/inference.py \
         --weights_path "<SAiD_weights>.pth" \
