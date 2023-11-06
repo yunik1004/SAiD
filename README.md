@@ -257,8 +257,12 @@ Hatched boxes indicate the masked areas that should be invariant during the edit
 
 || In-betweening | Blendshape-specific constraints |
 |---|:---:|:---:|
+|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png){: width="200"}<br><video width="200" src="https://github.com/yunik1004/SAiD/assets/20185342/ee826381-4ae0-4a58-8cb8-052716ec8743" />|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png){: width="200"}<br><video width="200" src="https://github.com/yunik1004/SAiD/assets/20185342/8be3ab98-669b-4d3b-9ba6-4a74eca3be06" />|
+|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png){: width="200"}<br><video width="200" src="https://github.com/yunik1004/SAiD/assets/20185342/46e07f16-1128-4ba8-ba2f-a93233ad3a44" />|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png){: width="200"}<br><video width="200" src="https://github.com/yunik1004/SAiD/assets/20185342/260a2a7a-d634-4059-87f2-1b73ea3ef250" />|
+<!--
 |FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.mp4){width=200}|
 |FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.mp4){width=200}|
+-->
 
 ### Visualization of SAiD outputs on different blendshape facial models
 
