@@ -1,6 +1,9 @@
 # SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion
 
-This is the official code for [SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion]().
+This is the code for `SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion`.
+
+- [Project page]()
+- [Paper]()
 
 ## Installation
 
@@ -219,63 +222,6 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
     ```
 
 5. Use [SyncNet](https://github.com/joonson/syncnet_python) to compute the AV offset/confidence.
-
-## Inference Results
-
-### Comparison with baseline methods
-
-|| GT | SAiD (Ours) | end2end_AU_speech | VOCA+QP | MeshTalk+QP | FaceFormer+QP | CodeTalker+QP |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav| ![](doc/video/GT/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200} |
-|FaceTalk_170809_00138_TA/<br>sentence02.wav| ![](doc/video/GT/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200} | ![](doc/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4){width=200} | ![](doc/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} | ![](doc/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200} |
-
-### Ablation studies
-
-|| SAiD (Base) | train w/ squared error | train w/o velocity loss | train w/o alignment bias | finetune pre-trained Wav2Vec 2.0 |
-|---|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|
-|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4){width=200}|![](doc/video/SAiD/ablation/squared_error/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/velocity_loss/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/no_alignment_bias/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|
-
-### Diversity on SAiD outputs
-
-We visualize the vertex position differences in SAiD outputs over the mean output.
-We use [viridis](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) colormap with a range of [0, 0.001].
-
-|| Output 1 | Output 2 | Output 3 | Output 4 | Output 5 |
-|---|:---:|:---:|:---:|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-4.mp4){width=200}|
-|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-0.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-1.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-2.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-3.mp4){width=200}|![](doc/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-4.mp4){width=200}|
-
-### Editability of SAiD
-
-We visualize the editing results of SAiD with two different cases:
-
-1. Motion in-betweening
-2. Motion generation with blendshape-specific constraints by masking coefficients corresponding to certain blendshapes.
-
-Hatched boxes indicate the masked areas that should be invariant during the editing.
-
-|| In-betweening | Blendshape-specific constraints |
-|---|:---:|:---:|
-|FaceTalk_170731_00024_TA/<br>sentence01.wav|<img src="doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png" /><br><video width="200" src="https://private-user-images.githubusercontent.com/20185342/280587030-ee826381-4ae0-4a58-8cb8-052716ec8743.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE2OTkyNzA5MzYsIm5iZiI6MTY5OTI3MDYzNiwicGF0aCI6Ii8yMDE4NTM0Mi8yODA1ODcwMzAtZWU4MjYzODEtNGFlMC00YTU4LThjYjgtMDUyNzE2ZWM4NzQzLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFJV05KWUFYNENTVkVINTNBJTJGMjAyMzExMDYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjMxMTA2VDExMzcxNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTExMDAwODI3ZTcyY2I2NTBiYzhiOTRjNzc2YjNmYmNhNjJkNjEzYWYyNTEwMWY2Y2QwNjFlMDM2ODI2NGJhMzEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JmFjdG9yX2lkPTAma2V5X2lkPTAmcmVwb19pZD0wIn0.GlRLccdFmlz5fFE1ioAeyzL_aF7CIePe9q41sJrWA9A" />|<img src="doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png" /><br><video width="200" src="https://private-user-images.githubusercontent.com/20185342/8be3ab98-669b-4d3b-9ba6-4a74eca3be06" />|
-|FaceTalk_170809_00138_TA/<br>sentence02.wav|<img src="doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png" /><br><video width="200" src="https://private-user-images.githubusercontent.com/20185342/46e07f16-1128-4ba8-ba2f-a93233ad3a44" />|<img src="doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png" /><br><video width="200" src="https://private-user-images.githubusercontent.com/20185342/260a2a7a-d634-4059-87f2-1b73ea3ef250" />|
-<!--
-|FaceTalk_170731_00024_TA/<br>sentence01.wav|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.mp4){width=200}|
-|FaceTalk_170809_00138_TA/<br>sentence02.wav|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.mp4){width=200}|![](doc/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png){width=200}<br>![](doc/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.mp4){width=200}|
--->
-
-### Visualization of SAiD outputs on different blendshape facial models
-
-Since the MetaHuman does not support the `mouthClose` blendshape, we use the editing algorithm to ensure the corresponding blendshape coefficients of the outputs are all zero.
-
-||VOCASET - FaceTalk_170725_00137_TA | [VRoid Studio - AvatarSample_A](https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831) | [MetaHuman - Ada](https://www.unrealengine.com/en-US/metahuman) | [Unity_ARKitFacialCapture - Sloth](https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models) |
-|---|:---:|:---:|:---:|:--:|
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/6e24222f-5acd-453e-894d-c604f4404b3c"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/1d060d91-d3f5-442a-8c03-0a9aa82135bd"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/d855bc97-057a-465f-9565-bb1d093932d5"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/021c0a13-eb99-49b2-b8ca-46591d21c8fb"> |
-| FaceTalk_170809_00138_TA/<br>sentence02.wav | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/4fb6161c-0eb1-48b4-87c0-b644902a76bc"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/0609209a-2815-4e3a-9f69-1945d0ff0536"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/62fcccb6-4f57-45ca-9361-e68ad6835de3"> | <video width="200" src="https://private-user-images.githubusercontent.com/20185342/84a01817-18de-4bb7-b62d-74a9c8fdb4dd"> |
-<!--
-| FaceTalk_170731_00024_TA/<br>sentence01.wav | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4){width=200} |
-| FaceTalk_170809_00138_TA/<br>sentence02.wav | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4){width=200} | ![](doc/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4){width=200} |
--->
 
 ## Reference
 
