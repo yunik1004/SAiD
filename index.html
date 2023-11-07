@@ -43,6 +43,13 @@
   <script src="static/js/bulma-carousel.min.js"></script>
   <script src="static/js/bulma-slider.min.js"></script>
   <script src="static/js/index.js"></script>
+
+  <style>
+    .tablepad {
+        opacity: 100;
+        margin-top: -100px;
+    }
+  </style>
 </head>
 <body>
 
@@ -62,13 +69,12 @@
                   </div>
 
                   <div class="is-size-5 publication-authors">
-                    <span class="author-block">CVPR 2024</span>
+                    <span class="author-block">Preprint</span>
                   </div>
 
                   <div class="column has-text-centered">
                     <div class="publication-links">
                          <!-- Arxiv PDF link -->
-                         <!--
                       <span class="link-block">
                         <a href="https://arxiv.org/pdf/<ARXIV PAPER ID>.pdf" target="_blank"
                         class="external-link button is-normal is-rounded is-dark">
@@ -78,7 +84,6 @@
                         <span>Paper</span>
                       </a>
                     </span>
-                    -->
 
                     <!-- Supplementary PDF link -->
                     <!--
@@ -95,7 +100,7 @@
 
                   <!-- Github link -->
                   <span class="link-block">
-                    <a href="https://github.com/YOUR REPO HERE" target="_blank"
+                    <a href="https://anonymous.4open.science/r/SAiD-D2D7" target="_blank"
                     class="external-link button is-normal is-rounded is-dark">
                     <span class="icon">
                       <i class="fab fa-github"></i>
@@ -132,7 +137,11 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ullamcorper tellus sed ante aliquam tempus. Etiam porttitor urna feugiat nibh elementum, et tempor dolor mattis. Donec accumsan enim augue, a vulputate nisi sodales sit amet. Proin bibendum ex eget mauris cursus euismod nec et nibh. Maecenas ac gravida ante, nec cursus dui. Vivamus purus nibh, placerat ac purus eget, sagittis vestibulum metus. Sed vestibulum bibendum lectus gravida commodo. Pellentesque auctor leo vitae sagittis suscipit.
+            Speech-driven 3D facial animation is challenging due to the scarcity of large-scale visual-audio datasets despite extensive research.
+            Most prior works, typically focused on learning regression models, encounter difficulties generating diverse lip movements from speech and require substantial effort in refining the generated outputs.
+            To address these issues, we propose a speech-driven 3D facial animation with a diffusion model (SAiD), a lightweight Transformer-based U-Net with a cross-modality alignment bias between audio and visual to enhance lip synchronization.
+            Moreover, we introduce BlendVOCA, a benchmark dataset of pairs of speech audio and parameters of a blendshape facial model, to address the lack of public resources.
+            Our experimental results demonstrate that the proposed approach achieves comparable or superior performance in lip synchronization to baselines, ensures more diverse lip movements, and streamlines the animation editing process.
           </p>
         </div>
       </div>
@@ -147,14 +156,465 @@
   <div class="hero-body">
     <div class="container">
       <!-- Paper video. -->
-      <h2 class="title is-3">Video Presentation</h2>
+      <div class="container is-max-desktop content">
+        <h2 class="title">Comparison with baseline methods</h2>
+      </div>
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
+        <div class="container is-max-desktop content">
+            <div class="hero-body table-container">
+                <table class="table is-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>GT</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>SAiD (Ours)</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>end2end_AU_speech</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>VOCA+QP</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>MeshTalk+QP</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>FaceFormer+QP</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>CodeTalker+QP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FaceTalk_170731_00024_TA/<br>sentence01.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/end2end_AU_speech/FaceTalk_170731_00024_TA-sentence01.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/VOCA/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/MeshTalk/FaceTalk_170731_00024_TA-sentence01.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/FaceFormer/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/CodeTalker/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>FaceTalk_170809_00138_TA/<br>sentence02.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/end2end_AU_speech/FaceTalk_170809_00138_TA-sentence02.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/VOCA/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/MeshTalk/FaceTalk_170809_00138_TA-sentence02.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/FaceFormer/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/CodeTalker/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+      </div>
 
-          <div class="publication-video">
-            <!-- Youtube embed code here -->
-            <iframe src="https://www.youtube.com/embed/JkaxUblCGz0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-          </div>
+      <div class="container is-max-desktop content">
+        <h2 class="title">Ablation studies</h2>
+      </div>
+
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+        <div class="container is-max-desktop content">
+            <div class="hero-body table-container">
+                <table class="table is-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>SAiD (Base)</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>train w/ squared error</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>train w/o velocity loss</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>train w/o alignment bias</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>finetune pre-trained Wav2Vec 2.0</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FaceTalk_170731_00024_TA/<br>sentence01.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/FaceTalk_170731_00024_TA-sentence01-0-vocaset.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/squared_error/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/velocity_loss/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/no_alignment_bias/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>FaceTalk_170809_00138_TA/<br>sentence02.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/FaceTalk_170809_00138_TA-sentence02-0-vocaset.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/squared_error/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/velocity_loss/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/no_alignment_bias/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/ablation/finetune_wav2vec/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+      </div>
+
+      <div class="container is-max-desktop content">
+        <h2 class="title">Diversity</h2>
+        <p>We visualize the vertex position differences in SAiD outputs over the mean output. We use <a href="https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html">viridis</a> colormap with a range of [0, 0.001].</p>
+      </div>
+
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+        <div class="container is-max-desktop content">
+            <div class="hero-body table-container">
+                <table class="table is-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Output 1</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Output 2</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Output 3</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Output 4</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Output 5</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FaceTalk_170731_00024_TA/<br>sentence01.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-1.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-2.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-3.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170731_00024_TA-sentence01-4.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>FaceTalk_170809_00138_TA/<br>sentence02.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-0.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-1.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-2.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-3.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/diversity/FaceTalk_170809_00138_TA-sentence02-4.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+      </div>
+
+      <div class="container is-max-desktop content">
+        <h2 class="title">Editability</h2>
+        <p>We visualize the editing results of SAiD with two different cases:</p>
+        <ol>
+            <li>Motion in-betweening</li>
+            <li>Motion generation with blendshape-specific constraints by masking coefficients corresponding to certain blendshapes</li>
+        </ol>
+        <p>Hatched boxes indicate the masked areas that should be invariant during the editing.</p>
+      </div>
+
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+        <div class="container is-max-desktop content">
+            <div class="hero-body table-container">
+                <table class="table is-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>In-betweening</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>Blendshape-specific constraints</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="2">FaceTalk_170731_00024_TA/<br>sentence01.wav</td>
+                            <td>
+                                <img width="200px" src="static/image/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.png" />
+                            </td>
+                            <td>
+                                <img width="200px" src="static/image/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.png" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-inbetween.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/editing/FaceTalk_170731_00024_TA-sentence01-0-blendshape.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2">FaceTalk_170809_00138_TA/<br>sentence02.wav</td>
+                            <td>
+                                <img width="200px" src="static/image/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.png" />
+                            </td>
+                            <td>
+                                <img width="200px" src="static/image/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.png" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-inbetween.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/editing/FaceTalk_170809_00138_TA-sentence02-0-blendshape.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+      </div>
+
+      <div class="container is-max-desktop content">
+        <h2 class="title">Visualization on different blendshape facial models</h2>
+        <p>Since the MetaHuman does not support the <em>mouthClose</em> blendshape, we use the editing algorithm to ensure the corresponding blendshape coefficients of the outputs are all zero.</p>
+      </div>
+
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+        <div class="container is-max-desktop content">
+            <div class="hero-body table-container">
+                <table class="table is-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br>VOCASET - FaceTalk_170725_00137_TA</th>
+                            <th><p class="tablepad">-------------------------------------------</p><br><a href="https://hub.vroid.com/en/characters/2287322741607496883/models/1995551907338074831">VRoid Studio - AvatarSample_A</a></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br><a href="https://www.unrealengine.com/en-US/metahuman">MetaHuman - Ada</a></th>
+                            <th><p class="tablepad">-------------------------------------------</p><br><a href="https://github.com/kodai100/Unity_ARKitFacialCapture/tree/master/Assets/Models">Unity_ARKitFacialCapture - Sloth</a></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FaceTalk_170731_00024_TA/<br>sentence01.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-2-vocaset-diff.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-1-vrm.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-metahuman.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170731_00024_TA-sentence01-3-unity.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>FaceTalk_170809_00138_TA/<br>sentence02.wav</td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-2-vocaset-diff.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-1-vrm.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-metahuman.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                            <td>
+                                <video poster="" controls preload="auto" width="200px">
+                                    <source src="static/video/SAiD/new_model/FaceTalk_170809_00138_TA-sentence02-3-unity.mp4"
+                                    type="video/mp4">
+                                </video>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         </div>
       </div>
     </div>
