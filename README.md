@@ -2,8 +2,8 @@
 
 This is the code for `SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion`.
 
-- [Project page]()
-- [Paper]()
+- [Project page](https://anonymous.4open.science/w/SAiD-D2D7)
+- [Paper]() (TBU)
 
 ## Installation
 
@@ -31,11 +31,11 @@ apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosm
 - `model`: It contains the weights of VAE, which is used for the evaluation.
 - `blender-addon`: It contains the blender addon that can visualize the blendshape coefficients.
 - `script`: It contains Python scripts for preprocessing, training, inference, and evaluation.
-- `doc`: It contains the resources for the documentation, such as sample videos.
+- `static`: It contains the resources for the project page.
 
 ## Inference
 
-You can download the pretrained weights of SAiD from [Hugging Face Repo](https://huggingface.co/yunik1004/SAiD).
+You can download the pretrained weights of SAiD from [Hugging Face Repo](https://huggingface.co/yunik1004/SAiD) (TBU).
 
 ```bash
 python script/inference.py \
