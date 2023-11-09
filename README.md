@@ -2,7 +2,7 @@
 
 This is the code for `SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion`.
 
-- [Project page](https://anonymous.4open.science/w/SAiD-D2D7)
+- [Project page](https://anonymous.4open.science/w/SAiD-D2D7/)
 - [Paper]() (TBU)
 
 ## Installation
