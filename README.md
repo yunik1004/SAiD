@@ -2,7 +2,7 @@
 
 This is the code for `SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion`.
 
-- [Project page](https://yunik1004.github.io/SAiD/)
+- [Project page](https://yunik1004.github.io/SAiD/) (TBU)
 - [Paper]() (TBU)
 
 ## Installation
