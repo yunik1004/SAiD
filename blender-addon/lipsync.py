@@ -14,8 +14,8 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "Lipsync",
     "author": "Inkyu",
-    "version": (0, 5, 3),
-    "blender": (3, 4, 0),
+    "version": (0, 6, 0),
+    "blender": (4, 0, 0),
     "location": "View3D > Sidebar > Lipsync",
     "description": "Tools for generating lipsync animation",
     "category": "Lipsync",
@@ -273,10 +273,12 @@ def load_obj(context: bpy.types.Context, path: str) -> Optional[bpy.types.Object
     obj = None
 
     if ext == ".ply":
-        bpy.ops.import_mesh.ply(filepath=path)
+        #bpy.ops.import_mesh.ply(filepath=path)
+        bpy.ops.wm.ply_import(filepath=path)
         obj = context.object
     elif ext == ".obj":
-        bpy.ops.import_scene.obj(filepath=path, split_mode="OFF")
+        #bpy.ops.import_scene.obj(filepath=path, split_mode="OFF")
+        bpy.ops.wm.obj_import(filepath=path)
         obj = context.selected_objects[0]
 
     return obj
