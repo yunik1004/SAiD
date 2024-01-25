@@ -2,8 +2,8 @@
 
 This is the code for `SAiD: Blendshape-based Audio-Driven Speech Animation with Diffusion`.
 
-- [Project page](https://yunik1004.github.io/SAiD/) (TBU)
-- [Paper]() (TBU)
+- [Project page](https://yunik1004.github.io/SAiD/)
+- [Paper](https://arxiv.org/abs/2401.08655)
 
 ## Installation
 
@@ -35,7 +35,7 @@ apt-get install libboost-dev libglfw3-dev libgles2-mesa-dev freeglut3-dev libosm
 
 ## Inference
 
-You can download the pretrained weights of SAiD from [Hugging Face Repo](https://huggingface.co/yunik1004/SAiD) (TBU).
+You can download the pretrained weights of SAiD from [Hugging Face Repo](https://huggingface.co/yunik1004/SAiD).
 
 ```bash
 python script/inference.py \
@@ -228,4 +228,12 @@ After updating `COEFFS_DIR` and `OUTPUT_DIR`, run the script:
 If you use this code as part of any research, please cite the following paper.
 
 ```text
+@misc{park2023said,
+      title={SAiD: Speech-driven Blendshape Facial Animation with Diffusion},
+      author={Inkyu Park and Jaewoong Cho},
+      year={2023},
+      eprint={2401.08655},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
 ```
